@@ -10,13 +10,13 @@
 <form method="post" class="form">
   {% csrf_token %}
   <div class="form-row">
-    <label>Semaine du <input type="date" name="week_start" value="{{ default_monday|date:'Y-m-d' }}"
-      {% if harvest %}readonly{% endif %}></label>
-    <label><input type="checkbox" name="is_published" {% if not harvest or harvest.is_published %}checked{% endif %}>
+    <label>Semaine du <input type="date" name="lundi" value="{{ lundi_defaut|date:'Y-m-d' }}"
+      {% if semaine %}readonly{% endif %}></label>
+    <label><input type="checkbox" name="publiee" {% if not semaine or semaine.publiee %}checked{% endif %}>
       Publiée aux clients</label>
   </div>
   <label>Note de la semaine
-    <input type="text" name="note" value="{{ harvest.note|default:'' }}"
+    <input type="text" name="note" value="{{ semaine.note|default:'' }}"
            placeholder="Ex : premières tomates de la saison !"></label>
 
   <h2>Produits disponibles</h2>
@@ -25,10 +25,10 @@
     <tbody>
     {% for row in rows %}
       <tr>
-        <td>{{ row.product.name }} <span class="muted">({{ row.product.get_unit_display }})</span></td>
-        <td><input type="number" step="0.01" min="0" name="qty_{{ row.product.pk }}"
+        <td>{{ row.produit.nom }} <span class="muted">({{ row.produit.get_unite_vente_display }})</span></td>
+        <td><input type="number" step="0.01" min="0" name="qty_{{ row.produit.pk }}"
                    value="{{ row.qty|default_if_none:'' }}"></td>
-        <td><input type="number" step="0.01" min="0" name="price_{{ row.product.pk }}"
+        <td><input type="number" step="0.01" min="0" name="price_{{ row.produit.pk }}"
                    value="{{ row.price|default_if_none:'' }}"></td>
       </tr>
     {% empty %}

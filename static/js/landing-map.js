@@ -35,23 +35,23 @@ legend.onAdd = function () {
 };
 legend.addTo(map);
 
-// Chargement des producteurs
+// Chargement des exploitants
 fetch(document.body.dataset.geojsonUrl)
   .then(function (r) { return r.json(); })
-  .then(function (producers) {
-    producers.forEach(function (p) {
-      var style = CAT_STYLES[p.certification] || CAT_STYLES.CONV;
-      var marker = L.circleMarker([p.latitude, p.longitude], {
+  .then(function (exploitants) {
+    exploitants.forEach(function (e) {
+      var style = CAT_STYLES[e.mode_production] || CAT_STYLES.CONV;
+      var marker = L.circleMarker([e.latitude, e.longitude], {
         radius: 8,
         color: "#fff",
         weight: 1.5,
         fillColor: style.color,
         fillOpacity: 0.85
       }).bindPopup(
-        "<strong>" + p.farm_name + "</strong><br>" + (p.city || "") +
-        '<br><a href="' + p.url + '">Voir la ferme →</a>'
+        "<strong>" + e.nom_ferme + "</strong><br>" + (e.ville || "") +
+        '<br><a href="' + e.url + '">Voir la ferme →</a>'
       );
-      marker._category = p.certification;
+      marker._category = e.mode_production;
       markers.push(marker);
     });
     applyFilters();

@@ -2,20 +2,20 @@
 {% block title %}Mes commandes — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>🧾 Mes commandes</h1>
-{% for order in orders %}
+{% for commande in commandes %}
   <div class="card order-card">
     <div class="order-head">
-      <strong>{{ order.producer.farm_name }}</strong>
-      <span class="badge badge-{{ order.status }}">{{ order.get_status_display }}</span>
+      <strong>{{ commande.exploitant.nom_ferme }}</strong>
+      <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
     </div>
-    <p>📅 {{ order.delivery_date|date:"d/m/Y" }} — 💰 {{ order.total }} €</p>
+    <p>📅 {{ commande.date_livraison|date:"d/m/Y" }} — 💰 {{ commande.total }} €</p>
     <ul>
-      {% for item in order.items.all %}
-        <li>{{ item.product.name }} × {{ item.quantity }}</li>
+      {% for ligne in commande.lignes.all %}
+        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }}</li>
       {% endfor %}
     </ul>
-    {% if order.status == 'PENDING' %}
-      <form method="post" action="{% url 'portal:order_cancel' order.pk %}">
+    {% if commande.statut == 'NOUVELLE' %}
+      <form method="post" action="{% url 'portal:order_cancel' commande.pk %}">
         {% csrf_token %}
         <button class="btn btn-outline" type="submit">Annuler</button>
       </form>

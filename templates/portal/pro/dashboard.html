@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Mon espace pro — MonPetitMaraicher{% endblock %}
 {% block content %}
-<h1>Bienvenue {{ producer.farm_name }} 👋</h1>
+<h1>Bienvenue {{ exploitant.nom_ferme }} 👋</h1>
 
 <div class="quick-actions">
   <a class="btn" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
   <a class="btn" href="{% url 'portal:harvest_manage' %}">🧺 Saisir mes dispos de la semaine</a>
-  <a class="btn btn-outline" href="{% url 'portal:producer_detail' producer.slug %}">Voir ma page publique</a>
+  <a class="btn btn-outline" href="{% url 'portal:producer_detail' exploitant.slug %}">Voir ma page publique</a>
 </div>
 
 <section>
   <h2>⏳ Commandes à valider</h2>
-  {% for order in pending_orders %}
+  {% for commande in commandes_attente %}
     <div class="card">
-      <strong>Commande #{{ order.pk }}</strong> — {{ order.client.username }}
-      pour le {{ order.delivery_date|date:"d/m/Y" }} ({{ order.total }} €)
+      <strong>Commande #{{ commande.pk }}</strong> — {{ commande.nom_client }}
+      pour le {{ commande.date_livraison|date:"d/m/Y" }} ({{ commande.total }} €)
       <a class="btn btn-sm" href="{% url 'portal:order_list' %}">Traiter</a>
     </div>
   {% empty %}
@@ -25,9 +25,9 @@
 <section>
   <h2>🥕 Mes produits</h2>
   <ul>
-    {% for product in products %}
-      <li>{{ product.name }} ({{ product.get_unit_display }})
-        — <a href="{% url 'portal:product_edit' product.pk %}">modifier</a></li>
+    {% for produit in produits %}
+      <li>{{ produit.nom }} ({{ produit.get_unite_vente_display }})
+        — <a href="{% url 'portal:product_edit' produit.pk %}">modifier</a></li>
     {% empty %}
       <li class="muted">Aucun produit. Commencez par en ajouter un !</li>
     {% endfor %}
@@ -36,11 +36,11 @@
 
 <section>
   <h2>🧺 Récolte actuelle</h2>
-  {% if harvest %}
-    <p>Semaine du {{ harvest.week_start|date:"d/m/Y" }} —
-       {{ harvest.items.count }} ligne(s) —
-       {% if harvest.is_published %}publiée ✅{% else %}non publiée ⏸{% endif %}<br>
-       <a href="{% url 'portal:harvest_manage' harvest.pk %}">Modifier la récolte</a></p>
+  {% if semaine %}
+    <p>Semaine du {{ semaine.lundi|date:"d/m/Y" }} —
+       {{ semaine.lignes.count }} ligne(s) —
+       {% if semaine.publiee %}publiée ✅{% else %}non publiée ⏸{% endif %}<br>
+       <a href="{% url 'portal:harvest_manage' semaine.pk %}">Modifier la récolte</a></p>
   {% else %}
     <p class="muted">Aucune récolte saisie. <a href="{% url 'portal:harvest_manage' %}">Créer ma récolte</a></p>
   {% endif %}
@@ -49,7 +49,7 @@
 <section>
   <h2>📍 Points de livraison & créneaux</h2>
   <p class="muted">À définir depuis l'administration Django pour l'instant
-     (menu « Points de livraison » et « Créneaux ») — des écrans dédiés
-     sont prévus dans la V2.</p>
+     (menu « Points de livraison » et « Créneaux de livraison ») — des écrans
+     dédiés sont prévus dans la V2 (issue #9).</p>
 </section>
 {% endblock %}

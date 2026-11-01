@@ -5,31 +5,31 @@
 <form class="search-bar" method="get" action="{% url 'portal:producer_search' %}">
   <input type="text" name="q" placeholder="Produit, ferme ou ville…" value="{{ q }}">
   <input type="text" name="dept" placeholder="Dépt. (ex : 44)" value="{{ dept }}" size="8">
-  <select name="cert">
+  <select name="mode">
     <option value="">Tous les modes de production</option>
-    <option value="AB" {% if cert == 'AB' %}selected{% endif %}>Bio (AB)</option>
-    <option value="PERMA" {% if cert == 'PERMA' %}selected{% endif %}>Permaculture</option>
-    <option value="PAYSAN" {% if cert == 'PAYSAN' %}selected{% endif %}>Agriculture paysanne</option>
-    <option value="RAISONNE" {% if cert == 'RAISONNE' %}selected{% endif %}>Raisonnée</option>
-    <option value="CONV" {% if cert == 'CONV' %}selected{% endif %}>Conventionnelle</option>
+    <option value="AB" {% if mode == 'AB' %}selected{% endif %}>Bio (AB)</option>
+    <option value="PERMA" {% if mode == 'PERMA' %}selected{% endif %}>Permaculture</option>
+    <option value="PAYSAN" {% if mode == 'PAYSAN' %}selected{% endif %}>Agriculture paysanne</option>
+    <option value="RAISONNE" {% if mode == 'RAISONNE' %}selected{% endif %}>Raisonnée</option>
+    <option value="CONV" {% if mode == 'CONV' %}selected{% endif %}>Conventionnelle</option>
   </select>
   <button class="btn" type="submit">Rechercher</button>
 </form>
 
 <div class="grid producers">
-  {% for producer in producers %}
-    <a class="card" href="{% url 'portal:producer_detail' producer.slug %}">
-      {% if producer.logo %}
-        <img class="card-logo" src="{{ producer.logo.url }}" alt="Logo {{ producer.farm_name }}">
+  {% for exploitant in exploitants %}
+    <a class="card" href="{% url 'portal:producer_detail' exploitant.slug %}">
+      {% if exploitant.logo %}
+        <img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">
       {% endif %}
-      <h2>{{ producer.farm_name }}</h2>
-      {% if producer.certification == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
-      {% elif producer.certification == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
-      {% elif producer.certification == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
-      {% elif producer.certification == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
+      <h2>{{ exploitant.nom_ferme }}</h2>
+      {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
+      {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
+      {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
+      {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
       {% endif %}
-      <p class="muted">{{ producer.city }}{% if producer.department %} ({{ producer.department }}){% endif %}</p>
-      {% if producer.description %}<p>{{ producer.description|truncatewords:20 }}</p>{% endif %}
+      <p class="muted">{{ exploitant.ville }}{% if exploitant.departement %} ({{ exploitant.departement }}){% endif %}</p>
+      {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
     </a>
   {% empty %}
     <p>Aucun producteur ne correspond à votre recherche.</p>

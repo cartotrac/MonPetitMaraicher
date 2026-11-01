@@ -3,60 +3,71 @@ from django.db import models
 from django.urls import reverse
 
 
-def producer_logo_path(instance, filename):
-    return f"logos/{instance.user.pk}/{filename}"
+def logo_chemin(instance, filename):
+    return f"exploitants/{instance.pk}/logo.png"
 
 
-def product_image_path(instance, filename):
-    return f"produits/{instance.producer.pk}/{filename}"
+def banniere_chemin(instance, filename):
+    return f"exploitants/{instance.pk}/banniere.jpg"
 
 
-class Producer(models.Model):
-    """Profil maraîcher : un compte utilisateur = une exploitation."""
+def illustration_produit_chemin(instance, filename):
+    return f"exploitants/{instance.exploitant.pk}/produits/{instance.slug}.jpg"
 
-    class Certification(models.TextChoices):
+
+class Exploitant(models.Model):
+    """Profil exploitant : un compte utilisateur = une exploitation.
+
+    Nommage français sans accent, voir docs/DATA_MODEL.md.
+    """
+
+    class ModeProduction(models.TextChoices):
         AB = "AB", "Agriculture Biologique (AB)"
         PERMA = "PERMA", "Permaculture"
         PAYSAN = "PAYSAN", "Agriculture paysanne"
         RAISONNE = "RAISONNE", "Agriculture raisonnée"
         CONV = "CONV", "Conventionnelle"
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="producer")
-    farm_name = models.CharField("Nom de l'exploitation", max_length=150)
-    slug = models.SlugField("Adresse publique", max_length=160, unique=True, blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE,
+                                related_name="exploitant")
+    nom_ferme = models.CharField("Nom de l'exploitation", max_length=150)
+    slug = models.SlugField("Adresse publique", max_length=160,
+                            unique=True, blank=True)
     siret = models.CharField("SIRET", max_length=14, blank=True)
-    certification = models.CharField(
+    mode_production = models.CharField(
         "Mode de production", max_length=10,
-        choices=Certification.choices, default=Certification.CONV
-    )
-    logo = models.ImageField("Logo miniature", upload_to=producer_logo_path, blank=True, null=True)
+        choices=ModeProduction.choices, default=ModeProduction.CONV)
+    logo = models.ImageField("Logo miniature", upload_to=logo_chemin,
+                             blank=True, null=True)
     description = models.TextField("Présentation de l'exploitation", blank=True)
-    address = models.CharField("Adresse", max_length=255, blank=True)
-    city = models.CharField("Ville", max_length=100, blank=True)
-    zip_code = models.CharField("Code postal", max_length=10, blank=True)
-    department = models.CharField("Département", max_length=3, db_index=True, blank=True)
-    phone = models.CharField("Téléphone", max_length=20, blank=True)
+    adresse = models.CharField("Adresse", max_length=255, blank=True)
+    ville = models.CharField("Ville", max_length=100, blank=True)
+    code_postal = models.CharField("Code postal", max_length=10, blank=True)
+    departement = models.CharField("Département", max_length=3,
+                                   db_index=True, blank=True)
+    telephone = models.CharField("Téléphone", max_length=20, blank=True)
     latitude = models.FloatField("Latitude", blank=True, null=True,
-                                 help_text="Position sur la carte (optionnel en V1)")
+                                 help_text="Position sur la carte (optionnel)")
     longitude = models.FloatField("Longitude", blank=True, null=True,
-                                  help_text="Position sur la carte (optionnel en V1)")
-    is_visible = models.BooleanField("Visible publiquement", default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+                                  help_text="Position sur la carte (optionnel)")
+    visible = models.BooleanField("Visible publiquement", default=True)
+    creee_le = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = "Maraîcher"
-        verbose_name_plural = "Maraîchers"
+        verbose_name = "Exploitant"
+        verbose_name_plural = "Exploitants"
+        ordering = ["nom_ferme"]
 
     def __str__(self):
-        return self.farm_name
+        return self.nom_ferme
 
     def save(self, *args, **kwargs):
         if not self.slug:
             from django.utils.text import slugify
-            base = slugify(self.farm_name) or "maraicher"
+            base = slugify(self.nom_ferme) or "exploitant"
             slug = base
             n = 2
-            while Producer.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            while Exploitant.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 slug = f"{base}-{n}"
                 n += 1
             self.slug = slug
@@ -66,180 +77,532 @@ class Producer(models.Model):
         return reverse("portal:producer_detail", kwargs={"slug": self.slug})
 
 
-class ClientProfile(models.Model):
+class ProfilClient(models.Model):
     """Profil client (optionnel, pour faciliter les commandes récurrentes)."""
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="client_profile")
-    phone = models.CharField("Téléphone", max_length=20, blank=True)
-    address = models.CharField("Adresse", max_length=255, blank=True)
-    city = models.CharField("Ville", max_length=100, blank=True)
-    zip_code = models.CharField("Code postal", max_length=10, blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE,
+                                related_name="profil_client")
+    telephone = models.CharField("Téléphone", max_length=20, blank=True)
+    adresse = models.CharField("Adresse", max_length=255, blank=True)
+    ville = models.CharField("Ville", max_length=100, blank=True)
+    code_postal = models.CharField("Code postal", max_length=10, blank=True)
 
     def __str__(self):
         return f"Client : {self.user.get_full_name() or self.user.username}"
 
 
-class Product(models.Model):
-    """Produit référencé par un maraîcher (catalogue).
+class Categorie(models.Model):
+    """Catégorie définie par chaque exploitant (issue #5)."""
 
-    NB V2 prévue : catégories personnalisables par producteur et attributs
-    libres (JSON) ; en V1 la catégorie est un champ texte simple.
-    """
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="categories")
+    nom = models.CharField("Nom", max_length=80)
+    slug = models.SlugField(max_length=100, blank=True)
+    position = models.PositiveSmallIntegerField("Position", default=0)
 
-    class Unit(models.TextChoices):
+    class Meta:
+        verbose_name = "Catégorie"
+        unique_together = ("exploitant", "nom")
+        ordering = ["position", "nom"]
+
+    def __str__(self):
+        return self.nom
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.nom)
+        super().save(*args, **kwargs)
+
+
+class ProduitStandard(models.Model):
+    """Produit du catalogue standard embarqué (~80–120 produits types,
+    issue #1). Lecture seule pour les exploitants : point de départ
+    copiable. Illustrations emojis/SVG embarquées : zéro dépendance."""
+
+    class Unite(models.TextChoices):
         KG = "KG", "le kg"
         PIECE = "PC", "la pièce"
         BOTTE = "BO", "la botte"
         BARQUETTE = "BQ", "la barquette"
 
-    producer = models.ForeignKey(Producer, on_delete=models.CASCADE, related_name="products")
-    name = models.CharField("Nom", max_length=150)
-    category = models.CharField("Catégorie", max_length=80, blank=True,
-                                help_text="Ex : légumes, fruits, herbes, œufs…")
+    nom = models.CharField("Nom", max_length=150, unique=True)
+    categorie = models.CharField("Catégorie standard", max_length=80)
+    unite_vente = models.CharField("Unité de vente", max_length=2,
+                                   choices=Unite.choices, default=Unite.KG)
+    saisons = models.JSONField("Saisons", default=list, blank=True,
+                               help_text='Ex : ["printemps", "été"]')
+    emoji = models.CharField("Emoji", max_length=8, blank=True)
+    svg = models.TextField("SVG inline", blank=True)
+
+    class Meta:
+        verbose_name = "Produit standard"
+        verbose_name_plural = "Produits standard (catalogue embarqué)"
+        ordering = ["categorie", "nom"]
+
+    def __str__(self):
+        return f"{self.emoji} {self.nom}".strip()
+
+
+class Produit(models.Model):
+    """Produit du catalogue d'un exploitant.
+
+    Attributs libres en JSONB (issue #5), traçabilité de la copie depuis le
+    catalogue standard (issue #1), produits perso autorisés.
+    """
+
+    class Unite(models.TextChoices):
+        KG = "KG", "le kg"
+        PIECE = "PC", "la pièce"
+        BOTTE = "BO", "la botte"
+        BARQUETTE = "BQ", "la barquette"
+
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="produits")
+    categorie = models.ForeignKey(Categorie, on_delete=models.SET_NULL,
+                                  null=True, blank=True,
+                                  related_name="produits")
+    nom = models.CharField("Nom", max_length=150)
+    slug = models.SlugField(max_length=160, blank=True)
     description = models.TextField("Description", blank=True)
-    image = models.ImageField("Photo", upload_to=product_image_path, blank=True, null=True)
-    unit = models.CharField("Unité de vente", max_length=2, choices=Unit.choices, default=Unit.KG)
-    is_active = models.BooleanField("Actif", default=True)
+    illustration = models.ImageField("Photo",
+                                      upload_to=illustration_produit_chemin,
+                                      blank=True, null=True)
+    unite_vente = models.CharField("Unité de vente", max_length=2,
+                                   choices=Unite.choices, default=Unite.KG)
+    attributs = models.JSONField("Attributs libres", default=dict, blank=True,
+                                 help_text='Ex : {"variété": "Butternut", "label": "AB"}')
+    origine_standard = models.ForeignKey(ProduitStandard,
+                                          on_delete=models.SET_NULL,
+                                          null=True, blank=True,
+                                          related_name="copies")
+    perso = models.BooleanField("Créé pour mon usage propre", default=False)
+    prix = models.DecimalField("Prix de référence (€)", max_digits=6,
+                               decimal_places=2, null=True, blank=True)
+    actif = models.BooleanField("Actif", default=True)
 
     class Meta:
         verbose_name = "Produit"
-        ordering = ["name"]
+        unique_together = ("exploitant", "slug")
+        ordering = ["nom"]
 
     def __str__(self):
-        return f"{self.name} ({self.producer.farm_name})"
+        return f"{self.nom} ({self.exploitant.nom_ferme})"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.nom) or "produit"
+        super().save(*args, **kwargs)
 
 
-class HarvestWeek(models.Model):
-    """Récolte d'une semaine donnée pour un maraîcher."""
+class SemaineRecolte(models.Model):
+    """Récolte d'une semaine donnée pour un exploitant.
 
-    producer = models.ForeignKey(Producer, on_delete=models.CASCADE, related_name="harvest_weeks")
-    week_start = models.DateField("Lundi de la semaine", db_index=True)
-    note = models.CharField("Note / actualité de la semaine", max_length=255, blank=True,
-                            help_text="Ex : « premières tomates de la saison ! »")
-    is_published = models.BooleanField("Publiée aux clients", default=True)
+    L'exploitant paramètre chaque semaine ce qui est visible côté vitrine.
+    """
+
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="semaines")
+    lundi = models.DateField("Lundi de la semaine", db_index=True)
+    note = models.CharField("Note / actualité de la semaine", max_length=255,
+                            blank=True)
+    publiee = models.BooleanField("Publiée aux clients", default=True)
 
     class Meta:
-        verbose_name = "Récolte hebdomadaire"
-        verbose_name_plural = "Récoltes hebdomadaires"
-        unique_together = ("producer", "week_start")
-        ordering = ["-week_start"]
+        verbose_name = "Semaine de récolte"
+        verbose_name_plural = "Semaines de récolte"
+        unique_together = ("exploitant", "lundi")
+        ordering = ["-lundi"]
 
     def __str__(self):
-        return f"Récolte du {self.week_start} — {self.producer.farm_name}"
+        return f"Récolte du {self.lundi} — {self.exploitant.nom_ferme}"
 
 
-class HarvestItem(models.Model):
-    """Ligne de récolte : estimation indicative de quantité + prix.
+class LigneRecolte(models.Model):
+    """Ligne de récolte : ESTIMATION indicative de quantité + prix.
 
     ⚠️ Les quantités saisies sont des ESTIMATIONS, pas un stock :
     elles informent le client mais ne bloquent ni ne décomptent aucune
-    commande. Seules les quantités livrées dans les paniers (V2) comptent.
+    commande. Seules les quantités livrées dans les paniers comptent.
     """
 
-    harvest = models.ForeignKey(HarvestWeek, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="harvest_items")
-    quantity_estimate = models.DecimalField("Quantité estimée", max_digits=8, decimal_places=2)
-    unit_price = models.DecimalField("Prix unitaire (€)", max_digits=6, decimal_places=2)
+    recolte = models.ForeignKey(SemaineRecolte, on_delete=models.CASCADE,
+                                related_name="lignes")
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE,
+                                related_name="lignes_recolte")
+    quantite_estimee = models.DecimalField("Quantité estimée",
+                                           max_digits=8, decimal_places=2)
+    prix_unitaire = models.DecimalField("Prix unitaire (€)",
+                                        max_digits=6, decimal_places=2)
 
     class Meta:
         verbose_name = "Ligne de récolte (estimation)"
-        unique_together = ("harvest", "product")
+        unique_together = ("recolte", "produit")
 
     def __str__(self):
-        return f"{self.product.name} ~{self.quantity_estimate} @ {self.unit_price}€"
+        return f"{self.produit.nom} ~{self.quantite_estimee} @ {self.prix_unitaire}€"
 
 
-class DeliveryPoint(models.Model):
+class PointLivraison(models.Model):
     """Point de livraison ou de mise à disposition des paniers."""
 
-    producer = models.ForeignKey(Producer, on_delete=models.CASCADE, related_name="delivery_points")
-    name = models.CharField("Nom", max_length=150, help_text="Ex : Marché de X, AMAP Y, Ferme")
-    address = models.CharField("Adresse", max_length=255)
-    city = models.CharField("Ville", max_length=100)
-    zip_code = models.CharField("Code postal", max_length=10)
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="points_livraison")
+    nom = models.CharField("Nom", max_length=150)
+    adresse = models.CharField("Adresse", max_length=255)
+    ville = models.CharField("Ville", max_length=100)
+    code_postal = models.CharField("Code postal", max_length=10)
     note = models.TextField("Précisions", blank=True)
 
     class Meta:
         verbose_name = "Point de livraison"
-        ordering = ["city", "name"]
+        ordering = ["ville", "nom"]
 
     def __str__(self):
-        return f"{self.name} ({self.city})"
+        return f"{self.nom} ({self.ville})"
 
 
-class DeliverySlot(models.Model):
+class CreneauLivraison(models.Model):
     """Créneau récurrent : jour, horaires, fréquence, capacité."""
 
-    class Frequency(models.TextChoices):
-        WEEKLY = "W", "Chaque semaine"
-        BIWEEKLY = "B", "Une semaine sur deux"
-        MONTHLY = "M", "Une fois par mois"
+    class Frequence(models.TextChoices):
+        HEBDO = "H", "Chaque semaine"
+        BIS = "B", "Une semaine sur deux"
+        MENSUEL = "M", "Une fois par mois"
 
-    producer = models.ForeignKey(Producer, on_delete=models.CASCADE, related_name="delivery_slots")
-    delivery_point = models.ForeignKey(DeliveryPoint, on_delete=models.CASCADE,
-                                       related_name="slots", blank=True, null=True)
-    day_of_week = models.PositiveSmallIntegerField(
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="creneaux")
+    point_livraison = models.ForeignKey(PointLivraison,
+                                        on_delete=models.CASCADE,
+                                        related_name="creneaux",
+                                        blank=True, null=True)
+    jour = models.PositiveSmallIntegerField(
         "Jour",
         choices=[(1, "Lundi"), (2, "Mardi"), (3, "Mercredi"), (4, "Jeudi"),
                  (5, "Vendredi"), (6, "Samedi"), (7, "Dimanche")],
     )
-    start_time = models.TimeField("Début")
-    end_time = models.TimeField("Fin")
-    frequency = models.CharField("Fréquence", max_length=1,
-                                 choices=Frequency.choices, default=Frequency.WEEKLY)
-    capacity = models.PositiveSmallIntegerField("Capacité (paniers/commandes)", default=10)
+    heure_debut = models.TimeField("Début")
+    heure_fin = models.TimeField("Fin")
+    frequence = models.CharField("Fréquence", max_length=1,
+                                 choices=Frequence.choices,
+                                 default=Frequence.HEBDO)
+    capacite = models.PositiveSmallIntegerField(
+        "Capacité (paniers/commandes)", default=10)
 
     class Meta:
-        verbose_name = "Créneau"
-        ordering = ["day_of_week", "start_time"]
+        verbose_name = "Créneau de livraison"
+        ordering = ["jour", "heure_debut"]
 
     def __str__(self):
-        return (f"{self.get_day_of_week_display()} {self.start_time}–{self.end_time} "
-                f"({self.get_frequency_display()})")
+        return (f"{self.get_jour_display()} {self.heure_debut}–{self.heure_fin} "
+                f"({self.get_frequence_display()})")
 
 
-class Order(models.Model):
-    """Commande client, à valider par le maraîcher.
+class Commande(models.Model):
+    """Commande client (portail ou saisie par l'exploitant), à valider.
 
-    NB V2 prévue : paniers numérotés (Basket n°1..X par client et par jour de
-    livraison) ; seul le contenu livré des paniers est décompté et exportable
-    en compta.
+    Porte TOUJOURS l'identité contact du client, loggué ou non :
+    nom + e-mail OU téléphone (clé de regroupement « commandes par client »).
+    Seules les commandes validées puis livrées persistent (purge sinon).
     """
 
-    class Status(models.TextChoices):
-        PENDING = "PENDING", "À valider"
-        VALIDATED = "VALIDATED", "Validée"
-        REFUSED = "REFUSED", "Refusée"
-        CANCELLED = "CANCELLED", "Annulée (client)"
-        DONE = "DONE", "Livrée"
+    class Statut(models.TextChoices):
+        NOUVELLE = "NOUVELLE", "À valider"
+        VALIDEE = "VALIDEE", "Validée"
+        REFUSEE = "REFUSEE", "Refusée"
+        ANNULEE = "ANNULEE", "Annulée (client)"
 
-    producer = models.ForeignKey(Producer, on_delete=models.CASCADE, related_name="orders")
-    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
-    delivery_point = models.ForeignKey(DeliveryPoint, on_delete=models.SET_NULL,
-                                       null=True, blank=True, related_name="orders")
-    delivery_date = models.DateField("Date de livraison souhaitée")
-    status = models.CharField("Statut", max_length=10, choices=Status.choices,
-                              default=Status.PENDING, db_index=True)
-    total = models.DecimalField("Total (€)", max_digits=8, decimal_places=2, default=0)
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="commandes")
+    client = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                               blank=True, related_name="commandes",
+                               help_text="Null si client sans compte")
+    nom_client = models.CharField("Nom du client", max_length=150)
+    email_client = models.EmailField("E-mail du client", blank=True)
+    telephone_client = models.CharField("Téléphone du client", max_length=20,
+                                        blank=True,
+                                        help_text="E-mail OU téléphone requis")
+    point_livraison = models.ForeignKey(PointLivraison,
+                                       on_delete=models.SET_NULL,
+                                       null=True, blank=True,
+                                       related_name="commandes")
+    date_livraison = models.DateField("Date de livraison souhaitée")
+    statut = models.CharField("Statut", max_length=10,
+                              choices=Statut.choices,
+                              default=Statut.NOUVELLE, db_index=True)
+    total = models.DecimalField("Total (€)", max_digits=8, decimal_places=2,
+                                default=0)
     note = models.TextField("Message du client", blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    validated_at = models.DateTimeField(null=True, blank=True)
+    saisie_exploitant = models.BooleanField("Saisie directe de l'exploitant",
+                                           default=False)
+    creee_le = models.DateTimeField(auto_now_add=True)
+    validee_le = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Commande"
-        ordering = ["-created_at"]
+        verbose_name_plural = "Commandes"
+        ordering = ["-creee_le"]
 
     def __str__(self):
-        return f"Commande #{self.pk} — {self.client} → {self.producer.farm_name}"
+        return (f"Commande #{self.pk} — {self.nom_client} "
+                f"→ {self.exploitant.nom_ferme}")
+
+    @property
+    def contact_client(self):
+        """Contact utilisé pour les envois e-mail/SMS (figé à l'instant t)."""
+        return self.email_client or self.telephone_client
 
 
-class OrderItem(models.Model):
-    """Ligne de commande (prix et quantité figés à la commande)."""
+class LigneCommande(models.Model):
+    """Ligne de commande : panier SOUHAITÉ, prix et quantité figés."""
 
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    quantity = models.DecimalField("Quantité", max_digits=8, decimal_places=2)
-    unit_price = models.DecimalField("Prix unitaire (€)", max_digits=6, decimal_places=2)
+    commande = models.ForeignKey(Commande, on_delete=models.CASCADE,
+                                 related_name="lignes")
+    produit = models.ForeignKey(Produit, on_delete=models.PROTECT,
+                                related_name="lignes_commande")
+    quantite = models.DecimalField("Quantité", max_digits=8, decimal_places=2)
+    prix_unitaire = models.DecimalField("Prix unitaire (€)",
+                                        max_digits=6, decimal_places=2)
 
-    def line_total(self):
-        return self.quantity * self.unit_price
+    class Meta:
+        verbose_name = "Ligne de commande"
+
+    def total_ligne(self):
+        return self.quantite * self.prix_unitaire
+
+
+class Panier(models.Model):
+    """Panier numéroté (n°1..X par client et par jour de livraison), préparé
+    pour un client. Le contenu LIVRÉ (LignePanier) est la seule source du
+    décompte de production et de l'export comptable."""
+
+    class Statut(models.TextChoices):
+        PREPARATION = "PREPARATION", "En préparation"
+        PRET = "PRET", "Prêt"
+        LIVRE = "LIVRE", "Livré"
+        RECU = "RECU", "Reçu / retiré"
+
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="paniers")
+    client = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                               blank=True, related_name="paniers")
+    nom_client = models.CharField("Nom du client", max_length=150)
+    email_client = models.EmailField("E-mail du client", blank=True)
+    telephone_client = models.CharField("Téléphone du client", max_length=20,
+                                        blank=True)
+    numero = models.PositiveSmallIntegerField("N° de panier")
+    date_livraison = models.DateField("Jour de livraison", db_index=True)
+    creneau = models.ForeignKey(CreneauLivraison, on_delete=models.SET_NULL,
+                                null=True, blank=True, related_name="paniers")
+    point_livraison = models.ForeignKey(PointLivraison,
+                                        on_delete=models.SET_NULL,
+                                        null=True, blank=True,
+                                        related_name="paniers")
+    commande = models.ForeignKey(Commande, on_delete=models.SET_NULL,
+                                 null=True, blank=True, related_name="paniers")
+    statut = models.CharField("Statut", max_length=10,
+                              choices=Statut.choices,
+                              default=Statut.PREPARATION, db_index=True)
+    total = models.DecimalField("Total (€)", max_digits=8, decimal_places=2,
+                                default=0)
+
+    class Meta:
+        verbose_name = "Panier"
+        unique_together = ("exploitant", "client", "date_livraison", "numero")
+        ordering = ["date_livraison", "numero"]
+
+    def __str__(self):
+        return (f"Panier n°{self.numero} — {self.nom_client} "
+                f"le {self.date_livraison}")
+
+    @classmethod
+    def prochain_numero(cls, exploitant, date_livraison, client=None,
+                         nom_client=""):
+        """n°1..X par client et par jour (même clé de regroupement que les
+        commandes : compte si loggué, sinon nom de contact)."""
+        qs = cls.objects.filter(exploitant=exploitant,
+                                date_livraison=date_livraison)
+        if client is not None:
+            qs = qs.filter(client=client)
+        else:
+            qs = qs.filter(client__isnull=True, nom_client=nom_client)
+        dernier = qs.order_by("-numero").values_list("numero", flat=True).first()
+        return (dernier or 0) + 1
+
+
+class LignePanier(models.Model):
+    """Contenu EFFECTIVEMENT livré dans un panier — LA source du décompte
+    de production et de l'export comptable CSV (issue #8)."""
+
+    panier = models.ForeignKey(Panier, on_delete=models.CASCADE,
+                               related_name="lignes")
+    produit = models.ForeignKey(Produit, on_delete=models.PROTECT,
+                                related_name="lignes_panier")
+    quantite = models.DecimalField("Quantité livrée", max_digits=8,
+                                   decimal_places=2)
+    prix_unitaire = models.DecimalField("Prix unitaire (€)",
+                                        max_digits=6, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Ligne de panier (livré)"
+
+    def total_ligne(self):
+        return self.quantite * self.prix_unitaire
+
+
+class ModeleMessage(models.Model):
+    """Modèle de message personnalisable (issue #3), placeholders
+    {{ client }}, {{ panier }}, {{ ferme }}, {{ creneau }}. Fallback sur le
+    défaut si le modèle personnalisé est cassé."""
+
+    class Type(models.TextChoices):
+        CONFIRMATION_COMMANDE = "CONFIRMATION_COMMANDE", "Confirmation de commande"
+        PANIER_PRET = "PANIER_PRET", "Panier prêt"
+        LIVRAISON_FAITE = "LIVRAISON_FAITE", "Livraison faite"
+        BULLETIN = "BULLETIN", "Bulletin (newsletter)"
+        ANNONCE = "ANNONCE", "Annonce"
+
+    class Canal(models.TextChoices):
+        EMAIL = "EMAIL", "E-mail"
+        SMS = "SMS", "SMS"
+
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="modeles_message")
+    type = models.CharField("Type", max_length=25, choices=Type.choices)
+    canal = models.CharField("Canal", max_length=5, choices=Canal.choices,
+                             default=Canal.EMAIL)
+    objet = models.CharField("Objet", max_length=200)
+    corps = models.TextField("Corps")
+    actif = models.BooleanField("Actif", default=True)
+
+    class Meta:
+        verbose_name = "Modèle de message"
+        unique_together = ("exploitant", "type", "canal")
+
+    def __str__(self):
+        return f"{self.get_type_display()} ({self.get_canal_display()}) — {self.exploitant}"
+
+
+class Bulletin(models.Model):
+    """Bulletin du producteur (récolte de la semaine, actualités)."""
+
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="bulletins")
+    semaine = models.ForeignKey(SemaineRecolte, on_delete=models.SET_NULL,
+                                null=True, blank=True)
+    objet = models.CharField("Objet", max_length=200)
+    corps = models.TextField("Corps")
+    envoye_le = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Bulletin"
+        ordering = ["-envoye_le"]
+
+    def __str__(self):
+        return f"Bulletin — {self.objet}"
+
+
+class Annonce(models.Model):
+    """Annonce ponctuelle (« paniers disponibles », …)."""
+
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="annonces")
+    objet = models.CharField("Objet", max_length=200)
+    corps = models.TextField("Corps")
+    envoye_le = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Annonce"
+        ordering = ["-envoye_le"]
+
+    def __str__(self):
+        return f"Annonce — {self.objet}"
+
+
+class PreferenceContact(models.Model):
+    """Préférences de contact par couple client ↔ exploitant (issue #3)."""
+
+    class Canal(models.TextChoices):
+        EMAIL = "EMAIL", "E-mail"
+        SMS = "SMS", "SMS"
+
+    client = models.ForeignKey(User, on_delete=models.CASCADE,
+                               related_name="preferences_contact")
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="preferences_clients")
+    veut_bulletin = models.BooleanField("Recevoir le bulletin", default=True)
+    veut_annonces = models.BooleanField("Recevoir les annonces", default=True)
+    canal = models.CharField("Canal préféré", max_length=5,
+                             choices=Canal.choices, default=Canal.EMAIL)
+
+    class Meta:
+        verbose_name = "Préférence de contact"
+        unique_together = ("client", "exploitant")
+
+    def __str__(self):
+        return f"{self.client} ↔ {self.exploitant}"
+
+
+class ConfigMessagerie(models.Model):
+    """SMTP et passerelle SMS de l'exploitant (jamais centralisés, issue #3).
+
+    ⚠️ V2 : chiffrer smtp_mot_de_passe et config_sms au repos.
+    """
+
+    class PasserelleSMS(models.TextChoices):
+        FREE = "FREE", "Free Mobile"
+        OVH = "OVH", "OVH"
+        TWILIO = "TWILIO", "Twilio"
+        HTTP_PERSO = "HTTP_PERSO", "HTTP personnalisée"
+
+    exploitant = models.OneToOneField(Exploitant, on_delete=models.CASCADE,
+                                      related_name="config_messagerie")
+    smtp_hote = models.CharField("Serveur SMTP", max_length=255, blank=True)
+    smtp_port = models.PositiveSmallIntegerField("Port SMTP", default=587)
+    smtp_utilisateur = models.CharField("Utilisateur SMTP", max_length=150,
+                                        blank=True)
+    smtp_mot_de_passe = models.CharField("Mot de passe SMTP", max_length=255,
+                                         blank=True)
+    smtp_expediteur = models.EmailField("Adresse d'expédition", blank=True)
+    passerelle_sms = models.CharField("Passerelle SMS", max_length=15,
+                                      choices=PasserelleSMS.choices, blank=True)
+    config_sms = models.JSONField("Configuration passerelle", default=dict,
+                                  blank=True)
+    quota_journalier = models.PositiveSmallIntegerField(
+        "Quota d'envois / jour", default=100)
+    heures_calmes = models.CharField(
+        "Heures calmes", max_length=11, blank=True,
+        help_text="Ex : 21:00-08:00 — pas d'envoi dans cette plage")
+
+    class Meta:
+        verbose_name = "Configuration messagerie"
+
+    def __str__(self):
+        return f"Messagerie de {self.exploitant}"
+
+
+class ParametresVitrine(models.Model):
+    """Personnalisation de la vitrine publique (issue #4)."""
+
+    exploitant = models.OneToOneField(Exploitant, on_delete=models.CASCADE,
+                                      related_name="parametres_vitrine")
+    titre_accroche = models.CharField("Titre d'accroche", max_length=150,
+                                      blank=True)
+    texte_accroche = models.TextField("Texte d'accroche", blank=True)
+    couleur_theme = models.CharField("Couleur d'accent", max_length=7,
+                                     default="#2e7d32")
+    image_banniere = models.ImageField("Bannière", upload_to=banniere_chemin,
+                                       blank=True, null=True)
+    afficher_recolte = models.BooleanField("Afficher la récolte", default=True)
+    afficher_catalogue = models.BooleanField("Afficher le catalogue", default=True)
+    afficher_creneaux = models.BooleanField("Afficher les créneaux", default=True)
+    reseaux = models.JSONField("Réseaux sociaux", default=dict, blank=True,
+                               help_text='Ex : {"facebook": "https://…"}')
+
+    class Meta:
+        verbose_name = "Paramètres de vitrine"
+        verbose_name_plural = "Paramètres de vitrine"
+
+    def __str__(self):
+        return f"Vitrine de {self.exploitant}"

@@ -11,252 +11,260 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from .forms import ClientRegisterForm, ProductForm, ProducerRegisterForm
-from .models import (HarvestItem, HarvestWeek, Order, OrderItem, Producer,
-                     Product)
+from .forms import (InscriptionClientForm, InscriptionExploitantForm,
+                    ProduitForm)
+from .models import (Commande, Exploitant, LigneCommande, LigneRecolte,
+                     Produit, SemaineRecolte)
 
 
 def home(request):
-    """Landing : bandeau, recherche, hero, carte des producteurs."""
-    producers = (Producer.objects.filter(is_visible=True)
-                 .exclude(latitude=None, longitude=None)
-                 .order_by("farm_name"))
-    return render(request, "portal/home.html", {"producers": producers})
+    """Landing : bandeau, recherche, hero, carte des exploitants."""
+    exploitants = (Exploitant.objects.filter(visible=True)
+                   .exclude(latitude=None, longitude=None)
+                   .order_by("nom_ferme"))
+    return render(request, "portal/home.html", {"exploitants": exploitants})
 
 
 def producer_search(request):
-    """Recherche multi-critères : producteur, produit, ville, département, catégorie."""
-    producers = Producer.objects.filter(is_visible=True).order_by("farm_name")
+    """Recherche multi-critères : exploitant, produit, ville, département, mode."""
+    exploitants = Exploitant.objects.filter(visible=True).order_by("nom_ferme")
     q = request.GET.get("q", "").strip()
     dept = request.GET.get("dept", "").strip()
-    cert = request.GET.get("cert", "").strip()
+    mode = request.GET.get("mode", "").strip()
     if q:
-        producers = producers.filter(
-            Q(farm_name__icontains=q) | Q(city__icontains=q)
-            | Q(products__name__icontains=q)
-            | Q(products__category__icontains=q)).distinct()
+        exploitants = exploitants.filter(
+            Q(nom_ferme__icontains=q) | Q(ville__icontains=q)
+            | Q(produits__nom__icontains=q)
+            | Q(produits__categorie__nom__icontains=q)).distinct()
     if dept:
-        producers = producers.filter(department=dept)
-    if cert:
-        producers = producers.filter(certification=cert)
+        exploitants = exploitants.filter(departement=dept)
+    if mode:
+        exploitants = exploitants.filter(mode_production=mode)
     return render(request, "portal/search_results.html", {
-        "producers": producers,
-        "q": q, "dept": dept, "cert": cert,
+        "exploitants": exploitants,
+        "q": q, "dept": dept, "mode": mode,
     })
 
 
-def producers_geojson(request):
-    """Données carte : producteurs visibles avec coordonnées."""
-    producers = (Producer.objects.filter(is_visible=True)
-                 .exclude(latitude=None, longitude=None))
+def producteurs_geojson(request):
+    """Données carte : exploitants visibles avec coordonnées."""
+    exploitants = (Exploitant.objects.filter(visible=True)
+                   .exclude(latitude=None, longitude=None))
     data = [{
-        "slug": p.slug,
-        "farm_name": p.farm_name,
-        "certification": p.certification,
-        "city": p.city,
-        "latitude": p.latitude,
-        "longitude": p.longitude,
-        "url": p.get_absolute_url(),
-    } for p in producers]
+        "slug": e.slug,
+        "nom_ferme": e.nom_ferme,
+        "mode_production": e.mode_production,
+        "ville": e.ville,
+        "latitude": e.latitude,
+        "longitude": e.longitude,
+        "url": e.get_absolute_url(),
+    } for e in exploitants]
     return JsonResponse(list(data), encoder=DjangoJSONEncoder, safe=False)
 
 
 def producer_detail(request, slug):
-    """Page publique d'un maraîcher : catalogue + récolte de la semaine."""
-    producer = get_object_or_404(Producer, slug=slug, is_visible=True)
+    """Page publique d'un exploitant : catalogue + récolte de la semaine."""
+    exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
     today = timezone.localdate()
-    monday = today - datetime.timedelta(days=today.weekday())
-    harvest = (HarvestWeek.objects.filter(producer=producer, is_published=True,
-                                          week_start__lte=monday)
-               .order_by("-week_start").first())
-    harvest_items = harvest.items.select_related("product") if harvest else []
+    lundi = today - datetime.timedelta(days=today.weekday())
+    semaine = (SemaineRecolte.objects.filter(exploitant=exploitant,
+                                             publiee=True,
+                                             lundi__lte=lundi)
+               .order_by("-lundi").first())
+    lignes = semaine.lignes.select_related("produit") if semaine else []
     return render(request, "portal/producer_detail.html", {
-        "producer": producer,
-        "harvest": harvest,
-        "harvest_items": harvest_items,
-        "delivery_points": producer.delivery_points.all(),
-        "delivery_slots": producer.delivery_slots.select_related("delivery_point"),
+        "exploitant": exploitant,
+        "semaine": semaine,
+        "lignes": lignes,
+        "points_livraison": exploitant.points_livraison.all(),
+        "creneaux": exploitant.creneaux.select_related("point_livraison"),
     })
 
 
 # ---------------------------------------------------------------- registres
 
-def register_producer(request):
+def register_exploitant(request):
     if request.method == "POST":
-        form = ProducerRegisterForm(request.POST, request.FILES)
+        form = InscriptionExploitantForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
             login(request, user)
             messages.success(
-                request, "Bienvenue ! Votre espace maraîcher est prêt : "
+                request, "Bienvenue ! Votre espace exploitant est prêt : "
                 "commencez par ajouter vos produits.")
             return redirect("portal:dashboard")
     else:
-        form = ProducerRegisterForm()
-    return render(request, "portal/registration/register_producer.html", {"form": form})
+        form = InscriptionExploitantForm()
+    return render(request, "portal/registration/register_producer.html",
+                  {"form": form})
 
 
 def register_client(request):
     if request.method == "POST":
-        form = ClientRegisterForm(request.POST)
+        form = InscriptionClientForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
             messages.success(request, "Compte client créé. À vous de commander !")
             return redirect("portal:home")
     else:
-        form = ClientRegisterForm()
-    return render(request, "portal/registration/register_client.html", {"form": form})
+        form = InscriptionClientForm()
+    return render(request, "portal/registration/register_client.html",
+                  {"form": form})
 
 
-def is_producer(user):
-    return user.is_authenticated and hasattr(user, "producer")
+def est_exploitant(user):
+    return user.is_authenticated and hasattr(user, "exploitant")
 
 
-producer_required = user_passes_test(is_producer, login_url="portal:login")
+exploitant_requis = user_passes_test(est_exploitant, login_url="portal:login")
 
 
 # ---------------------------------------------------------------- espace pro
 
 @login_required
-@producer_required
+@exploitant_requis
 def dashboard(request):
-    producer = request.user.producer
+    exploitant = request.user.exploitant
     return render(request, "portal/pro/dashboard.html", {
-        "producer": producer,
-        "products": producer.products.filter(is_active=True),
-        "harvest": HarvestWeek.objects.filter(producer=producer)
-                     .order_by("-week_start").first(),
-        "points": producer.delivery_points.all(),
-        "slots": producer.delivery_slots.all(),
-        "pending_orders": producer.orders.filter(status=Order.Status.PENDING)
-                          .order_by("-created_at")[:10],
+        "exploitant": exploitant,
+        "produits": exploitant.produits.filter(actif=True),
+        "semaine": SemaineRecolte.objects.filter(exploitant=exploitant)
+                   .order_by("-lundi").first(),
+        "points": exploitant.points_livraison.all(),
+        "creneaux": exploitant.creneaux.all(),
+        "commandes_attente": exploitant.commandes
+                             .filter(statut=Commande.Statut.NOUVELLE)
+                             .order_by("-creee_le")[:10],
     })
 
 
 @login_required
-@producer_required
-def product_create(request):
+@exploitant_requis
+def produit_creer(request):
     if request.method == "POST":
-        form = ProductForm(request.POST, request.FILES)
+        form = ProduitForm(request.POST, request.FILES)
         if form.is_valid():
-            product = form.save(commit=False)
-            product.producer = request.user.producer
-            product.save()
-            messages.success(request, f"Produit « {product.name} » ajouté.")
+            produit = form.save(commit=False)
+            produit.exploitant = request.user.exploitant
+            produit.save()
+            messages.success(request, f"Produit « {produit.nom} » ajouté.")
             return redirect("portal:dashboard")
     else:
-        form = ProductForm()
+        form = ProduitForm()
     return render(request, "portal/pro/product_form.html",
-                  {"form": form, "title": "Ajouter un produit"})
+                  {"form": form, "titre": "Ajouter un produit"})
 
 
 @login_required
-@producer_required
-def product_edit(request, pk):
-    product = get_object_or_404(Product, pk=pk, producer=request.user.producer)
+@exploitant_requis
+def produit_modifier(request, pk):
+    produit = get_object_or_404(Produit, pk=pk,
+                                exploitant=request.user.exploitant)
     if request.method == "POST":
-        form = ProductForm(request.POST, request.FILES, instance=product)
+        form = ProduitForm(request.POST, request.FILES, instance=produit)
         if form.is_valid():
             form.save()
             messages.success(request, "Produit mis à jour.")
             return redirect("portal:dashboard")
     else:
-        form = ProductForm(instance=product)
+        form = ProduitForm(instance=produit)
     return render(request, "portal/pro/product_form.html",
-                  {"form": form, "title": "Modifier le produit"})
+                  {"form": form, "titre": "Modifier le produit"})
 
 
 @login_required
-@producer_required
-def harvest_manage(request, harvest_id=None):
+@exploitant_requis
+def harvest_manage(request, semaine_id=None):
     """Saisie des dispos hebdo (ESTIMATIONS) : quantité estimée + prix."""
-    producer = request.user.producer
+    exploitant = request.user.exploitant
     today = timezone.localdate()
-    monday = today - datetime.timedelta(days=today.weekday())
-    harvest = None
-    if harvest_id:
-        harvest = get_object_or_404(HarvestWeek, pk=harvest_id, producer=producer)
+    lundi = today - datetime.timedelta(days=today.weekday())
+    semaine = None
+    if semaine_id:
+        semaine = get_object_or_404(SemaineRecolte, pk=semaine_id,
+                                   exploitant=exploitant)
     elif request.method == "GET":
-        harvest = (HarvestWeek.objects.filter(producer=producer)
-                   .order_by("-week_start").first())
-        if harvest:
-            return redirect("portal:harvest_manage", harvest.pk)
+        semaine = (SemaineRecolte.objects.filter(exploitant=exploitant)
+                   .order_by("-lundi").first())
+        if semaine:
+            return redirect("portal:harvest_manage", semaine.pk)
 
     if request.method == "POST":
-        if not harvest:
-            week_start = request.POST.get("week_start") or monday.isoformat()
+        if not semaine:
+            lundi_saisi = request.POST.get("lundi") or lundi.isoformat()
             try:
-                week_start = datetime.date.fromisoformat(week_start)
+                lundi_saisi = datetime.date.fromisoformat(lundi_saisi)
             except ValueError:
-                week_start = monday
-            harvest, _created = HarvestWeek.objects.get_or_create(
-                producer=producer,
-                week_start=week_start,
+                lundi_saisi = lundi
+            semaine, _cree = SemaineRecolte.objects.get_or_create(
+                exploitant=exploitant,
+                lundi=lundi_saisi,
                 defaults={"note": request.POST.get("note", "")})
-        harvest.note = request.POST.get("note", "")
-        harvest.is_published = bool(request.POST.get("is_published"))
-        harvest.save()
-        for product in producer.products.filter(is_active=True):
-            qty = request.POST.get(f"qty_{product.pk}", "").strip()
-            price = request.POST.get(f"price_{product.pk}", "").strip()
-            if not qty or not price:
+        semaine.note = request.POST.get("note", "")
+        semaine.publiee = bool(request.POST.get("publiee"))
+        semaine.save()
+        for produit in exploitant.produits.filter(actif=True):
+            qty = request.POST.get(f"qty_{produit.pk}", "").strip()
+            prix = request.POST.get(f"price_{produit.pk}", "").strip()
+            if not qty or not prix:
                 continue
             try:
-                qty, price = Decimal(qty), Decimal(price)
+                qty, prix = Decimal(qty), Decimal(prix)
             except InvalidOperation:
                 continue
-            HarvestItem.objects.update_or_create(
-                harvest=harvest, product=product,
-                defaults={"quantity_estimate": qty, "unit_price": price})
-        for item in harvest.items.all():
-            if f"qty_{item.product_id}" not in request.POST:
-                item.delete()
+            LigneRecolte.objects.update_or_create(
+                recolte=semaine, produit=produit,
+                defaults={"quantite_estimee": qty, "prix_unitaire": prix})
+        for ligne in semaine.lignes.all():
+            if f"qty_{ligne.produit_id}" not in request.POST:
+                ligne.delete()
         messages.success(request, "Récolte enregistrée.")
         return redirect("portal:dashboard")
 
-    items = {i.product_id: i for i in harvest.items.all()} if harvest else {}
+    lignes = {l.produit_id: l for l in semaine.lignes.all()} if semaine else {}
     rows = [{
-        "product": p,
-        "qty": items[p.pk].quantity_estimate if p.pk in items else None,
-        "price": items[p.pk].unit_price if p.pk in items else None,
-    } for p in producer.products.filter(is_active=True)]
+        "produit": p,
+        "qty": lignes[p.pk].quantite_estimee if p.pk in lignes else None,
+        "price": lignes[p.pk].prix_unitaire if p.pk in lignes else None,
+    } for p in exploitant.produits.filter(actif=True)]
     return render(request, "portal/pro/harvest_form.html", {
-        "harvest": harvest,
+        "semaine": semaine,
         "rows": rows,
-        "default_monday": (harvest.week_start if harvest else monday),
+        "lundi_defaut": (semaine.lundi if semaine else lundi),
     })
 
 
 @login_required
-@producer_required
-def order_list(request, status=None):
-    producer = request.user.producer
-    orders = producer.orders.select_related("client").order_by("-created_at")
-    if status:
-        orders = orders.filter(status=status)
+@exploitant_requis
+def order_list(request, statut=None):
+    exploitant = request.user.exploitant
+    commandes = exploitant.commandes.order_by("-creee_le")
+    if statut:
+        commandes = commandes.filter(statut=statut)
     return render(request, "portal/pro/orders.html",
-                  {"orders": orders, "status_filter": status})
+                  {"commandes": commandes, "filtre_statut": statut})
 
 
 @login_required
-@producer_required
-def order_validate(request, order_id):
+@exploitant_requis
+def order_validate(request, commande_id):
     """Validation / refus — les quantités restent des estimations, rien
-    n'est décompté ici ; seul le contenu livré des paniers comptera (V2)."""
-    producer = request.user.producer
-    order = get_object_or_404(Order, pk=order_id, producer=producer)
-    if request.method == "POST" and order.status == Order.Status.PENDING:
+    n'est décompté ici ; seul le contenu livré des paniers compte."""
+    exploitant = request.user.exploitant
+    commande = get_object_or_404(Commande, pk=commande_id, exploitant=exploitant)
+    if (request.method == "POST"
+            and commande.statut == Commande.Statut.NOUVELLE):
         action = request.POST.get("action")
         if action == "validate":
-            order.status = Order.Status.VALIDATED
-            order.validated_at = timezone.now()
-            order.save()
-            messages.success(request, f"Commande #{order.pk} validée.")
+            commande.statut = Commande.Statut.VALIDEE
+            commande.validee_le = timezone.now()
+            commande.save()
+            messages.success(request, f"Commande #{commande.pk} validée.")
         elif action == "refuse":
-            order.status = Order.Status.REFUSED
-            order.save()
-            messages.info(request, f"Commande #{order.pk} refusée.")
+            commande.statut = Commande.Statut.REFUSEE
+            commande.save()
+            messages.info(request, f"Commande #{commande.pk} refusée.")
     return redirect("portal:order_list")
 
 
@@ -269,83 +277,91 @@ def order_create(request, slug):
     Les quantités affichées sont des estimations : aucune commande n'est
     bloquée par une quantité indicative.
     """
-    producer = get_object_or_404(Producer, slug=slug, is_visible=True)
+    exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
     today = timezone.localdate()
-    monday = today - datetime.timedelta(days=today.weekday())
-    harvest = (HarvestWeek.objects.filter(producer=producer, is_published=True,
-                                          week_start__lte=monday)
-               .order_by("-week_start").first())
-    if not harvest:
-        messages.info(request, "Ce maraîcher n'a pas encore publié de récolte.")
+    lundi = today - datetime.timedelta(days=today.weekday())
+    semaine = (SemaineRecolte.objects.filter(exploitant=exploitant,
+                                             publiee=True,
+                                             lundi__lte=lundi)
+               .order_by("-lundi").first())
+    if not semaine:
+        messages.info(request,
+                      "Ce producteur n'a pas encore publié de récolte.")
         return redirect("portal:producer_detail", slug=slug)
-    items = harvest.items.select_related("product")
+    lignes = semaine.lignes.select_related("produit")
 
     if request.method == "POST":
-        order_items, total = [], Decimal("0")
-        for item in items:
-            raw = request.POST.get(f"qty_{item.pk}", "").strip()
-            if not raw:
+        lignes_souhaitees, total = [], Decimal("0")
+        for ligne in lignes:
+            brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
+            if not brut:
                 continue
             try:
-                qty = Decimal(raw)
+                qty = Decimal(brut)
             except InvalidOperation:
                 continue
             if qty <= 0:
                 continue
-            order_items.append((item, qty))
-            total += qty * item.unit_price
-        point = producer.delivery_points.filter(
-            pk=request.POST.get("delivery_point")).first()
+            lignes_souhaitees.append((ligne, qty))
+            total += qty * ligne.prix_unitaire
+        point = exploitant.points_livraison.filter(
+            pk=request.POST.get("point_livraison")).first()
         try:
-            delivery_date = datetime.date.fromisoformat(request.POST["delivery_date"])
+            date_livraison = datetime.date.fromisoformat(
+                request.POST["date_livraison"])
         except (KeyError, ValueError):
-            delivery_date = None
-        if not order_items or delivery_date is None or delivery_date < today:
+            date_livraison = None
+        if (not lignes_souhaitees or date_livraison is None
+                or date_livraison < today):
             messages.error(request,
                            "Commande invalide : vérifiez les quantités et la date.")
             return redirect("portal:order_create", slug=slug)
+        nom_client = (request.user.get_full_name() or request.user.username)
         with transaction.atomic():
-            order = Order.objects.create(
-                producer=producer, client=request.user,
-                delivery_point=point, delivery_date=delivery_date,
+            commande = Commande.objects.create(
+                exploitant=exploitant, client=request.user,
+                nom_client=nom_client, email_client=request.user.email,
+                point_livraison=point, date_livraison=date_livraison,
                 note=request.POST.get("note", ""), total=total)
-            for item, qty in order_items:
-                OrderItem.objects.create(
-                    order=order, product=item.product,
-                    quantity=qty, unit_price=item.unit_price)
+            for ligne, qty in lignes_souhaitees:
+                LigneCommande.objects.create(
+                    commande=commande, produit=ligne.produit,
+                    quantite=qty, prix_unitaire=ligne.prix_unitaire)
         messages.success(
-            request, "Commande envoyée ! Le maraîcher va la valider, "
+            request, "Commande envoyée ! Le producteur va la valider, "
             "vous la retrouverez dans « Mes commandes ».")
         return redirect("portal:my_orders")
 
     # Dates futures correspondant aux jours de créneaux (28 jours)
-    slot_days = {s.day_of_week for s in producer.delivery_slots.all()}
+    jours = {c.jour for c in exploitant.creneaux.all()}
     dates = []
     for i in range(0, 29):
         d = today + datetime.timedelta(days=i)
-        if d.isoweekday() in slot_days or not slot_days:
+        if d.isoweekday() in jours or not jours:
             dates.append(d)
     return render(request, "portal/order_create.html", {
-        "producer": producer,
-        "harvest": harvest,
-        "items": items,
-        "delivery_points": producer.delivery_points.all(),
+        "exploitant": exploitant,
+        "semaine": semaine,
+        "lignes": lignes,
+        "points_livraison": exploitant.points_livraison.all(),
         "dates": dates,
     })
 
 
 @login_required
 def my_orders(request):
-    orders = (request.user.orders.select_related("producer")
-              .prefetch_related("items__product").order_by("-created_at"))
-    return render(request, "portal/my_orders.html", {"orders": orders})
+    commandes = (request.user.commandes.select_related("exploitant")
+                 .prefetch_related("lignes__produit").order_by("-creee_le"))
+    return render(request, "portal/my_orders.html",
+                  {"commandes": commandes})
 
 
 @login_required
-def order_cancel(request, order_id):
-    order = get_object_or_404(Order, pk=order_id, client=request.user)
-    if request.method == "POST" and order.status == Order.Status.PENDING:
-        order.status = Order.Status.CANCELLED
-        order.save()
-        messages.info(request, f"Commande #{order.pk} annulée.")
+def order_cancel(request, commande_id):
+    commande = get_object_or_404(Commande, pk=commande_id, client=request.user)
+    if (request.method == "POST"
+            and commande.statut == Commande.Statut.NOUVELLE):
+        commande.statut = Commande.Statut.ANNULEE
+        commande.save()
+        messages.info(request, f"Commande #{commande.pk} annulée.")
     return redirect("portal:my_orders")
