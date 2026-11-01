@@ -6,15 +6,27 @@
 
 ## Principes
 
-- **PostgreSQL** en prod : les attributs libres utilisent des champs **JSONB**
-  (SQLite accepté en mono-ferme : Django dégrade `JSONField` en texte — OK,
-  aucun filtrage avancé requis sur ces attributs).
-- Les quantités hebdo sont des **estimations** : aucun décompte à la commande.
-  Seules les quantités **livrées dans les paniers** sont décomptées.
-- Chaque producteur possède **ses propres catégories et produits** ; le
-  catalogue standard embarqué n'est qu'un **point de départ copiable**.
-- Les prix et quantités sont **figés** (copie) au moment de la commande :
-  modifier un produit n'altère jamais l'historique.
+1. **PostgreSQL** en prod : les attributs libres utilisent des champs **JSONB**
+   (SQLite accepté en mono-ferme : Django dégrade `JSONField` en texte — OK,
+   aucun filtrage avancé requis sur ces attributs).
+2. **Quantités hebdo = estimations** : aucun décompte à la commande.
+   Seules les quantités **livrées dans les paniers** sont décomptées.
+3. **Catalogues par producteur** : chacun possède ses catégories et produits ;
+   le catalogue standard embarqué n'est qu'un point de départ copiable.
+4. **Prix et quantités figés à la commande** : modifier un produit n'altère
+   jamais l'historique.
+5. **Volumes fichiers maîtrisés** (voir § Médias) : l'illustration par défaut
+   est l'emoji/SVG du catalogue standard — une ferme complète doit pouvoir
+   tourner **sans aucun fichier importé**.
+6. **Maximum de process côté navigateur** (voir § Front) : le serveur stocke
+   et valide, le navigateur calcule, filtre et compresse.
+7. **Données client minimales** : l'exploitant ne voit les coordonnées d'un
+   client que pour les paniers **livrés** (voir § Données personnelles) ;
+   il ne reçoit que les commandes et infos associées à ses clients, jamais
+   la base client du portail.
+8. **Paramétrage hebdo par l'exploitant** : la récolte publiée chaque semaine
+   détermine ce qui est visible ; ses modalités d'échange (modèles de
+   messages, préférences) ne changent que s'il les modifie.
 
 ## Catalogue
 
@@ -33,37 +45,43 @@ Catégories **définies par chaque producteur** (remplacent le champ texte `cate
 
 ### Product **[V1 → évolué en V2]**
 
-Évolutions du modèle existant :
-
 | Champ | Type | Notes |
 |---|---|---|
 | category | FK ProductCategory, SET_NULL, null | remplace le champ texte |
-| attributes | JSONField, default dict | attributs libres : `{"variété": "Butternut", "label": "AB", "saison": ["été", "automne"]}` — stockés en JSONB |
-| from_standard | FK StandardProduct, SET_NULL, null | traçabilité de la copie depuis le catalogue standard |
+| attributes | JSONField, default dict | attributs libres : `{"variété": "Butternut", "label": "AB", "saison": ["été"]}` — JSONB |
+| from_standard | FK StandardProduct, SET_NULL, null | traçabilité de la copie |
 | is_custom | Boolean | produit créé pour l'usage propre du producteur |
-| price | Decimal(6,2) | prix de référence (peut être surchargé par ligne de récolte) |
+| emoji | Char(8), blank | illustration embarquée héritée du produit standard |
+| svg | Text, blank | SVG inline optionnel (embarqué, licence libre) |
+| photo | ImageField, **null/blank** | optionnelle, redimensionnée/compressée côté navigateur avant envoi |
+| price | Decimal(6,2) | prix de référence |
 
 ### StandardProduct **[V2 — issue #1]**
 
 Catalogue standard embarqué (~80–120 produits types), en données de départ
-(fixture/migration), **pas éditable par les producteurs** (lecture seule).
+(fixture/migration), **lecture seule** pour les producteurs.
 
 | Champ | Type | Notes |
 |---|---|---|
 | name | Char(150) unique | « Carotte » |
-| category | Char(80) | « Légumes racines » (catégorie standard simple) |
+| category | Char(80) | catégorie standard simple |
 | unit | Char(2) choices | kg / pièce / botte / barquette |
-| seasons | JSONField | `["printemps", "été", "automne"]` → filtre saison |
-| emoji | Char(8) | illustration embarquée 🥕 (zéro dépendance) |
-| svg | Text, blank | SVG inline optionnel (embarqué, licence libre) |
+| seasons | JSONField | `["printemps", "été"]` → filtre saison |
+| emoji | Char(8) | 🥕 — zéro dépendance, zéro fichier |
+| svg | Text, blank | SVG inline optionnel |
 
-Filtres côté vitrine standard : catégorie, saison, recherche nom.
-Copie : écran à cases à cocher → `Product.objects.create(from_standard=…)`
-par producteur.
+Filtres (navigateur) : catégorie, saison, recherche nom. Copie à cocher →
+`Product.objects.create(from_standard=…)`.
 
 ## Récoltes et paniers
 
-### HarvestWeek / HarvestItem **[V1]**
+### HarvestWeek **[V1 → complétée]**
+
+| Champ ajouté | Type | Notes |
+|---|---|---|
+| is_published | Boolean, default False | **paramétrage hebdo** : la récolte n'est visible côté client que publiée ; l'exploitant peut préparer la semaine à l'avance puis publier |
+
+### HarvestItem **[V1]**
 
 Inchangés : estimations hebdo, prix par ligne, aucune réservation de stock.
 
@@ -74,13 +92,12 @@ Panier **numéroté**, préparé pour un client, un jour de livraison.
 | Champ | Type | Notes |
 |---|---|---|
 | producer | FK Producer, CASCADE | |
-| client | FK User, SET_NULL, null | null si commande saisie par le producteur pour un client sans compte |
-| client_name | Char(150) | figé : nom affiché même si le compte disparaît |
-| number | PositiveSmallInt | **n°1..X par client et par jour** — calculé : (dernier n° du couple client/jour) + 1 |
+| client | FK User, SET_NULL, null | null si client sans compte (saisie producteur) |
+| client_name | Char(150) | figé à la création |
+| number | PositiveSmallInt | **n°1..X par client et par jour** |
 | delivery_date | Date, indexé | jour de livraison réel |
-| delivery_slot | FK DeliverySlot, SET_NULL, null | créneau associé |
-| delivery_point | FK DeliveryPoint, SET_NULL, null | |
-| order | FK Order, SET_NULL, null | commande d'origine si portail ; null si saisie directe |
+| delivery_slot / delivery_point | FK, SET_NULL, null | |
+| order | FK Order, SET_NULL, null | commande portail d'origine, null si saisie directe |
 | status | Choices | `PREPARING` / `READY` / `DELIVERED` / `COLLECTED` |
 | total | Decimal(8,2) | |
 
@@ -88,7 +105,7 @@ Panier **numéroté**, préparé pour un client, un jour de livraison.
 
 ### BasketItem **[V2]**
 
-Contenu **effectivement livré** — c'est LA source du décompte de production.
+Contenu **effectivement livré** — source du décompte de production.
 
 | Champ | Type | Notes |
 |---|---|---|
@@ -97,76 +114,61 @@ Contenu **effectivement livré** — c'est LA source du décompte de production.
 | quantity | Decimal(8,2) | quantité réellement mise dans le panier |
 | unit_price | Decimal(6,2) | prix figé à la livraison |
 
-**Export comptable CSV** (issue #8) : produit, quantité, prix, total, date de
-livraison, client — uniquement `status = DELIVERED / COLLECTED`.
+**Export comptable CSV** (issue #8) : produit, quantité, prix, total, date,
+client — uniquement `DELIVERED / COLLECTED`.
 
 ### Order / OrderItem **[V1]**
 
 Évolutions mineures :
 
-- `order` peut être `null` côté client → `created_by_producer = True` pour
-  les saisies directes (issue #2) ;
-- à la validation d'une commande, un `Basket` pré-rempli est proposé
-  (contenu copiable/ajustable) — la commande ne décompte rien ;
-- `OrderItem` reste figé (historique), les ajustements se font dans `BasketItem`.
+- `created_by_producer = Boolean` pour les saisies directes (issue #2) ;
+- validation d'une commande → un `Basket` pré-rempli est proposé
+  (ajustable), la commande ne décompte rien ;
+- `OrderItem` figé (historique), ajustements dans `BasketItem`.
 
 ## Livraison
 
 ### DeliveryPoint / DeliverySlot **[V1]**
 
-Inchangés. Écrans producteur dédiés prévus (issue #9).
+Inchangés. Écrans producteur prévus (issue #9).
 
 ## Communication **[V2 — issue #3]**
 
-### MessageTemplate
+L'exploitant garde ses modalités d'échange par défaut ; il ne les modifie
+que s'il le souhaite.
 
-Modèles de messages personnalisables, avec placeholders `{{ client }}`,
-`{{ panier }}`,`{{ ferme }}`,`{{ creneau }}`…
+### MessageTemplate
 
 | Champ | Type | Notes |
 |---|---|---|
-| producer | FK Producer, CASCADE | `unique_together ("producer", "kind")` |
+| producer | FK, CASCADE | `unique_together ("producer", "kind")` |
 | kind | Choices | `ORDER_CONFIRM` / `BASKET_READY` / `DELIVERY_DONE` / `NEWSLETTER` / `ANNOUNCEMENT` |
 | subject | Char(200) | |
-| body | Text | texte du message, placeholders inclus |
+| body | Text | placeholders `{{ client }}`, `{{ panier }}`, `{{ ferme }}`, `{{ creneau }}` |
 | channel | Choices | `EMAIL` / `SMS` |
-| is_active | Boolean | un modèle actif par (producer, kind, channel) |
-
-Chaque type possède un **contenu par défaut** (fourni en fixture) que le
-producteur édite — jamais d'envoi bloquant si le modèle est cassé : fallback
-sur le défaut.
+| is_active | Boolean | fallback sur le défaut si modèle cassé |
 
 ### Newsletter / Announcement
 
 | Modèle | Champs | Notes |
 |---|---|---|
-| Newsletter | producer, week_start (FK HarvestWeek nullable), subject, body, sent_at | envoyée aux clients abonnés |
-| Announcement | producer, subject, body, sent_at | annonce ponctuelle, ex : « paniers disponibles » |
+| Newsletter | producer, week_start (FK HarvestWeek nullable), subject, body, sent_at | aux clients abonnés |
+| Announcement | producer, subject, body, sent_at | annonce ponctuelle (paniers dispo…) |
 
 ### ContactPreference
-
-Par client et par producteur (le même client peut vouloir tout d'un
-maraîcher et seulement les annonces d'un autre) :
 
 | Champ | Type | Notes |
 |---|---|---|
 | client | FK User, CASCADE | `unique_together ("client", "producer")` |
 | producer | FK Producer, CASCADE | |
-| wants_newsletter | Boolean, default True | |
-| wants_announcements | Boolean, default True | |
-| channel | Choices | `EMAIL` / `SMS` / `BOTH` | `SMS` → n° du ClientProfile requis |
+| wants_newsletter / wants_announcements | Boolean, default True | |
+| channel | Choices | `EMAIL` / `SMS` / `BOTH` |
 
 ### ProducerMessagingConfig
 
-SMTP et passerelle SMS **du producteur** (jamais centralisés) :
-
-| Champ | Type | Notes |
-|---|---|---|
-| producer | OneToOne Producer | |
-| smtp_host / smtp_port / smtp_user / smtp_password / smtp_from | Char/Int | mot de passe chiffré au repos (Keyczar/Fernet), jamais exporté |
-| sms_provider | Choices | `FREE` / `OVH` / `TWILIO` / `CUSTOM_HTTP`… |
-| sms_config | JSONField | endpoint + credentials (chiffrés), format propre à la passerelle |
-| daily_quota / quiet_hours | SmallInt / Char | garde-fous anti-spam |
+SMTP et passerelle SMS **du producteur** (jamais centralisés) : smtp_*,
+sms_provider + sms_config (JSON, credentials chiffrés), daily_quota,
+quiet_hours. Cf. version précédente.
 
 ## Vitrine **[V2 — issue #4]**
 
@@ -175,14 +177,61 @@ SMTP et passerelle SMS **du producteur** (jamais centralisés) :
 | Champ | Type | Notes |
 |---|---|---|
 | producer | OneToOne Producer | |
-| hero_title / hero_text | Char/Text | bloc d'accueil personnalisé |
-| theme_color | Char(7) | couleur d'accent (#RRGGBB) |
-| banner_image | Image | |
+| hero_title / hero_text | Char/Text | personnalisables |
+| theme_color | Char(7) | #RRGGBB |
+| banner_image | Image, **null/blank** | optionnelle, compressée côté navigateur |
 | show_harvest / show_catalog / show_slots | Boolean | sections visibles |
-| social_links | JSONField | `{"facebook": "…", "instagram": "…"}` |
+| social_links | JSONField | `{"facebook": "…"}` |
+
+## Médias : maîtrise des volumes
+
+Objectif : **une instance entière doit rester légère**, même avec des
+dizaines de producteurs.
+
+- **Défaut zéro fichier** : emoji/SVG inline (catalogue standard) — une ferme
+  sans logo ni photo fonctionne à l'identique, avec un avatar emoji 🌱
+  généré par défaut.
+- Logo/banner/photo **optionnels** ; s'ils existent :
+  - compression **dans le navigateur** avant upload (Canvas API :
+    max 512 px de côté, JPEG qualité ~0.8, cible < 100 Ko) ;
+  - contrôle serveur en second recours (rejet > 300 Ko).
+- Pas de stockage de documents (catalogues produits en base + JSON, pas en
+  fichiers) ; export/import JSON pour la portabilité.
+- Nettoyage : toute image orpheline (produit supprimé) purgée.
+
+## Front : maximum de process dans le navigateur
+
+Le serveur Django **stocke, authentifie et valide** ; le navigateur client
+fait le reste, en JavaScript vanilla (pas de framework, décision maintenue) :
+
+- filtres catalogue (catégorie, saison, recherche) **côté client** sur le
+  JSON servi une seule fois ;
+- **calcul du panier en direct** (totaux, quantités) dans le navigateur ;
+  le serveur ne fait qu'une validation des prix/poids à la soumission ;
+- compression d'images avant upload (Canvas) ;
+- carte Leaflet : filtrage et clustering des marqueurs localement.
+
+Bénéfices : moins de trafic serveur, réactivité, et un portail utilisable
+sur les connexions rurales lentes.
+
+## Données personnelles : partage minimal avec l'exploitant
+
+- Les coordonnées complètes d'un client (e-mail, téléphone, adresse)
+  restent **côté portail** ; l'exploitant ne voit, pour un panier donné, que
+  le **nom** (nécessaire à la numérotation) tant que le panier n'est pas livré.
+- Au passage `DELIVERED / COLLECTED`, un **instantané** `client_contact`
+  (JSON : e-mail/tél. selon le canal choisi) est copié dans le `Basket` :
+  l'exploitant détient alors l'historique de ses livraisons avec les infos
+  clients associées, en base, liées à son exploitation.
+- L'exploitant **ne peut pas** lister ni exporter l'ensemble des clients du
+  portail : il ne reçoit que les commandes et infos liées à ses propres
+  paniers.
+- RGPD : finalité explicite (exécution de la commande), durée de conservation
+  paramétrable, droit d'accès/effacement côté portail.
 
 ## Historique des modifications
 
 | Version | Changement |
 |---|---|
-| 0.1 | Première rédaction — à valider avant migrations |
+| 0.1 | Première rédaction |
+| 0.2 | Volumes maîtrisés, process navigateur, données client partagées à la livraison, publication hebdo (retours Julien) |
