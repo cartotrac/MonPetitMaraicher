@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Inscription client — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>Créer mon compte client</h1>
+<form method="post" class="form">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-lg" type="submit">Créer mon compte</button>
+</form>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Producteurs locaux — MonPetitMaraicher{% endblock %}
+{% block extrahead %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+{% block content %}
+
+{# ---- Bandeau d'action ---- #}
+<section class="action-bar">
+  <a class="btn btn-lg" href="{% url 'portal:producer_search' %}">🔍 Chercher mon producteur ou un produit</a>
+  <a class="btn btn-outline btn-lg" href="{% url 'portal:register_producer' %}">🧑‍🌾 Je suis producteur — rejoindre le réseau</a>
+</section>
+
+{# ---- Hero section : portail, philosophie, fonctionnalités ---- #}
+<section class="hero">
+  <h1>Du champ à votre table, en circuit court</h1>
+  <p class="hero-lead">
+    MonPetitMaraicher met en relation les maraîchers et petits producteurs indépendants
+    avec les clients de leur territoire. Chaque producteur reste maître de ses prix,
+    de ses produits et de ses clients : le portail est un outil au service des
+    circuits courts, pas un intermédiaire. Un bien commun, libre et réplicable.
+  </p>
+  <div class="grid features">
+    <div class="feature"><h3>🧺 Récoltes de la semaine</h3>
+      <p>Chaque producteur publie ses disponibilités hebdomadaires : produits, quantités estimées, prix.</p></div>
+    <div class="feature"><h3>📍 Points de livraison</h3>
+      <p>Marchés, AMAP, ferme : chaque producteur définit ses points de retrait et créneaux.</p></div>
+    <div class="feature"><h3>🛒 Commande directe</h3>
+      <p>Le client commande auprès du producteur qui valide : paniers préparés pour chaque jour de livraison.</p></div>
+    <div class="feature"><h3>✉️ Communication directe</h3>
+      <p>Newsletters et annonces de mise à disposition, par la boîte mail du producteur.</p></div>
+  </div>
+</section>
+
+{# ---- Carte de France des producteurs ---- #}
+<section class="map-section">
+  <div class="map-header">
+    <h2>🗺️ Les producteurs du réseau</h2>
+    <button id="btn-geoloc" class="btn" type="button">📍 Me géolocaliser</button>
+  </div>
+  <div id="carte-producteurs" class="map-canvas"></div>
+</section>
+
+{% endblock %}
+{% block extrajs %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{% static 'js/landing-map.js' %}"></script>
+{% endblock %}

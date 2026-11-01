@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Inscription producteur — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>Créer mon espace producteur</h1>
+<p>Renseignez les informations de votre exploitation : elles seront visibles
+   sur votre page publique. Vous pourrez tout modifier ensuite.</p>
+<form method="post" enctype="multipart/form-data" class="form">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-lg" type="submit">Créer mon espace pro</button>
+</form>
+{% endblock %}

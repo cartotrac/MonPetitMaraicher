@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ producer.farm_name }} — MonPetitMaraicher{% endblock %}
+{% block content %}
+<div class="producer-head">
+  {% if producer.logo %}<img class="producer-logo" src="{{ producer.logo.url }}" alt="Logo">{% endif %}
+  <div>
+    <h1>{{ producer.farm_name }}</h1>
+    {% if producer.certification == 'AB' %}<span class="badge badge-ab">Certifié AB</span>
+    {% elif producer.certification == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
+    {% elif producer.certification == 'PAYSAN' %}<span class="badge badge-paysan">Agriculture paysanne</span>
+    {% elif producer.certification == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>{% endif %}
+    <p class="muted">{{ producer.address }} — {{ producer.zip_code }} {{ producer.city }}</p>
+  </div>
+</div>
+
+{% if producer.description %}<p class="producer-desc">{{ producer.description }}</p>{% endif %}
+
+<section>
+  <h2>🧺 Récolte de la semaine{% if harvest %} (semaine du {{ harvest.week_start|date:"d/m/Y" }}){% endif %}</h2>
+  {% if harvest and harvest.note %}<p class="flash info">{{ harvest.note }}</p>{% endif %}
+  {% if harvest_items %}
+    <p class="muted">Les quantités sont des estimations : elles vous informent des
+       disponibilités attendues. Le producteur ajuste au moment de la préparation.</p>
+    <table class="table">
+      <thead><tr><th>Produit</th><th>Disponibilité estimée</th><th>Prix</th></tr></thead>
+      <tbody>
+      {% for item in harvest_items %}
+        <tr>
+          <td>{{ item.product.name }}</td>
+          <td>~ {{ item.quantity_estimate }} {{ item.product.get_unit_display }}</td>
+          <td>{{ item.unit_price }} €</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if user.is_authenticated %}
+      <a class="btn" href="{% url 'portal:order_create' producer.slug %}">Commander</a>
+    {% else %}
+      <p><a href="{% url 'login' %}">Connectez-vous</a> ou
+         <a href="{% url 'portal:register_client' %}">créez un compte</a> pour commander.</p>
+    {% endif %}
+  {% else %}
+    <p class="muted">Pas encore de récolte publiée cette semaine.</p>
+  {% endif %}
+</section>
+
+{% if delivery_points %}
+<section>
+  <h2>📍 Points de livraison</h2>
+  <ul>
+    {% for point in delivery_points %}
+      <li><strong>{{ point.name }}</strong> — {{ point.address }}, {{ point.zip_code }} {{ point.city }}
+        {% if point.note %}<br><span class="muted">{{ point.note }}</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if delivery_slots %}
+<section>
+  <h2>🗓️ Créneaux</h2>
+  <ul>
+    {% for slot in delivery_slots %}
+      <li>{{ slot.get_day_of_week_display }} {{ slot.start_time }}–{{ slot.end_time }}
+          — {{ slot.get_frequency_display }}
+          {% if slot.delivery_point %}({{ slot.delivery_point.name }}){% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

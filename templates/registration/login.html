@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Connexion — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>Connexion</h1>
+<form method="post" class="form">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-lg" type="submit">Se connecter</button>
+  <p class="muted">
+    Pas encore de compte ?
+    <a href="{% url 'portal:register_client' %}">Client</a> ·
+    <a href="{% url 'portal:register_producer' %}">Producteur</a>
+  </p>
+</form>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr" data-geojson-url="{% url 'portal:producers_geojson' %}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MonPetitMaraicher{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extrahead %}{% endblock %}
+</head>
+<body data-geojson-url="{% url 'portal:producers_geojson' %}">
+<header class="site-header">
+  <nav class="nav container">
+    <a class="brand" href="{% url 'portal:home' %}">🌱 MonPetitMaraicher</a>
+    <div class="nav-links">
+      <a href="{% url 'portal:producer_search' %}">Chercher</a>
+      {% if user.is_authenticated %}
+        {% if user.producer %}
+          <a href="{% url 'portal:dashboard' %}">Mon espace pro</a>
+          <a href="{% url 'portal:order_list' %}">Commandes</a>
+        {% else %}
+          <a href="{% url 'portal:my_orders' %}">Mes commandes</a>
+        {% endif %}
+        <form class="inline" method="post" action="{% url 'logout' %}">
+          {% csrf_token %}<button class="btn-link" type="submit">Déconnexion</button>
+        </form>
+      {% else %}
+        <a href="{% url 'portal:register_client' %}">Devenir client</a>
+        <a class="btn btn-outline" href="{% url 'portal:register_producer' %}">Je suis maraîcher</a>
+        <a class="btn" href="{% url 'login' %}">Connexion</a>
+      {% endif %}
+    </div>
+  </nav>
+</header>
+
+<main class="container">
+  {% for message in messages %}
+    <div class="flash {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>MonPetitMaraicher — producteurs locaux, récoltes fraîches, circuits courts.</p>
+  </div>
+</footer>
+{% block extrajs %}{% endblock %}
+</body>
+</html>
