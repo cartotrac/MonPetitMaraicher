@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Mes commandes — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>🧾 Mes commandes</h1>
+{% for order in orders %}
+  <div class="card order-card">
+    <div class="order-head">
+      <strong>{{ order.producer.farm_name }}</strong>
+      <span class="badge badge-{{ order.status }}">{{ order.get_status_display }}</span>
+    </div>
+    <p>📅 {{ order.delivery_date|date:"d/m/Y" }} — 💰 {{ order.total }} €</p>
+    <ul>
+      {% for item in order.items.all %}
+        <li>{{ item.product.name }} × {{ item.quantity }}</li>
+      {% endfor %}
+    </ul>
+    {% if order.status == 'PENDING' %}
+      <form method="post" action="{% url 'portal:order_cancel' order.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-outline" type="submit">Annuler</button>
+      </form>
+    {% endif %}
+  </div>
+{% empty %}
+  <p class="muted">Vous n'avez pas encore de commande.
+     <a href="{% url 'portal:home' %}">Trouvez un producteur !</a></p>
+{% endfor %}
+{% endblock %}

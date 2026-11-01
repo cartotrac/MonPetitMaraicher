@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Commandes reçues — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>📥 Commandes reçues</h1>
+<div class="quick-actions">
+  <a class="btn {% if not status_filter %}btn-active{% endif %}" href="{% url 'portal:order_list' %}">Toutes</a>
+  <a class="btn {% if status_filter == 'PENDING' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'PENDING' %}">À valider</a>
+  <a class="btn {% if status_filter == 'VALIDATED' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'VALIDATED' %}">Validées</a>
+</div>
+
+{% for order in orders %}
+  <div class="card order-card">
+    <div class="order-head">
+      <strong>#{{ order.pk }} — {{ order.client.username }}</strong>
+      <span class="badge badge-{{ order.status }}">{{ order.get_status_display }}</span>
+    </div>
+    <p>📅 Livraison : {{ order.delivery_date|date:"d/m/Y" }}
+       {% if order.delivery_point %}à {{ order.delivery_point.name }}{% endif %}
+       — 💰 {{ order.total }} €</p>
+    <ul>
+      {% for item in order.items.all %}
+        <li>{{ item.product.name }} × {{ item.quantity }} ({{ item.unit_price }} €/u)</li>
+      {% endfor %}
+    </ul>
+    {% if order.note %}<p class="muted">💬 {{ order.note }}</p>{% endif %}
+    {% if order.status == 'PENDING' %}
+      <form method="post" action="{% url 'portal:order_validate' order.pk %}" class="inline-form">
+        {% csrf_token %}
+        <button class="btn" name="action" value="validate" type="submit">✅ Valider</button>
+        <button class="btn btn-outline" name="action" value="refuse" type="submit">❌ Refuser</button>
+      </form>
+    {% endif %}
+  </div>
+{% empty %}
+  <p class="muted">Aucune commande pour l'instant.</p>
+{% endfor %}
+{% endblock %}
