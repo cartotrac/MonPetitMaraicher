@@ -2,10 +2,8 @@
 
 > Document de référence pour les modèles Django (`portal/models.py`).
 > Convention : **noms de tables et de champs en français**, sans accent dans
-> les identifiants (Django et PostgreSQL les acceptent, mais on garde
-> `numero` plutôt que `numéro` : plus sûr pour les shells, exports et
-> migrations). Les modèles déjà en place en V1 sont signalés **[V1]**, les
-> ajouts prévus **[V2]** (issues #1–#9).
+> les identifiants (`numero`, `quantite`…). Les modèles déjà en place en
+> V1 sont signalés **[V1]**, les ajouts prévus **[V2]** (issues #1–#9).
 
 ## Principes
 
@@ -16,6 +14,10 @@
   Seules les quantités **livrées dans les paniers** sont décomptées.
 - **Seules les commandes validées par l'exploitant puis livrées** persistent
   en base ; les paniers non confirmés ou abandonnés sont **purgés**.
+- **Clients loggués** : historique complet rattaché au compte.
+  **Clients sans compte** : seuls les éléments de session (panier navigateur)
+  et **l'enregistrement de la commande à l'instant t** sont conservés —
+  l'identité est le **contact (e-mail OU téléphone) + nom**.
 - Chaque producteur possède **ses propres catégories et produits** ; le
   catalogue standard embarqué n'est qu'un **point de départ copiable**.
 - Les prix et quantités sont **figés** (copie) au moment de la commande :
@@ -23,7 +25,6 @@
 - **Fichiers** : seuls les visuels de l'exploitant sont importés, sous
   `media/exploitants/{id}/` avec un **naming explicite** et un **quota par
   type**. Le catalogue standard vit en emojis/SVG embarqués : zéro fichier.
-- Identifiants en anglais : `id`, `pk`, `fk` restent standard.
 
 ## Catalogue
 
@@ -80,6 +81,40 @@ Filtres : catégorie, saison, recherche nom. Copie cochable →
 Estimations hebdo, prix par ligne, aucune réservation de stock. L'exploitant
 paramètre chaque semaine **ce qui est visible** côté vitrine.
 
+### Commande **[V1 → évoluée en V2 — issues #2, #6]**
+
+Une commande, **du portail ou saisie par l'exploitant**, porte **toujours
+l'identité contact du client**, loggué ou non.
+
+| Champ | Type | Notes |
+|---|---|---|
+| exploitant | FK Exploitant, CASCADE | `related_name="commandes"` |
+| client | FK Utilisateur, SET_NULL, null | null si client sans compte |
+| nom_client | Char(150) | **toujours rempli**, figé à l'instant t |
+| email_client | EmailField, blank | **e-mail OU téléphone obligatoire** |
+| telephone_client | Char(20), blank | (contrainte de formulaire, pas en base) |
+| statut | Choices | `NOUVELLE` / `VALIDEE` / `REFUSEE` ; livrée → statut porté par le `Panier` |
+| saisie_exploitant | Boolean | saisie directe (issue #2) |
+| panier_souhaite | OneToOne Panier, null | généré à la validation |
+| creee_le | DateTime, indexé | |
+
+**Clé de regroupement client** (vue « commandes par client » de l'exploitant) :
+`exploitant + (client si loggué, sinon email_client ou telephone_client)`.
+Un même contact retrouve ses commandes groupées, loggué ou non. À terme,
+lorsqu'un contact crée un compte, ses commandes passées (même e-mail/tél)
+peuvent lui être **rattachées**.
+
+### LigneCommande **[V1]**
+
+Historique du panier **souhaité** — figé, jamais modifié.
+
+| Champ | Type | Notes |
+|---|---|---|
+| commande | FK Commande, CASCADE | `related_name="lignes"` |
+| produit | FK Produit, PROTECT | |
+| quantite | Decimal(8,2) | quantité demandée |
+| prix_unitaire | Decimal(6,2) | **tarif figé au moment de la commande** |
+
 ### Panier **[V2 — issues #2, #6, #8]**
 
 Panier **numéroté**, préparé pour un client, un jour de livraison.
@@ -87,9 +122,10 @@ Panier **numéroté**, préparé pour un client, un jour de livraison.
 | Champ | Type | Notes |
 |---|---|---|
 | exploitant | FK Exploitant, CASCADE | |
-| client | FK Utilisateur, SET_NULL, null | null si commande saisie pour un client sans compte |
-| nom_client | Char(150) | figé : nom affiché même si le compte disparaît |
-| numero | PositiveSmallInt | **n°1..X par client et par jour** — (dernier n° du couple client/jour) + 1 |
+| client | FK Utilisateur, SET_NULL, null | null si client sans compte |
+| nom_client | Char(150) | figé : identité conservée même sans compte |
+| email_client / telephone_client | Email/Char(20) | figés, copiés de la commande |
+| numero | PositiveSmallInt | **n°1..X par client et par jour** — (dernier n° du couple client/jour) + 1 ; la clé de numérotation = la même clé de regroupement que la commande |
 | date_livraison | Date, indexé | jour de livraison réel |
 | creneau | FK CreneauLivraison, SET_NULL, null | |
 | point_livraison | FK PointLivraison, SET_NULL, null | |
@@ -111,20 +147,19 @@ Contenu **effectivement livré** — LA source du décompte de production.
 | prix_unitaire | Decimal(6,2) | **tarif figé au moment de la commande** |
 
 **Export comptable CSV** (issue #8) : produit, quantité, prix, total, date de
-livraison, client — uniquement `statut = LIVRE / RECU`.
+livraison, client (nom + contact) — uniquement `statut = LIVRE / RECU`.
 
-### Commande / LigneCommande **[V1]**
+### Interface exploitant : suivi visuel des commandes par client **[V2 — issues #2, #6]**
 
-Évolutions mineures :
-
-- `Commande` : `saisie_exploitant = True` pour les saisies directes
-  (issue #2) ; statut `VALIDEE` figé par l'exploitant ;
-- à la validation, un `Panier` pré-rempli est proposé (contenu
-  copiable/ajustable) — la commande ne décompte rien ;
-- `LigneCommande` reste figée (historique du panier **souhaité**), les
-  ajustements de l'exploitant se font dans `LignePanier` (panier **livré**) ;
-- **purge automatique** des commandes non validées ou non livrées
-  (tâche planifiée) : seules les paniers livrés persistent.
+L'écran « Mes clients » de l'exploitant liste les clients **loggués ou non**,
+regroupés par la clé de regroupement ci-dessus, avec pour chacun :
+- nom, contact (e-mail OU tél), badge « compte / sans compte » ;
+- nombre de paniers livrés, dernière commande, paniers en préparation ;
+- l'historique complet des paniers **livrés** (les commandes non validées
+  n'apparaissent pas : elles sont purgées) ;
+- pour les clients sans compte : uniquement **l'enregistrement de la
+  commande à l'instant t** (figé) — pas d'historique de navigation ni de
+  session, ceux-ci restent dans le navigateur.
 
 ## Livraison
 
@@ -149,7 +184,9 @@ Modèles personnalisables, placeholders `{{ client }}`, `{{ panier }}`,
 | actif | Boolean | un actif par (exploitant, type, canal) |
 
 Contenu **par défaut fourni en fixture** et éditable ; **fallback sur le
-défaut** si le modèle personnalisé est cassé.
+défaut** si le modèle personnalisé est cassé. L'envoi utilise le contact
+figé dans la commande (e-mail OU téléphone selon le canal et les
+préférences) — fonctionne donc aussi pour les clients sans compte.
 
 ### Bulletin / Annonce
 
@@ -160,7 +197,7 @@ défaut** si le modèle personnalisé est cassé.
 
 ### PreferenceContact
 
-Par couple client ↔ exploitant.
+Par couple client ↔ exploitant (clients loggués uniquement).
 
 | Champ | Type | Notes |
 |---|---|---|
@@ -210,9 +247,21 @@ Chaque exploitant a un dossier dédié `media/exploitants/{id}/` :
 - Compression/redimensionnement automatique à l'import (taille max par image).
 - Zéro fichier pour le catalogue standard (emojis/SVG embarqués).
 
+## RGPD (rappel, voir canvas dédié)
+
+- Visiteur sans compte : rien de stocké au-delà de la session anonyme ;
+  la commande sans compte conserve **uniquement l'instant t** (identité
+  contact + lignes figées).
+- La clé de regroupement client est visible de l'exploitant pour ses
+  commandes uniquement — jamais l'historique global du client.
+- Suppression du compte : `client` = null, `nom_client` et contacts figés
+  conservés sur l'historique livré (preuve comptable) ; les commandes sans
+  compte peuvent être anonymisées sur demande (droit à l'effacement).
+
 ## Historique des modifications
 
 | Version | Changement |
 |---|---|
+| 0.3 | Commande porte l'identité contact (e-mail OU tél + nom) ; regroupement clients loggués/non ; écran suivi par client |
 | 0.2 | Noms de tables et champs en français ; purge des commandes non livrées ; système de fichiers/naming/quota |
 | 0.1 | Première rédaction |
