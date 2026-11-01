@@ -34,16 +34,23 @@ Le producteur crée sa vitrine en ligne, publie ses récoltes et son planning de
 
 ## Feuille de route
 
-- [ ] Écrans maraîcher : vitrine personnalisable, planning visuel des livraisons et paniers numérotés
-- [ ] Envois réels e-mail/SMS (SMTP du producteur + passerelle SMS au choix)
-- [ ] Géocodage automatique des adresses + clustering des marqueurs
-- [ ] Exports comptables avancés (périodisation, totaux)
-- [ ] Panier multi-producteurs
-- [ ] Mutualisation par département / pays
+Le backlog détaillé est suivi dans les [issues du dépôt](https://github.com/cartotrac/MonPetitMaraicher/issues) :
+
+- [ ] [#1 — Catalogue de produits standard embarqué (emojis/SVG libres) avec filtres](https://github.com/cartotrac/MonPetitMaraicher/issues/1)
+- [ ] [#2 — Saisie directe de commandes par le producteur](https://github.com/cartotrac/MonPetitMaraicher/issues/2)
+- [ ] [#3 — Communication producteur ↔ clients : newsletter, annonces, confirmations e-mail/SMS](https://github.com/cartotrac/MonPetitMaraicher/issues/3)
+- [ ] [#4 — Vitrine producteur personnalisable](https://github.com/cartotrac/MonPetitMaraicher/issues/4)
+- [ ] [#5 — Catégories personnalisables et attributs libres des produits (JSONB)](https://github.com/cartotrac/MonPetitMaraicher/issues/5)
+- [ ] [#6 — Paniers numérotés par client et par jour de livraison](https://github.com/cartotrac/MonPetitMaraicher/issues/6)
+- [ ] [#7 — Géocodage automatique des adresses + clustering carte](https://github.com/cartotrac/MonPetitMaraicher/issues/7)
+- [ ] [#8 — Export comptable des paniers livrés (CSV)](https://github.com/cartotrac/MonPetitMaraicher/issues/8)
+- [ ] [#9 — Écrans producteur : points de livraison et créneaux hebdo](https://github.com/cartotrac/MonPetitMaraicher/issues/9)
+
+Plus loin : panier multi-producteurs, mutualisation par département / pays, automatisation du déploiement.
 
 ## Stack
 
-Python 3.11+ · Django 5 · SQLite (dev) / MySQL-PostgreSQL (prod) · Leaflet + OpenStreetMap · templates HTML/CSS sobres · déploiement WSGI (AlwaysData compatible)
+Python 3.11+ · Django 5 · **PostgreSQL** (prod, champs JSONB pour les attributs personnalisés) / SQLite (dev et instance mono-ferme) · Leaflet + OpenStreetMap · templates HTML/CSS sobres · déploiement WSGI (AlwaysData compatible)
 
 ## Démarrage rapide
 
@@ -58,7 +65,7 @@ python manage.py runserver
 
 ## Déploiement
 
-Voir [docs/DEPLOY_ALWAYSDATA.md](docs/DEPLOY_ALWAYSDATA.md).
+Voir [docs/DEPLOY_ALWAYSDATA.md](docs/DEPLOY_ALWAYSDATA.md) et les [décisions techniques](docs/DECISIONS.md).
 
 ## Licence
 
