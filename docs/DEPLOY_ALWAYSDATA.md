@@ -1,7 +1,9 @@
 # Déploiement sur AlwaysData (sous-domaine)
 
 MonPetitMaraicher est une application Django servie en **WSGI**,
-directement supporté par AlwaysData.
+directement supporté par AlwaysData. Base de données recommandée :
+**PostgreSQL** (natif chez AlwaysData, champs JSONB pour les attributs
+personnalisés des produits).
 
 ## 1. Prérequis
 
@@ -19,12 +21,12 @@ git clone https://github.com/cartotrac/MonPetitMaraicher.git ~/monpetitmaraicher
 cd ~/monpetitmaraicher
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
-venv/bin/pip install mysqlclient
+venv/bin/pip install "psycopg[binary]"
 ```
 
-## 3. Base de données
+## 3. Base de données PostgreSQL
 
-Dans le panneau AlwaysData : **Bases de données > MySQL**, créer :
+Dans le panneau AlwaysData : **Bases de données > PostgreSQL**, créer :
 - une base (ex : `toncompte_mpm`)
 - un utilisateur et son mot de passe
 
@@ -34,12 +36,12 @@ Renseigner ensuite les variables d'environnement (voir `.env.example`) :
 DJANGO_SECRET_KEY=<générée>
 DJANGO_DEBUG=0
 DJANGO_ALLOWED_HOSTS=monpetitmaraicher.tondomaine.fr
-DB_ENGINE=django.db.backends.mysql
+DB_ENGINE=django.db.backends.postgresql
 DB_NAME=toncompte_mpm
 DB_USER=toncompte_mpm
 DB_PASSWORD=***
-DB_HOST=mysql-toncompte.alwaysdata.net
-DB_PORT=3306
+DB_HOST=postgresql-toncompte.alwaysdata.net
+DB_PORT=5432
 ```
 
 Puis :
@@ -50,6 +52,10 @@ venv/bin/python manage.py migrate
 venv/bin/python manage.py createsuperuser
 venv/bin/python manage.py collectstatic
 ```
+
+> 💡 Alternative légère : pour une instance mono-ferme (Raspberry Pi, très
+> petit hébergement), laisser `DB_ENGINE` vide => la base devient un simple
+> fichier SQLite (`db.sqlite3`), sauvegardable/copiable d'un coup.
 
 ## 4. Configuration du site dans le panneau
 
@@ -87,7 +93,15 @@ venv/bin/python manage.py collectstatic --noinput
 
 Redémarrer l'application WSGI depuis le panneau si nécessaire.
 
-## 6. Évolutions prévues
+## 6. Portabilité des données (bien commun)
+
+- Les catalogues producteurs (produits, catégories personnalisées,
+  attributs) pourront être **exportés/importés en JSON** pour sauvegarde ou
+  migration d'une instance à l'autre.
+- Sauvegardes recommandées : `pg_dump` quotidien de la base + archive du
+  dossier `media/`.
+
+## 7. Évolutions prévues
 
 - Automatiser le déploiement (script `deploy.sh` ou GitHub Actions + SSH)
 - Mutualisation par département : soit instances séparées, soit passage en
