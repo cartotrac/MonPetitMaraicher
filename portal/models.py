@@ -401,7 +401,7 @@ class Panier(models.Model):
                                         related_name="paniers")
     commande = models.ForeignKey(Commande, on_delete=models.SET_NULL,
                                  null=True, blank=True, related_name="paniers")
-    statut = models.CharField("Statut", max_length=10,
+    statut = models.CharField("Statut", max_length=12,
                               choices=Statut.choices,
                               default=Statut.PREPARATION, db_index=True)
     total = models.DecimalField("Total (€)", max_digits=8, decimal_places=2,
