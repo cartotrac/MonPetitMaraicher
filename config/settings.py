@@ -4,6 +4,23 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+# Charge le fichier .env à la racine du projet s'il existe (dev / déploiement
+# AlwaysData en SSH). En WSGI, les variables du panneau priment (setdefault :
+# l'environnement déjà défini gagne sur le fichier).
+def _charger_env(chemin=BASE_DIR / ".env"):
+    if not chemin.exists():
+        return
+    for ligne in chemin.read_text(encoding="utf-8").splitlines():
+        ligne = ligne.strip()
+        if not ligne or ligne.startswith("#") or "=" not in ligne:
+            continue
+        cle, _, valeur = ligne.partition("=")
+        os.environ.setdefault(cle.strip(), valeur.strip())
+
+
+_charger_env()
+
+
 def env(key, default=None):
     return os.environ.get(key, default)
 
