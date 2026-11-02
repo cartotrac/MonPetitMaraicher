@@ -322,7 +322,7 @@ def panier_list(request):
 @exploitant_requis
 def panier_detail(request, panier_id):
     """Préparation du panier : ajustement du contenu EFFECTIVEMENT livré
-    (quantités, ajout/withdrawal de produits) et changement de statut.
+    (quantités, ajout/retrait de produits) et changement de statut.
     C'est la source du décompte de production et de l'export (issue #8)."""
     exploitant = request.user.exploitant
     panier = get_object_or_404(Panier, pk=panier_id, exploitant=exploitant)
