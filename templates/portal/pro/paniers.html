@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Paniers — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>🧺 Paniers</h1>
+
+<form method="get" class="inline-form">
+  <label for="date">Jour de livraison :</label>
+  <input type="date" id="date" name="date" value="{{ date_filter }}">
+  <button class="btn btn-sm" type="submit">Filtrer</button>
+  <a class="btn btn-outline btn-sm" href="{% url 'portal:panier_list' %}">Tout voir</a>
+</form>
+
+{% for panier in paniers %}
+  <div class="card order-card">
+    <div class="order-head">
+      <strong>Panier n°{{ panier.numero }} — {{ panier.nom_client }}</strong>
+      <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
+    </div>
+    <p>📅 {{ panier.date_livraison|date:"d/m/Y" }}
+       {% if panier.point_livraison %}à {{ panier.point_livraison.nom }}{% endif %}
+       — 💰 {{ panier.total }} €
+       — {{ panier.lignes.count }} article(s)</p>
+    <p class="muted">✉️ {{ panier.email_client }}{% if panier.telephone_client %} · 📞 {{ panier.telephone_client }}{% endif %}
+       {% if panier.client %}· 💻 client avec compte{% else %}· sans compte{% endif %}</p>
+    <a class="btn btn-sm" href="{% url 'portal:panier_detail' panier.pk %}">Préparer / modifier</a>
+  </div>
+{% empty %}
+  <p class="muted">Aucun panier pour l'instant. Validez une commande et le panier
+     numéroté sera créé automatiquement.</p>
+{% endfor %}
+{% endblock %}

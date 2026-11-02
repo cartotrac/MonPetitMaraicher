@@ -13,8 +13,8 @@ from django.utils import timezone
 
 from .forms import (InscriptionClientForm, InscriptionExploitantForm,
                     ProduitForm)
-from .models import (Commande, Exploitant, LigneCommande, LigneRecolte,
-                     Produit, SemaineRecolte)
+from .models import (Commande, Exploitant, LigneCommande, LignePanier,
+                    LigneRecolte, Panier, Produit, SemaineRecolte)
 
 
 def home(request):
@@ -136,6 +136,8 @@ def dashboard(request):
         "commandes_attente": exploitant.commandes
                              .filter(statut=Commande.Statut.NOUVELLE)
                              .order_by("-creee_le")[:10],
+        "paniers_en_cours": exploitant.paniers
+                            .exclude(statut=Panier.Statut.RECU).count(),
     })
 
 
@@ -249,23 +251,140 @@ def order_list(request, statut=None):
 @login_required
 @exploitant_requis
 def order_validate(request, commande_id):
-    """Validation / refus — les quantités restent des estimations, rien
-    n'est décompté ici ; seul le contenu livré des paniers compte."""
+    """Validation / refus.
+
+    Valider crée le PANIER numéroté pré-rempli (copie des lignes de la
+    commande) : l'exploitant ajustera ensuite le contenu EFFECTIVEMENT
+    livré — seul décompte de production (règle DATA_MODEL v0.3).
+    """
     exploitant = request.user.exploitant
     commande = get_object_or_404(Commande, pk=commande_id, exploitant=exploitant)
     if (request.method == "POST"
             and commande.statut == Commande.Statut.NOUVELLE):
         action = request.POST.get("action")
         if action == "validate":
-            commande.statut = Commande.Statut.VALIDEE
-            commande.validee_le = timezone.now()
-            commande.save()
-            messages.success(request, f"Commande #{commande.pk} validée.")
+            with transaction.atomic():
+                commande.statut = Commande.Statut.VALIDEE
+                commande.validee_le = timezone.now()
+                commande.save()
+                panier = Panier.objects.create(
+                    exploitant=exploitant,
+                    client=commande.client,
+                    nom_client=commande.nom_client,
+                    email_client=commande.email_client,
+                    telephone_client=commande.telephone_client,
+                    numero=Panier.prochain_numero(
+                        exploitant, commande.date_livraison,
+                        client=commande.client,
+                        nom_client=commande.nom_client),
+                    date_livraison=commande.date_livraison,
+                    point_livraison=commande.point_livraison,
+                    commande=commande,
+                    statut=Panier.Statut.PREPARATION,
+                    total=commande.total)
+                for ligne in commande.lignes.select_related("produit"):
+                    LignePanier.objects.create(
+                        panier=panier, produit=ligne.produit,
+                        quantite=ligne.quantite,
+                        prix_unitaire=ligne.prix_unitaire)
+            messages.success(
+                request, f"Commande #{commande.pk} validée → "
+                f"panier n°{panier.numero} créé pour "
+                f"{panier.nom_client}.")
         elif action == "refuse":
             commande.statut = Commande.Statut.REFUSEE
             commande.save()
             messages.info(request, f"Commande #{commande.pk} refusée.")
     return redirect("portal:order_list")
+
+
+@login_required
+@exploitant_requis
+def panier_list(request):
+    """Liste des paniers, filtrable par jour de livraison."""
+    exploitant = request.user.exploitant
+    paniers = (exploitant.paniers.select_related("client", "point_livraison")
+               .prefetch_related("lignes__produit")
+               .order_by("-date_livraison", "numero"))
+    date_filter = request.GET.get("date", "").strip()
+    if date_filter:
+        try:
+            date_filter = datetime.date.fromisoformat(date_filter).isoformat()
+        except ValueError:
+            date_filter = ""
+        else:
+            paniers = paniers.filter(date_livraison=date_filter)
+    return render(request, "portal/pro/paniers.html",
+                  {"paniers": paniers, "date_filter": date_filter})
+
+
+@login_required
+@exploitant_requis
+def panier_detail(request, panier_id):
+    """Préparation du panier : ajustement du contenu EFFECTIVEMENT livré
+    (quantités, ajout/withdrawal de produits) et changement de statut.
+    C'est la source du décompte de production et de l'export (issue #8)."""
+    exploitant = request.user.exploitant
+    panier = get_object_or_404(Panier, pk=panier_id, exploitant=exploitant)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "lignes":
+            with transaction.atomic():
+                total = Decimal("0")
+                for ligne in panier.lignes.select_related("produit"):
+                    brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
+                    if not brut:
+                        ligne.delete()
+                        continue
+                    try:
+                        qty = Decimal(brut)
+                    except InvalidOperation:
+                        continue
+                    if qty <= 0:
+                        ligne.delete()
+                        continue
+                    ligne.quantite = qty
+                    ligne.save()
+                    total += qty * ligne.prix_unitaire
+                # Ajout d'un produit non commandé (prix du catalogue)
+                pid = request.POST.get("produit_ajout", "").strip()
+                qadd = request.POST.get("qty_ajout", "").strip()
+                if pid and qadd:
+                    produit = exploitant.produits.filter(
+                        pk=pid, actif=True).first()
+                    try:
+                        qadd = Decimal(qadd)
+                    except InvalidOperation:
+                        qadd = None
+                    if produit and qadd and qadd > 0:
+                        prix = produit.prix or Decimal("0")
+                        LignePanier.objects.create(
+                            panier=panier, produit=produit,
+                            quantite=qadd, prix_unitaire=prix)
+                        total += qadd * prix
+                panier.total = total
+                panier.save()
+            messages.success(
+                request, f"Panier n°{panier.numero} mis à jour "
+                f"({panier.total} €).")
+
+        elif action == "statut":
+            nouveau = request.POST.get("statut", "")
+            if nouveau in Panier.Statut.values:
+                panier.statut = nouveau
+                panier.save()
+                messages.success(
+                    request, f"Panier n°{panier.numero} : "
+                    f"{panier.get_statut_display()}.")
+
+        return redirect("portal:panier_detail", panier.pk)
+
+    return render(request, "portal/pro/panier_detail.html", {
+        "panier": panier,
+        "produits": exploitant.produits.filter(actif=True),
+    })
 
 
 # ---------------------------------------------------------------- client

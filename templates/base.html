@@ -18,6 +18,7 @@
         {% if user.exploitant %}
           <a href="{% url 'portal:dashboard' %}">Mon espace pro</a>
           <a href="{% url 'portal:order_list' %}">Commandes</a>
+          <a href="{% url 'portal:panier_list' %}">Paniers</a>
         {% else %}
           <a href="{% url 'portal:my_orders' %}">Mes commandes</a>
         {% endif %}

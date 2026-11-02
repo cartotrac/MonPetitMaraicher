@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Panier n°{{ panier.numero }} — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>🧺 Panier n°{{ panier.numero }} — {{ panier.nom_client }}</h1>
+<p>
+  <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
+  📅 Livraison le {{ panier.date_livraison|date:"d/m/Y" }}
+  {% if panier.point_livraison %}à {{ panier.point_livraison.nom }}{% endif %}
+  — 💰 {{ panier.total }} €
+</p>
+<p class="muted">✉️ {{ panier.email_client }}{% if panier.telephone_client %} · 📞 {{ panier.telephone_client }}{% endif %}
+   {% if panier.client %}· 💻 client avec compte{% else %}· sans compte{% endif %}
+   {% if panier.commande %}· issu de la <a href="{% url 'portal:order_list' %}">commande #{{ panier.commande.pk }}</a>{% endif %}</p>
+
+<section>
+  <h2>Contenu livré</h2>
+  <p class="muted">Ajustez les quantités réellement mises dans le panier.
+     Laissez vide (ou 0) pour retirer une ligne. C'est ce contenu qui
+     constitue le décompte de production et l'export comptable.</p>
+  <form method="post" action="{% url 'portal:panier_detail' panier.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="lignes">
+    <ul>
+      {% for ligne in panier.lignes.all %}
+        <li>
+          <label>
+            <input type="number" step="0.01" min="0"
+                   name="qty_{{ ligne.pk }}" value="{{ ligne.quantite }}">
+            × {{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u
+            = {{ ligne.total_ligne }} €)
+          </label>
+        </li>
+      {% empty %}
+        <li class="muted">Panier vide.</li>
+      {% endfor %}
+    </ul>
+    <div class="inline-form">
+      <label>
+        Ajouter un produit :
+        <select name="produit_ajout">
+          <option value="">—</option>
+          {% for produit in produits %}
+            <option value="{{ produit.pk }}">{{ produit.nom }}{% if produit.prix %} ({{ produit.prix }} €/u){% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Quantité :
+        <input type="number" step="0.01" min="0" name="qty_ajout" size="5">
+      </label>
+      <button class="btn" type="submit">💾 Enregistrer le panier</button>
+    </div>
+  </form>
+</section>
+
+<section>
+  <h2>Statut du panier</h2>
+  <div class="quick-actions">
+    {% for valeur, libelle in panier.Statut.choices %}
+      <form method="post" action="{% url 'portal:panier_detail' panier.pk %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="statut">
+        <input type="hidden" name="statut" value="{{ valeur }}">
+        <button class="btn {% if panier.statut == valeur %}btn-active{% else %}btn-outline{% endif %}"
+                type="submit">{{ libelle }}</button>
+      </form>
+    {% endfor %}
+  </div>
+</section>
+
+<p><a href="{% url 'portal:panier_list' %}">← Retour aux paniers</a></p>
+{% endblock %}

@@ -33,6 +33,9 @@ urlpatterns = [
          name="order_list_filtered"),
     path("espace-commandes/<int:commande_id>/decision/", views.order_validate,
          name="order_validate"),
+    path("espace-paniers/", views.panier_list, name="panier_list"),
+    path("espace-paniers/<int:panier_id>/", views.panier_detail,
+         name="panier_detail"),
 
     # Espace client
     path("commander/<slug:slug>/", views.order_create, name="order_create"),
