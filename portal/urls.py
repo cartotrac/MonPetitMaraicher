@@ -21,6 +21,8 @@ urlpatterns = [
 
     # Espace pro
     path("espace-pro/", views.dashboard, name="dashboard"),
+    path("espace-pro/profil/", views.profil_exploitant,
+         name="profil_exploitant"),
     path("espace-produits/ajouter/", views.produit_creer,
          name="product_create"),
     path("espace-produits/edition-rapide/", views.produit_edition_rapide,
@@ -53,6 +55,7 @@ urlpatterns = [
     path("points-livraison/", views.points_manage, name="points_manage"),
 
     # Espace client
+    path("profil/", views.profil_client, name="profil_client"),
     path("commander/<slug:slug>/", views.order_create, name="order_create"),
     path("mes-commandes/", views.my_orders, name="my_orders"),
     path("mes-commandes/<int:commande_id>/annuler/", views.order_cancel,

@@ -22,7 +22,7 @@
        {% if commande.canal_pref %} · 💬 contact préféré : {{ commande.canal_pref }}{% endif %}</p>
     <ul>
       {% for ligne in commande.lignes.all %}
-        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.get_unite_vente_display }} ({{ ligne.prix_unitaire }} €/u)</li>
+        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.unite_courte }} ({{ ligne.prix_unitaire }} €/u)</li>
       {% endfor %}
     </ul>
     {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}
@@ -41,6 +41,21 @@
             </li>
           {% endfor %}
         </ul>
+        {% if commande.point_livraison %}
+          <p class="muted">📍 Point de livraison : <strong>{{ commande.point_livraison.nom }}</strong></p>
+        {% elif points %}
+          <label>Point de livraison (requis pour valider — le panier est
+            numéroté par jour et par point) :
+            <select name="point_livraison" required>
+              <option value="">— choisir un point —</option>
+              {% for point in points %}
+                <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
+              {% endfor %}
+            </select></label>
+        {% else %}
+          <p class="flash warning">⚠️ Aucun point de livraison : créez-en un
+            dans « Livraison » avant de valider cette commande.</p>
+        {% endif %}
         <label>Commentaire (visible par le client) :
           <textarea name="note" rows="2"></textarea>
         </label>

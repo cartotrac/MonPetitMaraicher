@@ -22,8 +22,10 @@
           <a href="{% url 'portal:panier_list' %}">Paniers</a>
           <a href="{% url 'portal:clients_suivi' %}">Clients</a>
           <a href="{% url 'portal:points_manage' %}">Livraison</a>
+          <a href="{% url 'portal:profil_exploitant' %}">Mon profil</a>
         {% else %}
           <a href="{% url 'portal:my_orders' %}">Mes commandes</a>
+          <a href="{% url 'portal:profil_client' %}">Mon profil</a>
         {% endif %}
         <form class="inline" method="post" action="{% url 'logout' %}">
           {% csrf_token %}<button class="btn-link" type="submit">Déconnexion</button>

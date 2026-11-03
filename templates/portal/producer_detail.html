@@ -10,10 +10,13 @@
     {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
     {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Agriculture paysanne</span>
     {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>{% endif %}
+    {% if exploitant.siret_valide %}<span class="badge badge-ok">✔ Compte pro vérifié (SIRET)</span>
+    {% else %}<span class="badge badge-off">Producteur particulier</span>{% endif %}
     <p class="muted">{{ exploitant.adresse }} — {{ exploitant.code_postal }} {{ exploitant.ville }}</p>
   </div>
 </div>
 
+{% if not request.GET.apercu %}
 {% if meteo %}
 <div class="meteo-hero card">
   <span class="meteo-emoji">{{ meteo.emoji }}</span>
@@ -47,6 +50,7 @@
   </div>
 </div>
 {% endif %}
+{% endif %}
 
 {% if exploitant.description %}<p class="producer-desc card">{{ exploitant.description }}</p>{% endif %}
 
@@ -62,7 +66,7 @@
       {% for ligne in lignes %}
         <tr>
           <td>{% if ligne.produit.origine_standard and ligne.produit.origine_standard.emoji %}{{ ligne.produit.origine_standard.emoji }} {% endif %}{{ ligne.produit.nom }}</td>
-          <td>~ {{ ligne.quantite_estimee }} {{ ligne.produit.get_unite_vente_display }}</td>
+          <td>~ {{ ligne.quantite_estimee }} {{ ligne.produit.unite_courte }}</td>
           <td>{{ ligne.prix_unitaire }} €</td>
         </tr>
       {% endfor %}
@@ -120,3 +124,4 @@
 </section>
 {% endif %}
 {% endblock %}
+

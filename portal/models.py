@@ -76,6 +76,23 @@ class Exploitant(models.Model):
     def get_absolute_url(self):
         return reverse("portal:producer_detail", kwargs={"slug": self.slug})
 
+    @property
+    def siret_valide(self):
+        """SIRET syntaxiquement valide : 14 chiffres, clé de Luhn correcte.
+        (Validation de forme, sans appel au registre national en V1.)"""
+        chiffres = "".join(c for c in (self.siret or "") if c.isdigit())
+        if len(chiffres) != 14:
+            return False
+        total = 0
+        for i, c in enumerate(chiffres):
+            d = int(c)
+            if i % 2 == 0:  # 14 chiffres : indices pairs doublés depuis la gauche
+                d *= 2
+                if d > 9:
+                    d -= 9
+            total += d
+        return total % 10 == 0
+
 
 class ProfilClient(models.Model):
     """Profil client (optionnel, pour faciliter les commandes récurrentes)."""
@@ -194,6 +211,20 @@ class Produit(models.Model):
             from django.utils.text import slugify
             self.slug = slugify(self.nom) or "produit"
         super().save(*args, **kwargs)
+
+    # Libellé d'unité pour l'affichage public : « kg », « pièce(s) »…
+    UNITES_COURTES = {"KG": "kg", "PC": "pièce(s)", "BO": "botte(s)",
+                      "BQ": "barquette(s)"}
+
+    @property
+    def unite_courte(self):
+        return self.UNITES_COURTES.get(self.unite_vente, self.unite_vente)
+
+    @property
+    def image_externe(self):
+        """Lien vers une photo hébergée ailleurs (drive, cloud, réseau) :
+        stocké dans attributs["image_url"] — zéro stockage local."""
+        return (self.attributs or {}).get("image_url", "")
 
 
 class SemaineRecolte(models.Model):
@@ -608,3 +639,4 @@ class ParametresVitrine(models.Model):
 
     def __str__(self):
         return f"Vitrine de {self.exploitant}"
+

@@ -7,6 +7,12 @@
    Les prix de référence du catalogue s'appliquent ; le contenu reste
    ajustable dans la préparation du panier.</p>
 
+{% if not points %}
+  <p class="flash warning">⚠️ Aucun point de livraison : le panier ne peut
+     pas être numéroté. Créez-en un d'abord dans
+     <a href="{% url 'portal:points_manage' %}">« Livraison »</a>.</p>
+{% endif %}
+
 <form method="post" class="form">
   {% csrf_token %}
   <div class="card param-card">
@@ -27,15 +33,21 @@
     <div class="form-row">
       <label>Date de livraison
         <input type="date" name="date_livraison" value="{{ date_defaut }}" required></label>
-      {% if points %}
       <label>Point de livraison
-        <select name="point_livraison">
-          <option value="">— aucun —</option>
-          {% for point in points %}
-            <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
-          {% endfor %}
-        </select></label>
-      {% endif %}
+        {% if points %}
+          <span class="muted">(requis — le panier est numéroté par jour et par point)</span>
+          <select name="point_livraison" required>
+            <option value="">— choisir un point —</option>
+            {% for point in points %}
+              <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
+            {% endfor %}
+          </select>
+        {% else %}
+          <select name="point_livraison" disabled>
+            <option value="">Aucun point — voir « Livraison »</option>
+          </select>
+        {% endif %}
+      </label>
       {% if creneaux %}
       <label>Créneau
         <select name="creneau">
@@ -57,7 +69,7 @@
     <tbody>
     {% for produit in produits %}
       <tr>
-        <td>{{ produit.nom }} <span class="muted">({{ produit.get_unite_vente_display }})</span>
+        <td>{{ produit.nom }} <span class="muted">({{ produit.unite_courte }})</span>
           {% if produit.prix is None %}<span class="badge badge-off">prix à définir</span>{% endif %}</td>
         <td><input type="number" name="qty_{{ produit.pk }}" min="0"
                    step="{% if produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}"

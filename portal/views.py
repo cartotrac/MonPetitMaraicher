@@ -15,12 +15,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import (InscriptionClientForm, InscriptionExploitantForm,
-                    ProduitForm)
+                    ProduitForm, ProfilClientForm, ProfilExploitantForm)
 from .meteo import meteo_synthese
 from .models import (Categorie, Commande, CreneauLivraison, Exploitant,
                     LigneCommande, LignePanier, LigneRecolte, Panier,
                     ParametresVitrine, PointLivraison, PreferenceContact,
-                    Produit, ProduitStandard, SemaineRecolte)
+                    Produit, ProduitStandard, ProfilClient, SemaineRecolte)
 from .notifications import notifier_client
 
 # Unités vendues à la pièce : quantités entières uniquement.
@@ -122,6 +122,18 @@ def producer_detail(request, slug):
 
 # ---------------------------------------------------------------- registres
 
+
+def _enregistrer_image_externe(produit, url):
+    """Photo externe (drive, cloud, réseau) : stockée dans attributs
+    JSONB, aucun fichier sur le serveur. Vide = lien retiré."""
+    url = (url or "").strip()
+    attributs = dict(produit.attributs or {})
+    if url:
+        attributs["image_url"] = url
+    else:
+        attributs.pop("image_url", None)
+    produit.attributs = attributs
+
 def register_exploitant(request):
     if request.method == "POST":
         form = InscriptionExploitantForm(request.POST, request.FILES)
@@ -210,6 +222,8 @@ def produit_creer(request):
         if form.is_valid():
             produit = form.save(commit=False)
             produit.exploitant = exploitant
+            _enregistrer_image_externe(produit,
+                                        request.POST.get("image_externe", ""))
             produit.save()
             messages.success(request, f"Produit « {produit.nom} » ajouté.")
             return redirect("portal:dashboard")
@@ -229,7 +243,10 @@ def produit_modifier(request, pk):
         form = ProduitForm(request.POST, request.FILES, instance=produit,
                            exploitant=request.user.exploitant)
         if form.is_valid():
-            form.save()
+            produit = form.save(commit=False)
+            _enregistrer_image_externe(produit,
+                                        request.POST.get("image_externe", ""))
+            produit.save()
             messages.success(request, "Produit mis à jour.")
             return redirect("portal:dashboard")
     else:
@@ -492,7 +509,8 @@ def order_list(request, statut=None):
     for c in commandes:
         c.canal_pref = canaux.get(c.client_id) if c.client_id else None
     return render(request, "portal/pro/orders.html",
-                  {"commandes": commandes, "filtre_statut": statut})
+                  {"commandes": commandes, "filtre_statut": statut,
+                   "points": exploitant.points_livraison.all()})
 
 
 def _quantite_ajustee(brut, quantite_commandee, produit):
@@ -552,6 +570,17 @@ def order_direct_create(request):
                 or date_livraison < timezone.localdate()):
             erreurs.append("Date de livraison invalide "
                            "(aujourd'hui ou plus tard).")
+        # Un point de livraison est obligatoire pour numéroter le panier :
+        # soit celui choisi, soit — s'il n'en existe aucun — un message
+        # invitant à en créer un d'abord (menu « Livraison »).
+        if point is None:
+            if points:
+                erreurs.append("Point de livraison requis : "
+                               "choisissez un point pour cette commande.")
+            else:
+                erreurs.append("Aucun point de livraison : créez-en un "
+                               "d'abord dans « Livraison » "
+                               "(Points & créneaux).")
 
         lignes, total = [], Decimal("0")
         for produit in produits:
@@ -646,6 +675,23 @@ def order_validate(request, commande_id):
             and commande.statut == Commande.Statut.NOUVELLE):
         action = request.POST.get("action")
         if action == "validate":
+            # Point de livraison obligatoire pour créer le panier numéroté :
+            # par défaut celui de la commande, sinon celui choisi au moment
+            # de la validation.
+            point = commande.point_livraison
+            if point is None:
+                point = exploitant.points_livraison.filter(
+                    pk=request.POST.get("point_livraison")).first()
+            if point is None and exploitant.points_livraison.exists():
+                messages.error(
+                    request, "Un point de livraison est requis pour "
+                    "valider : choisissez-en un puis validez à nouveau.")
+                return redirect("portal:order_list")
+            if point is None:
+                messages.error(
+                    request, "Aucun point de livraison : créez-en un "
+                    "d'abord dans « Livraison » (Points & créneaux).")
+                return redirect("portal:order_list")
             ajustees, erreurs, total = [], [], Decimal("0")
             for ligne in commande.lignes.select_related("produit"):
                 brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
@@ -669,6 +715,7 @@ def order_validate(request, commande_id):
             with transaction.atomic():
                 commande.statut = Commande.Statut.VALIDEE
                 commande.validee_le = timezone.now()
+                commande.point_livraison = point
                 commande.save()
                 panier = Panier.objects.create(
                     exploitant=exploitant,
@@ -678,9 +725,9 @@ def order_validate(request, commande_id):
                     telephone_client=commande.telephone_client,
                     numero=Panier.prochain_numero(
                         exploitant, commande.date_livraison,
-                        point_livraison=commande.point_livraison),
+                        point_livraison=point),
                     date_livraison=commande.date_livraison,
-                    point_livraison=commande.point_livraison,
+                    point_livraison=point,
                     commande=commande,
                     statut=Panier.Statut.PREPARATION,
                     total=total,
@@ -765,7 +812,7 @@ def panier_export_csv(request):
                 e["paniers"].add(panier.pk)
         for e in sorted(agg.values(), key=lambda x: x["produit"].nom):
             writer.writerow([
-                e["produit"].nom, e["produit"].get_unite_vente_display(),
+                e["produit"].nom, e["produit"].unite_courte,
                 str(e["qte"]).replace(".", ","),
                 str(e["total"]).replace(".", ","),
                 len(e["paniers"])])
@@ -797,7 +844,7 @@ def panier_export_csv(request):
                     panier.point_livraison.nom
                     if panier.point_livraison else "",
                     ligne.produit.nom,
-                    ligne.produit.get_unite_vente_display(),
+                    ligne.produit.unite_courte,
                     str(ligne.quantite).replace(".", ","),
                     str(ligne.prix_unitaire).replace(".", ","),
                     str(ligne.total_ligne()).replace(".", ","),
@@ -1233,6 +1280,10 @@ def order_create(request, slug):
             total += qty * ligne.prix_unitaire
         point = exploitant.points_livraison.filter(
             pk=request.POST.get("point_livraison")).first()
+        if point is None and exploitant.points_livraison.exists():
+            messages.error(request, "Merci de choisir un point de "
+                           "livraison pour votre commande.")
+            return redirect("portal:order_create", slug=slug)
         try:
             date_livraison = datetime.date.fromisoformat(
                 request.POST["date_livraison"])
@@ -1311,3 +1362,58 @@ def order_cancel(request, commande_id):
         commande.save()
         messages.info(request, f"Commande #{commande.pk} annulée.")
     return redirect("portal:my_orders")
+
+
+
+# ----------------------------------------------------------- editions profil
+
+@login_required
+def profil_client(request):
+    """Le client édite ses informations : prenom, nom, e-mail, telephone."""
+    profil, _cree = ProfilClient.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        form = ProfilClientForm(request.POST)
+        if form.is_valid():
+            user = request.user
+            user.first_name = form.cleaned_data["prenom"]
+            user.last_name = form.cleaned_data["nom"]
+            user.email = form.cleaned_data["email"]
+            user.save()
+            profil.telephone = form.cleaned_data["telephone"]
+            profil.save()
+            messages.success(request, "Vos informations ont été mises à jour.")
+            return redirect("portal:my_orders")
+    else:
+        form = ProfilClientForm(initial={
+            "prenom": request.user.first_name,
+            "nom": request.user.last_name,
+            "email": request.user.email,
+            "telephone": profil.telephone,
+        })
+    return render(request, "portal/profil_client.html", {"form": form})
+
+
+@login_required
+@exploitant_requis
+def profil_exploitant(request):
+    """Le maraicher édite sa fiche : ferme, SIRET, adresse, coordonnees
+    carto… La validite du SIRET (cle de Luhn) determine le badge public
+    « Compte pro vérifié » ou « Producteur particulier »."""
+    exploitant = request.user.exploitant
+    if request.method == "POST":
+        form = ProfilExploitantForm(request.POST, request.FILES,
+                                    instance=exploitant)
+        if form.is_valid():
+            form.save()
+            if exploitant.siret and not exploitant.siret_valide:
+                messages.warning(
+                    request, "Fiche enregistrée, mais le numéro SIRET "
+                    "n'est pas valide (14 chiffres attendus) : votre "
+                    "vitrine affichera « Producteur particulier ».")
+            else:
+                messages.success(request, "Votre fiche a été mise à jour.")
+            return redirect("portal:dashboard")
+    else:
+        form = ProfilExploitantForm(instance=exploitant)
+    return render(request, "portal/pro/profil_exploitant.html",
+                  {"form": form, "exploitant": exploitant})

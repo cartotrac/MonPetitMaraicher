@@ -77,6 +77,10 @@ class InscriptionClientForm(UserCreationForm):
 
 
 class ProduitForm(forms.ModelForm):
+    image_externe = forms.URLField(
+        label="Lien photo externe (drive, cloud, réseau — rien n'est "
+              "hébergé sur le portail)", required=False)
+
     class Meta:
         model = Produit
         fields = ["nom", "categorie", "description", "illustration",
@@ -95,3 +99,33 @@ class ProduitForm(forms.ModelForm):
                 exploitant=exploitant)
         else:
             self.fields["categorie"].queryset = Categorie.objects.none()
+        if self.instance and self.instance.pk:
+            self.fields["image_externe"].initial = (
+                self.instance.attributs or {}).get("image_url", "")
+
+
+class ProfilClientForm(forms.Form):
+    """Édition de ses informations par un client connecté."""
+
+    prenom = forms.CharField(label="Prénom", max_length=150, required=False)
+    nom = forms.CharField(label="Nom", max_length=150, required=False)
+    email = forms.EmailField(label="E-mail")
+    telephone = forms.CharField(label="Téléphone", max_length=20,
+                                required=False)
+
+
+class ProfilExploitantForm(forms.ModelForm):
+    """Édition de sa fiche par un maraîcher (badge SIRET inclus)."""
+
+    class Meta:
+        model = Exploitant
+        fields = ["nom_ferme", "siret", "mode_production", "logo",
+                  "description", "adresse", "ville", "code_postal",
+                  "departement", "telephone", "latitude", "longitude"]
+        labels = {"nom_ferme": "Nom de l'exploitation",
+                  "siret": "SIRET (14 chiffres)",
+                  "mode_production": "Mode de production",
+                  "logo": "Logo miniature",
+                  "description": "Présentation",
+                  "latitude": "Latitude (optionnel, pour la carte)",
+                  "longitude": "Longitude (optionnel, pour la carte)"}
