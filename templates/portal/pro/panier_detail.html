@@ -15,7 +15,7 @@
 <section>
   <h2>Contenu livré</h2>
   <p class="muted">Ajustez les quantités réellement mises dans le panier, côte à côte
-     avec ce que le client avait souhaité. Vide ou 0 = retirer la ligne.
+     avec ce que le client avait souhaité. 0 = retirer la ligne, vide = conserver la quantité.
      ⚠️ signale un écart avec la commande. C'est ce contenu qui constitue
      le décompte de production et l'export comptable.</p>
   <form method="post" action="{% url 'portal:panier_detail' panier.pk %}">

@@ -28,7 +28,7 @@
     {% if commande.statut == 'NOUVELLE' %}
       <form method="post" action="{% url 'portal:order_validate' commande.pk %}" class="inline-form">
         {% csrf_token %}
-        <p class="muted">Ajustez si besoin les quantités (0 ou vide = retirer la ligne) :</p>
+        <p class="muted">Ajustez si besoin les quantités (0 = retirer la ligne, vide = conserver la quantité commandée) :</p>
         <ul>
           {% for ligne in commande.lignes.all %}
             <li>
