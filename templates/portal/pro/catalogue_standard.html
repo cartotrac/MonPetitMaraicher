@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Produits types — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>📚 Produits types</h1>
+<p class="muted">Catalogue de départ : cochez les produits que vous vendez,
+   indiquez un prix si vous le connaissez, puis copiez-les dans votre
+   catalogue. Les catégories correspondantes sont créées automatiquement —
+   vous pourrez les renommer et reclasser ensuite. Tout reste modifiable.</p>
+<form method="post" action="{% url 'portal:catalogue_copier' %}">
+  {% csrf_token %}
+  {% for categorie, items in paires %}
+    <h2>{{ categorie }}</h2>
+    <ul>
+      {% for item in items %}
+        <li>
+          {% if item.deja %}
+            {{ item.std.emoji }} {{ item.std.nom }}
+            ({{ item.std.get_unite_vente_display }}) ✅ déjà dans mon catalogue
+          {% else %}
+            <label>
+              <input type="checkbox" name="std" value="{{ item.std.pk }}">
+              {{ item.std.emoji }} {{ item.std.nom }}
+              ({{ item.std.get_unite_vente_display }})
+              — prix €/u : <input type="number" step="0.01" min="0"
+                            name="prix_{{ item.std.pk }}" size="6">
+            </label>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+  <button class="btn" type="submit">📥 Copier la sélection</button>
+</form>
+<p><a href="{% url 'portal:dashboard' %}">← Retour à l'espace pro</a></p>
+{% endblock %}

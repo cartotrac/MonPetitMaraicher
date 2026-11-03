@@ -4,7 +4,9 @@
 <h1>Bienvenue {{ exploitant.nom_ferme }} 👋</h1>
 
 <div class="quick-actions">
+  <a class="btn" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
   <a class="btn" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
+  <a class="btn btn-outline" href="{% url 'portal:categories_manage' %}">🗂 Gérer mes catégories</a>
   <a class="btn" href="{% url 'portal:harvest_manage' %}">🧺 Saisir mes dispos de la semaine</a>
   <a class="btn btn-outline" href="{% url 'portal:producer_detail' exploitant.slug %}">Voir ma page publique</a>
 </div>
@@ -32,10 +34,10 @@
   <h2>🥕 Mes produits</h2>
   <ul>
     {% for produit in produits %}
-      <li>{{ produit.nom }} ({{ produit.get_unite_vente_display }})
+      <li>{{ produit.nom }} ({{ produit.get_unite_vente_display }}){% if produit.categorie %} — {{ produit.categorie.nom }}{% endif %}
         — <a href="{% url 'portal:product_edit' produit.pk %}">modifier</a></li>
     {% empty %}
-      <li class="muted">Aucun produit. Commencez par en ajouter un !</li>
+      <li class="muted">Aucun produit. Commencez par <a href="{% url 'portal:catalogue_standard' %}">importer des produits types</a> !</li>
     {% endfor %}
   </ul>
 </section>

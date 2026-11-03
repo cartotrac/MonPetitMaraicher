@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Exploitant, Produit, ProfilClient
+from .models import Categorie, Exploitant, Produit, ProfilClient
 
 
 class InscriptionExploitantForm(UserCreationForm):
@@ -86,3 +86,12 @@ class ProduitForm(forms.ModelForm):
                   "unite_vente": "Unité de vente",
                   "prix": "Prix de référence (€)",
                   "actif": "Actif"}
+
+    def __init__(self, *args, exploitant=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Les catégories sont propres à chaque exploitant (issue #5).
+        if exploitant is not None:
+            self.fields["categorie"].queryset = Categorie.objects.filter(
+                exploitant=exploitant)
+        else:
+            self.fields["categorie"].queryset = Categorie.objects.none()

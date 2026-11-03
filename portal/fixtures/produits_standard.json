@@ -1,0 +1,1611 @@
+[
+  {
+    "model": "portal.produitstandard",
+    "pk": 1,
+    "fields": {
+      "nom": "Carotte",
+      "categorie": "Légumes racines",
+      "unite_vente": "KG",
+      "saisons": [
+        "été",
+        "automne"
+      ],
+      "emoji": "🥕",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 2,
+    "fields": {
+      "nom": "Betterave rouge",
+      "categorie": "Légumes racines",
+      "unite_vente": "KG",
+      "saisons": [
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 3,
+    "fields": {
+      "nom": "Radis rose",
+      "categorie": "Légumes racines",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "printemps",
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 4,
+    "fields": {
+      "nom": "Radis noir",
+      "categorie": "Légumes racines",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 5,
+    "fields": {
+      "nom": "Navet",
+      "categorie": "Légumes racines",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 6,
+    "fields": {
+      "nom": "Panais",
+      "categorie": "Légumes racines",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 7,
+    "fields": {
+      "nom": "Salsifis",
+      "categorie": "Légumes racines",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 8,
+    "fields": {
+      "nom": "Cerfeuil tubéreux",
+      "categorie": "Légumes racines",
+      "unite_vente": "KG",
+      "saisons": [
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 9,
+    "fields": {
+      "nom": "Pomme de terre (bintje)",
+      "categorie": "Pommes de terre",
+      "unite_vente": "KG",
+      "saisons": [
+        "été",
+        "automne",
+        "hiver"
+      ],
+      "emoji": "🥔",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 10,
+    "fields": {
+      "nom": "Pomme de terre nouvelle",
+      "categorie": "Pommes de terre",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 11,
+    "fields": {
+      "nom": "Pomme de terre vitelotte",
+      "categorie": "Pommes de terre",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 12,
+    "fields": {
+      "nom": "Oignon jaune",
+      "categorie": "Alliacés",
+      "unite_vente": "KG",
+      "saisons": [
+        "été",
+        "automne",
+        "hiver"
+      ],
+      "emoji": "🧅",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 13,
+    "fields": {
+      "nom": "Oignon rouge",
+      "categorie": "Alliacés",
+      "unite_vente": "KG",
+      "saisons": [
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 14,
+    "fields": {
+      "nom": "Échalote",
+      "categorie": "Alliacés",
+      "unite_vente": "KG",
+      "saisons": [
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 15,
+    "fields": {
+      "nom": "Ail (tête)",
+      "categorie": "Alliacés",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été",
+        "automne"
+      ],
+      "emoji": "🧄",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 16,
+    "fields": {
+      "nom": "Poireau",
+      "categorie": "Alliacés",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 17,
+    "fields": {
+      "nom": "Tomate ronde",
+      "categorie": "Légumes fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🍅",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 18,
+    "fields": {
+      "nom": "Tomate cœur de bœuf",
+      "categorie": "Légumes fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 19,
+    "fields": {
+      "nom": "Tomate cerise",
+      "categorie": "Légumes fruits",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 20,
+    "fields": {
+      "nom": "Tomate ananas",
+      "categorie": "Légumes fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 21,
+    "fields": {
+      "nom": "Concombre",
+      "categorie": "Légumes fruits",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🥒",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 22,
+    "fields": {
+      "nom": "Courgette",
+      "categorie": "Légumes fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 23,
+    "fields": {
+      "nom": "Aubergine",
+      "categorie": "Légumes fruits",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🍆",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 24,
+    "fields": {
+      "nom": "Poivron rouge",
+      "categorie": "Légumes fruits",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 25,
+    "fields": {
+      "nom": "Poivron vert",
+      "categorie": "Légumes fruits",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 26,
+    "fields": {
+      "nom": "Piment",
+      "categorie": "Légumes fruits",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🌶",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 27,
+    "fields": {
+      "nom": "Haricot vert",
+      "categorie": "Légumes fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 28,
+    "fields": {
+      "nom": "Haricot beurre",
+      "categorie": "Légumes fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 29,
+    "fields": {
+      "nom": "Batavia",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "printemps",
+        "été",
+        "automne"
+      ],
+      "emoji": "🥬",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 30,
+    "fields": {
+      "nom": "Feuille de chêne",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "printemps",
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 31,
+    "fields": {
+      "nom": "Laitue romaine",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "printemps",
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 32,
+    "fields": {
+      "nom": "Sucrine",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "printemps",
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 33,
+    "fields": {
+      "nom": "Mâche",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 34,
+    "fields": {
+      "nom": "Épinard",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "KG",
+      "saisons": [
+        "printemps",
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 35,
+    "fields": {
+      "nom": "Roquette",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "printemps",
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 36,
+    "fields": {
+      "nom": "Mesclun",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "printemps",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 37,
+    "fields": {
+      "nom": "Chou kale",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 38,
+    "fields": {
+      "nom": "Chicorée",
+      "categorie": "Légumes feuilles",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 39,
+    "fields": {
+      "nom": "Brocoli",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "printemps",
+        "automne",
+        "hiver"
+      ],
+      "emoji": "🥦",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 40,
+    "fields": {
+      "nom": "Chou-fleur",
+      "categorie": "Autres légumes",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 41,
+    "fields": {
+      "nom": "Chou romanesco",
+      "categorie": "Autres légumes",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 42,
+    "fields": {
+      "nom": "Chou blanc",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 43,
+    "fields": {
+      "nom": "Chou rouge",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 44,
+    "fields": {
+      "nom": "Chou de Bruxelles",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 45,
+    "fields": {
+      "nom": "Céleri branche",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 46,
+    "fields": {
+      "nom": "Céleri-rave",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 47,
+    "fields": {
+      "nom": "Fenouil",
+      "categorie": "Autres légumes",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 48,
+    "fields": {
+      "nom": "Blette",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "printemps",
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 49,
+    "fields": {
+      "nom": "Artichaut",
+      "categorie": "Autres légumes",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "printemps",
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 50,
+    "fields": {
+      "nom": "Asperge",
+      "categorie": "Autres légumes",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "printemps"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 51,
+    "fields": {
+      "nom": "Petit pois",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "printemps",
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 52,
+    "fields": {
+      "nom": "Fève",
+      "categorie": "Autres légumes",
+      "unite_vente": "KG",
+      "saisons": [
+        "printemps"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 53,
+    "fields": {
+      "nom": "Maïs doux",
+      "categorie": "Autres légumes",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🌽",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 54,
+    "fields": {
+      "nom": "Potimarron",
+      "categorie": "Cucurbitacées",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "🎃",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 55,
+    "fields": {
+      "nom": "Courge butternut",
+      "categorie": "Cucurbitacées",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 56,
+    "fields": {
+      "nom": "Potiron",
+      "categorie": "Cucurbitacées",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 57,
+    "fields": {
+      "nom": "Patate douce",
+      "categorie": "Cucurbitacées",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "🍠",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 58,
+    "fields": {
+      "nom": "Champignon de Paris",
+      "categorie": "Champignons",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "🍄",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 59,
+    "fields": {
+      "nom": "Pleurote",
+      "categorie": "Champignons",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 60,
+    "fields": {
+      "nom": "Girolle",
+      "categorie": "Champignons",
+      "unite_vente": "KG",
+      "saisons": [
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 61,
+    "fields": {
+      "nom": "Persil",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "printemps",
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 62,
+    "fields": {
+      "nom": "Basilic",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 63,
+    "fields": {
+      "nom": "Ciboulette",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "printemps",
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 64,
+    "fields": {
+      "nom": "Coriandre",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 65,
+    "fields": {
+      "nom": "Menthe",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 66,
+    "fields": {
+      "nom": "Estragon",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 67,
+    "fields": {
+      "nom": "Thym",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 68,
+    "fields": {
+      "nom": "Romarin",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 69,
+    "fields": {
+      "nom": "Sauge",
+      "categorie": "Herbes aromatiques",
+      "unite_vente": "BOTTE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 70,
+    "fields": {
+      "nom": "Pomme",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "🍎",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 71,
+    "fields": {
+      "nom": "Poire",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne",
+        "hiver"
+      ],
+      "emoji": "🍐",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 72,
+    "fields": {
+      "nom": "Prune",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 73,
+    "fields": {
+      "nom": "Pêche",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🍑",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 74,
+    "fields": {
+      "nom": "Nectarine",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 75,
+    "fields": {
+      "nom": "Abricot",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 76,
+    "fields": {
+      "nom": "Cerise",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🍒",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 77,
+    "fields": {
+      "nom": "Figue",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "été",
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 78,
+    "fields": {
+      "nom": "Coing",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 79,
+    "fields": {
+      "nom": "Châtaigne",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 80,
+    "fields": {
+      "nom": "Raisin de table",
+      "categorie": "Fruits",
+      "unite_vente": "KG",
+      "saisons": [
+        "automne"
+      ],
+      "emoji": "🍇",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 81,
+    "fields": {
+      "nom": "Melon",
+      "categorie": "Fruits",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🍈",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 82,
+    "fields": {
+      "nom": "Pastèque",
+      "categorie": "Fruits",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🍉",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 83,
+    "fields": {
+      "nom": "Fraise",
+      "categorie": "Baies",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "printemps",
+        "été"
+      ],
+      "emoji": "🍓",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 84,
+    "fields": {
+      "nom": "Framboise",
+      "categorie": "Baies",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 85,
+    "fields": {
+      "nom": "Groseille",
+      "categorie": "Baies",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 86,
+    "fields": {
+      "nom": "Cassis",
+      "categorie": "Baies",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 87,
+    "fields": {
+      "nom": "Mûre",
+      "categorie": "Baies",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 88,
+    "fields": {
+      "nom": "Myrtille",
+      "categorie": "Baies",
+      "unite_vente": "BARQUETTE",
+      "saisons": [
+        "été"
+      ],
+      "emoji": "🫐",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 89,
+    "fields": {
+      "nom": "Lentille verte",
+      "categorie": "Légumes secs",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 90,
+    "fields": {
+      "nom": "Lentille blonde",
+      "categorie": "Légumes secs",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 91,
+    "fields": {
+      "nom": "Pois chiche",
+      "categorie": "Légumes secs",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 92,
+    "fields": {
+      "nom": "Haricot blanc",
+      "categorie": "Légumes secs",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 93,
+    "fields": {
+      "nom": "Haricot rouge",
+      "categorie": "Légumes secs",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 94,
+    "fields": {
+      "nom": "Pois cassé",
+      "categorie": "Légumes secs",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 95,
+    "fields": {
+      "nom": "Œufs (boîte de 6)",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "🥚",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 96,
+    "fields": {
+      "nom": "Pain au levain",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "🍞",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 97,
+    "fields": {
+      "nom": "Farine de blé",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 98,
+    "fields": {
+      "nom": "Farine de seigle",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 99,
+    "fields": {
+      "nom": "Miel (500 g)",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "🍯",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 100,
+    "fields": {
+      "nom": "Yaourt fermier",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 101,
+    "fields": {
+      "nom": "Fromage de chèvre",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "🧀",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 102,
+    "fields": {
+      "nom": "Tomme",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 103,
+    "fields": {
+      "nom": "Faisselle",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 104,
+    "fields": {
+      "nom": "Beurre fermier",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "🧈",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 105,
+    "fields": {
+      "nom": "Jus de pomme (1 L)",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "🧃",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 106,
+    "fields": {
+      "nom": "Cidre (75 cL)",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 107,
+    "fields": {
+      "nom": "Confiture",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 108,
+    "fields": {
+      "nom": "Compote",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 109,
+    "fields": {
+      "nom": "Sirop de fruits",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 110,
+    "fields": {
+      "nom": "Saucisson sec",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "PIECE",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "",
+      "svg": ""
+    }
+  },
+  {
+    "model": "portal.produitstandard",
+    "pk": 111,
+    "fields": {
+      "nom": "Poulet fermier",
+      "categorie": "Produits de la ferme",
+      "unite_vente": "KG",
+      "saisons": [
+        "toute l'année"
+      ],
+      "emoji": "🍗",
+      "svg": ""
+    }
+  }
+]

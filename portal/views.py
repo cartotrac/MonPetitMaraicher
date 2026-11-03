@@ -13,9 +13,9 @@ from django.utils import timezone
 
 from .forms import (InscriptionClientForm, InscriptionExploitantForm,
                     ProduitForm)
-from .models import (Commande, Exploitant, LigneCommande, LignePanier,
-                    LigneRecolte, Panier, PreferenceContact, Produit,
-                    SemaineRecolte)
+from .models import (Categorie, Commande, Exploitant, LigneCommande,
+                    LignePanier, LigneRecolte, Panier, PreferenceContact,
+                    Produit, ProduitStandard, SemaineRecolte)
 
 # Unités vendues à la pièce : quantités entières uniquement.
 UNITES_ENTIERES = ("PC", "BO", "BQ")
@@ -148,18 +148,20 @@ def dashboard(request):
 @login_required
 @exploitant_requis
 def produit_creer(request):
+    exploitant = request.user.exploitant
     if request.method == "POST":
-        form = ProduitForm(request.POST, request.FILES)
+        form = ProduitForm(request.POST, request.FILES, exploitant=exploitant)
         if form.is_valid():
             produit = form.save(commit=False)
-            produit.exploitant = request.user.exploitant
+            produit.exploitant = exploitant
             produit.save()
             messages.success(request, f"Produit « {produit.nom} » ajouté.")
             return redirect("portal:dashboard")
     else:
-        form = ProduitForm()
+        form = ProduitForm(exploitant=exploitant)
     return render(request, "portal/pro/product_form.html",
-                  {"form": form, "titre": "Ajouter un produit"})
+                  {"form": form, "titre": "Ajouter un produit",
+                   "categories_url": "portal:categories_manage"})
 
 
 @login_required
@@ -168,15 +170,18 @@ def produit_modifier(request, pk):
     produit = get_object_or_404(Produit, pk=pk,
                                 exploitant=request.user.exploitant)
     if request.method == "POST":
-        form = ProduitForm(request.POST, request.FILES, instance=produit)
+        form = ProduitForm(request.POST, request.FILES, instance=produit,
+                           exploitant=request.user.exploitant)
         if form.is_valid():
             form.save()
             messages.success(request, "Produit mis à jour.")
             return redirect("portal:dashboard")
     else:
-        form = ProduitForm(instance=produit)
+        form = ProduitForm(instance=produit,
+                           exploitant=request.user.exploitant)
     return render(request, "portal/pro/product_form.html",
-                  {"form": form, "titre": "Modifier le produit"})
+                  {"form": form, "titre": "Modifier le produit",
+                   "categories_url": "portal:categories_manage"})
 
 
 @login_required
@@ -477,6 +482,130 @@ def panier_detail(request, panier_id):
         "rows": rows,
         "produits": exploitant.produits.filter(actif=True),
     })
+
+
+# ------------------------------------------------- catalogue & catégories
+
+@login_required
+@exploitant_requis
+def catalogue_standard(request):
+    """Catalogue embarqué de produits types (issue #1) : base de départ
+    copiable en un clic, avec traçabilité origine_standard."""
+    exploitant = request.user.exploitant
+    standards = ProduitStandard.objects.order_by("categorie", "nom")
+    deja_copies = set(Produit.objects.filter(
+        exploitant=exploitant,
+        origine_standard__isnull=False
+    ).values_list("origine_standard_id", flat=True))
+    groupes, ordre = {}, []
+    for std in standards:
+        if std.categorie not in groupes:
+            groupes[std.categorie] = []
+            ordre.append(std.categorie)
+        groupes[std.categorie].append({
+            "std": std,
+            "deja": std.pk in deja_copies,
+        })
+    paires = [(cat, groupes[cat]) for cat in ordre]
+    return render(request, "portal/pro/catalogue_standard.html",
+                  {"paires": paires})
+
+
+@login_required
+@exploitant_requis
+def catalogue_copier(request):
+    """Copie les produits types sélectionnés dans le catalogue de
+    l'exploitant : catégorie créée si besoin, prix optionnel, traçabilité
+    origine_standard (issue #1)."""
+    exploitant = request.user.exploitant
+    if request.method == "POST":
+        ids = request.POST.getlist("std")
+        copies = 0
+        for std in ProduitStandard.objects.filter(pk__in=ids):
+            if Produit.objects.filter(exploitant=exploitant,
+                                      origine_standard=std).exists():
+                continue
+            cat, _cree = Categorie.objects.get_or_create(
+                exploitant=exploitant, nom=std.categorie)
+            if _cree:
+                cat.position = exploitant.categories.count()
+                cat.save()
+            prix = None
+            brut = request.POST.get(f"prix_{std.pk}", "").strip()
+            if brut:
+                try:
+                    prix = Decimal(brut)
+                except InvalidOperation:
+                    prix = None
+            Produit.objects.create(
+                exploitant=exploitant, nom=std.nom, categorie=cat,
+                description="", unite_vente=std.unite_vente,
+                attributs={"saisons": std.saisons},
+                origine_standard=std, prix=prix, actif=True)
+            copies += 1
+        if copies:
+            messages.success(request, f"{copies} produit(s) copié(s) dans "
+                             "votre catalogue — complétez les prix si besoin.")
+        else:
+            messages.info(request, "Aucun nouveau produit copié.")
+    return redirect("portal:catalogue_standard")
+
+
+@login_required
+@exploitant_requis
+def categories_manage(request):
+    """Gestion des catégories de l'exploitant (issue #5) : créer,
+    renommer, réordonner, supprimer. Supprimer ne touche pas les produits
+    (ils passent « sans catégorie")."""
+    exploitant = request.user.exploitant
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "creer":
+            nom = request.POST.get("nom", "").strip()
+            if nom:
+                cat, cree = Categorie.objects.get_or_create(
+                    exploitant=exploitant, nom=nom[:80])
+                if cree:
+                    cat.position = exploitant.categories.count()
+                    cat.save()
+                    messages.success(request,
+                                     f"Catégorie « {cat.nom} » créée.")
+                else:
+                    messages.info(request, "Cette catégorie existe déjà.")
+        elif action == "renommer":
+            cat = get_object_or_404(Categorie, pk=request.POST.get("pk"),
+                                   exploitant=exploitant)
+            nom = request.POST.get("nom", "").strip()
+            if nom:
+                cat.nom = nom[:80]
+                cat.save()
+                messages.success(request, "Catégorie renommée.")
+        elif action == "supprimer":
+            cat = get_object_or_404(Categorie, pk=request.POST.get("pk"),
+                                   exploitant=exploitant)
+            nb = cat.produits.count()
+            nom = cat.nom
+            cat.delete()
+            message = f"Catégorie « {nom} » supprimée"
+            if nb:
+                message += (f" — {nb} produit(s) désormais sans catégorie "
+                            "(reclassez-les en les modifiant).")
+            messages.info(request, message + ".")
+        elif action in ("monter", "descendre"):
+            cat = get_object_or_404(Categorie, pk=request.POST.get("pk"),
+                                    exploitant=exploitant)
+            voisines = list(exploitant.categories.order_by("position", "nom"))
+            i = voisines.index(cat)
+            j = i - 1 if action == "monter" else i + 1
+            if 0 <= j < len(voisines):
+                voisines[i], voisines[j] = voisines[j], voisines[i]
+                for k, c in enumerate(voisines):
+                    c.position = k
+                    c.save()
+        return redirect("portal:categories_manage")
+    categories = exploitant.categories.order_by("position", "nom")
+    return render(request, "portal/pro/categories.html",
+                  {"categories": categories})
 
 
 # ---------------------------------------------------------------- client
