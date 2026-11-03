@@ -35,7 +35,7 @@
     "fields": {
       "nom": "Radis rose",
       "categorie": "Légumes racines",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "printemps",
         "été"
@@ -215,7 +215,7 @@
     "fields": {
       "nom": "Ail (tête)",
       "categorie": "Alliacés",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été",
         "automne"
@@ -230,7 +230,7 @@
     "fields": {
       "nom": "Poireau",
       "categorie": "Alliacés",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "automne",
         "hiver"
@@ -273,7 +273,7 @@
     "fields": {
       "nom": "Tomate cerise",
       "categorie": "Légumes fruits",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "été"
       ],
@@ -301,7 +301,7 @@
     "fields": {
       "nom": "Concombre",
       "categorie": "Légumes fruits",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été"
       ],
@@ -329,7 +329,7 @@
     "fields": {
       "nom": "Aubergine",
       "categorie": "Légumes fruits",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été"
       ],
@@ -343,7 +343,7 @@
     "fields": {
       "nom": "Poivron rouge",
       "categorie": "Légumes fruits",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été"
       ],
@@ -357,7 +357,7 @@
     "fields": {
       "nom": "Poivron vert",
       "categorie": "Légumes fruits",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été"
       ],
@@ -371,7 +371,7 @@
     "fields": {
       "nom": "Piment",
       "categorie": "Légumes fruits",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été"
       ],
@@ -413,7 +413,7 @@
     "fields": {
       "nom": "Batavia",
       "categorie": "Légumes feuilles",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "printemps",
         "été",
@@ -429,7 +429,7 @@
     "fields": {
       "nom": "Feuille de chêne",
       "categorie": "Légumes feuilles",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "printemps",
         "été",
@@ -445,7 +445,7 @@
     "fields": {
       "nom": "Laitue romaine",
       "categorie": "Légumes feuilles",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "printemps",
         "été"
@@ -460,7 +460,7 @@
     "fields": {
       "nom": "Sucrine",
       "categorie": "Légumes feuilles",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "printemps",
         "été"
@@ -475,7 +475,7 @@
     "fields": {
       "nom": "Mâche",
       "categorie": "Légumes feuilles",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "automne",
         "hiver"
@@ -506,7 +506,7 @@
     "fields": {
       "nom": "Roquette",
       "categorie": "Légumes feuilles",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "printemps",
         "été",
@@ -522,7 +522,7 @@
     "fields": {
       "nom": "Mesclun",
       "categorie": "Légumes feuilles",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "printemps",
         "automne"
@@ -552,7 +552,7 @@
     "fields": {
       "nom": "Chicorée",
       "categorie": "Légumes feuilles",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "hiver"
       ],
@@ -582,7 +582,7 @@
     "fields": {
       "nom": "Chou-fleur",
       "categorie": "Autres légumes",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "automne",
         "hiver"
@@ -597,7 +597,7 @@
     "fields": {
       "nom": "Chou romanesco",
       "categorie": "Autres légumes",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "automne"
       ],
@@ -685,7 +685,7 @@
     "fields": {
       "nom": "Fenouil",
       "categorie": "Autres légumes",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été",
         "automne"
@@ -716,7 +716,7 @@
     "fields": {
       "nom": "Artichaut",
       "categorie": "Autres légumes",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "printemps",
         "été"
@@ -731,7 +731,7 @@
     "fields": {
       "nom": "Asperge",
       "categorie": "Autres légumes",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "printemps"
       ],
@@ -774,7 +774,7 @@
     "fields": {
       "nom": "Maïs doux",
       "categorie": "Autres légumes",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été"
       ],
@@ -892,7 +892,7 @@
     "fields": {
       "nom": "Persil",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "printemps",
         "été",
@@ -908,7 +908,7 @@
     "fields": {
       "nom": "Basilic",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "été"
       ],
@@ -922,7 +922,7 @@
     "fields": {
       "nom": "Ciboulette",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "printemps",
         "été",
@@ -938,7 +938,7 @@
     "fields": {
       "nom": "Coriandre",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "été"
       ],
@@ -952,7 +952,7 @@
     "fields": {
       "nom": "Menthe",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "été"
       ],
@@ -966,7 +966,7 @@
     "fields": {
       "nom": "Estragon",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "été"
       ],
@@ -980,7 +980,7 @@
     "fields": {
       "nom": "Thym",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "toute l'année"
       ],
@@ -994,7 +994,7 @@
     "fields": {
       "nom": "Romarin",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "toute l'année"
       ],
@@ -1008,7 +1008,7 @@
     "fields": {
       "nom": "Sauge",
       "categorie": "Herbes aromatiques",
-      "unite_vente": "BOTTE",
+      "unite_vente": "BO",
       "saisons": [
         "toute l'année"
       ],
@@ -1179,7 +1179,7 @@
     "fields": {
       "nom": "Melon",
       "categorie": "Fruits",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été"
       ],
@@ -1193,7 +1193,7 @@
     "fields": {
       "nom": "Pastèque",
       "categorie": "Fruits",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "été"
       ],
@@ -1207,7 +1207,7 @@
     "fields": {
       "nom": "Fraise",
       "categorie": "Baies",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "printemps",
         "été"
@@ -1222,7 +1222,7 @@
     "fields": {
       "nom": "Framboise",
       "categorie": "Baies",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "été"
       ],
@@ -1236,7 +1236,7 @@
     "fields": {
       "nom": "Groseille",
       "categorie": "Baies",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "été"
       ],
@@ -1250,7 +1250,7 @@
     "fields": {
       "nom": "Cassis",
       "categorie": "Baies",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "été"
       ],
@@ -1264,7 +1264,7 @@
     "fields": {
       "nom": "Mûre",
       "categorie": "Baies",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "été"
       ],
@@ -1278,7 +1278,7 @@
     "fields": {
       "nom": "Myrtille",
       "categorie": "Baies",
-      "unite_vente": "BARQUETTE",
+      "unite_vente": "BQ",
       "saisons": [
         "été"
       ],
@@ -1376,7 +1376,7 @@
     "fields": {
       "nom": "Œufs (boîte de 6)",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1390,7 +1390,7 @@
     "fields": {
       "nom": "Pain au levain",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1432,7 +1432,7 @@
     "fields": {
       "nom": "Miel (500 g)",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1446,7 +1446,7 @@
     "fields": {
       "nom": "Yaourt fermier",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1460,7 +1460,7 @@
     "fields": {
       "nom": "Fromage de chèvre",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1488,7 +1488,7 @@
     "fields": {
       "nom": "Faisselle",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1502,7 +1502,7 @@
     "fields": {
       "nom": "Beurre fermier",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1516,7 +1516,7 @@
     "fields": {
       "nom": "Jus de pomme (1 L)",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1530,7 +1530,7 @@
     "fields": {
       "nom": "Cidre (75 cL)",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1544,7 +1544,7 @@
     "fields": {
       "nom": "Confiture",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1558,7 +1558,7 @@
     "fields": {
       "nom": "Compote",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1572,7 +1572,7 @@
     "fields": {
       "nom": "Sirop de fruits",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
@@ -1586,7 +1586,7 @@
     "fields": {
       "nom": "Saucisson sec",
       "categorie": "Produits de la ferme",
-      "unite_vente": "PIECE",
+      "unite_vente": "PC",
       "saisons": [
         "toute l'année"
       ],
