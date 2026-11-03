@@ -14,26 +14,36 @@
 
 <section>
   <h2>Contenu livré</h2>
-  <p class="muted">Ajustez les quantités réellement mises dans le panier.
-     Laissez vide (ou 0) pour retirer une ligne. C'est ce contenu qui
-     constitue le décompte de production et l'export comptable.</p>
+  <p class="muted">Ajustez les quantités réellement mises dans le panier, côte à côte
+     avec ce que le client avait souhaité. Vide ou 0 = retirer la ligne.
+     ⚠️ signale un écart avec la commande. C'est ce contenu qui constitue
+     le décompte de production et l'export comptable.</p>
   <form method="post" action="{% url 'portal:panier_detail' panier.pk %}">
     {% csrf_token %}
     <input type="hidden" name="action" value="lignes">
-    <ul>
-      {% for ligne in panier.lignes.all %}
-        <li>
-          <label>
-            <input type="number" step="0.01" min="0"
-                   name="qty_{{ ligne.pk }}" value="{{ ligne.quantite }}">
-            × {{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u
-            = {{ ligne.total_ligne }} €)
-          </label>
-        </li>
-      {% empty %}
-        <li class="muted">Panier vide.</li>
-      {% endfor %}
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Produit</th><th>Unité</th><th>Souhaité (client)</th>
+          <th>Livré</th><th>Prix/u</th><th>Total ligne</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>{{ row.ligne.produit.nom }}{% if row.ajuste %} ⚠️ ajusté{% endif %}</td>
+            <td>{{ row.ligne.produit.get_unite_vente_display }}</td>
+            <td>{% if row.souhaite is not None %}{{ row.souhaite }}{% else %}— (ajout){% endif %}</td>
+            <td><input type="number" step="{{ row.step }}" min="0"
+                       name="qty_{{ row.ligne.pk }}" value="{{ row.ligne.quantite }}"></td>
+            <td>{{ row.ligne.prix_unitaire }} €</td>
+            <td>{{ row.ligne.total_ligne }} €</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="muted">Panier vide.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
     <div class="inline-form">
       <label>
         Ajouter un produit :
@@ -49,6 +59,9 @@
       </label>
       <button class="btn" type="submit">💾 Enregistrer le panier</button>
     </div>
+    <label>Commentaire (visible par le client) :
+      <textarea name="note" rows="2">{{ panier.note }}</textarea>
+    </label>
   </form>
 </section>
 

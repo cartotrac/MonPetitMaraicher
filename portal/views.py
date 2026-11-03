@@ -14,7 +14,11 @@ from django.utils import timezone
 from .forms import (InscriptionClientForm, InscriptionExploitantForm,
                     ProduitForm)
 from .models import (Commande, Exploitant, LigneCommande, LignePanier,
-                    LigneRecolte, Panier, Produit, SemaineRecolte)
+                    LigneRecolte, Panier, PreferenceContact, Produit,
+                    SemaineRecolte)
+
+# Unités vendues à la pièce : quantités entières uniquement.
+UNITES_ENTIERES = ("PC", "BO", "BQ")
 
 
 def home(request):
@@ -240,22 +244,49 @@ def harvest_manage(request, semaine_id=None):
 @login_required
 @exploitant_requis
 def order_list(request, statut=None):
+    """Commandes reçues, avec contact client (e-mail, téléphone, canal
+    préféré si le client en a exprimé un)."""
     exploitant = request.user.exploitant
     commandes = exploitant.commandes.order_by("-creee_le")
     if statut:
         commandes = commandes.filter(statut=statut)
+    canaux = {p.client_id: p.get_canal_display()
+              for p in PreferenceContact.objects.filter(exploitant=exploitant)}
+    commandes = list(commandes.prefetch_related("lignes__produit"))
+    for c in commandes:
+        c.canal_pref = canaux.get(c.client_id) if c.client_id else None
     return render(request, "portal/pro/orders.html",
                   {"commandes": commandes, "filtre_statut": statut})
+
+
+def _quantite_ajustee(brut, quantite_commandee, produit):
+    """Valide une quantité ajustée : Decimal, positive, entière si l'unité
+    se vend à la pièce. Retourne (quantité, erreur_ou_None)."""
+    if brut == "":
+        qty = quantite_commandee
+    else:
+        try:
+            qty = Decimal(brut)
+        except InvalidOperation:
+            return None, f"« {produit.nom} » : quantité invalide."
+    if qty <= 0:
+        return None, None  # ligne retirée volontairement
+    if (produit.unite_vente in UNITES_ENTIERES
+            and qty != qty.to_integral_value()):
+        return None, (f"« {produit.nom} » se vend à la pièce : "
+                      "quantité entière requise.")
+    return qty, None
 
 
 @login_required
 @exploitant_requis
 def order_validate(request, commande_id):
-    """Validation / refus.
+    """Validation / refus d'une commande.
 
-    Valider crée le PANIER numéroté pré-rempli (copie des lignes de la
-    commande) : l'exploitant ajustera ensuite le contenu EFFECTIVEMENT
-    livré — seul décompte de production (règle DATA_MODEL v0.3).
+    L'exploitant peut AJUSTER les quantités au moment de valider (0 ou vide =
+    retirer la ligne) et laisser un commentaire visible par le client.
+    Le panier numéroté est créé avec le contenu ajusté : point de départ
+    du contenu livré (DATA_MODEL v0.3).
     """
     exploitant = request.user.exploitant
     commande = get_object_or_404(Commande, pk=commande_id, exploitant=exploitant)
@@ -263,6 +294,26 @@ def order_validate(request, commande_id):
             and commande.statut == Commande.Statut.NOUVELLE):
         action = request.POST.get("action")
         if action == "validate":
+            ajustees, erreurs, total = [], [], Decimal("0")
+            for ligne in commande.lignes.select_related("produit"):
+                brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
+                qty, erreur = _quantite_ajustee(brut, ligne.quantite,
+                                                ligne.produit)
+                if erreur:
+                    erreurs.append(erreur)
+                    continue
+                if qty is None:
+                    continue  # ligne retirée
+                ajustees.append((ligne, qty))
+                total += qty * ligne.prix_unitaire
+            if erreurs:
+                messages.error(request, " ".join(erreurs))
+                return redirect("portal:order_list")
+            if not ajustees:
+                messages.error(
+                    request, "Impossible de valider : toutes les lignes "
+                    "auraient été retirées.")
+                return redirect("portal:order_list")
             with transaction.atomic():
                 commande.statut = Commande.Statut.VALIDEE
                 commande.validee_le = timezone.now()
@@ -281,11 +332,12 @@ def order_validate(request, commande_id):
                     point_livraison=commande.point_livraison,
                     commande=commande,
                     statut=Panier.Statut.PREPARATION,
-                    total=commande.total)
-                for ligne in commande.lignes.select_related("produit"):
+                    total=total,
+                    note=request.POST.get("note", "").strip())
+                for ligne, qty in ajustees:
                     LignePanier.objects.create(
                         panier=panier, produit=ligne.produit,
-                        quantite=ligne.quantite,
+                        quantite=qty,
                         prix_unitaire=ligne.prix_unitaire)
             messages.success(
                 request, f"Commande #{commande.pk} validée → "
@@ -321,9 +373,10 @@ def panier_list(request):
 @login_required
 @exploitant_requis
 def panier_detail(request, panier_id):
-    """Préparation du panier : ajustement du contenu EFFECTIVEMENT livré
-    (quantités, ajout/retrait de produits) et changement de statut.
-    C'est la source du décompte de production et de l'export (issue #8)."""
+    """Préparation du panier : ajustement du contenu EFFECTIVEMENT livré,
+    comparé côte à côte aux quantités souhaitées par le client, avec
+    commentaire visible par le client. Source du décompte de production
+    et de l'export comptable (issue #8)."""
     exploitant = request.user.exploitant
     panier = get_object_or_404(Panier, pk=panier_id, exploitant=exploitant)
 
@@ -331,40 +384,64 @@ def panier_detail(request, panier_id):
         action = request.POST.get("action")
 
         if action == "lignes":
+            ajustes, erreurs, total = {}, [], Decimal("0")
+            for ligne in panier.lignes.select_related("produit"):
+                brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
+                if brut == "":
+                    ajustes[ligne.pk] = None  # retirée
+                    continue
+                try:
+                    qty = Decimal(brut)
+                except InvalidOperation:
+                    erreurs.append(f"« {ligne.produit.nom} » : quantité invalide.")
+                    continue
+                if qty <= 0:
+                    ajustes[ligne.pk] = None
+                    continue
+                if (ligne.produit.unite_vente in UNITES_ENTIERES
+                        and qty != qty.to_integral_value()):
+                    erreurs.append(f"« {ligne.produit.nom} » se vend à la "
+                                   "pièce : quantité entière requise.")
+                    continue
+                ajustes[ligne.pk] = qty
+            pid = request.POST.get("produit_ajout", "").strip()
+            qadd = request.POST.get("qty_ajout", "").strip()
+            ajout = None
+            if pid and qadd:
+                produit = exploitant.produits.filter(
+                    pk=pid, actif=True).first()
+                try:
+                    qadd = Decimal(qadd)
+                except InvalidOperation:
+                    produit = None
+                if produit and qadd > 0:
+                    if (produit.unite_vente in UNITES_ENTIERES
+                            and qadd != qadd.to_integral_value()):
+                        erreurs.append(f"« {produit.nom} » se vend à la "
+                                       "pièce : quantité entière requise.")
+                    else:
+                        ajout = (produit, qadd)
+            if erreurs:
+                messages.error(request, " ".join(erreurs))
+                return redirect("portal:panier_detail", panier.pk)
             with transaction.atomic():
-                total = Decimal("0")
                 for ligne in panier.lignes.select_related("produit"):
-                    brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
-                    if not brut:
-                        ligne.delete()
-                        continue
-                    try:
-                        qty = Decimal(brut)
-                    except InvalidOperation:
-                        continue
-                    if qty <= 0:
+                    qty = ajustes.get(ligne.pk, ligne.quantite)
+                    if qty is None:
                         ligne.delete()
                         continue
                     ligne.quantite = qty
                     ligne.save()
                     total += qty * ligne.prix_unitaire
-                # Ajout d'un produit non commandé (prix du catalogue)
-                pid = request.POST.get("produit_ajout", "").strip()
-                qadd = request.POST.get("qty_ajout", "").strip()
-                if pid and qadd:
-                    produit = exploitant.produits.filter(
-                        pk=pid, actif=True).first()
-                    try:
-                        qadd = Decimal(qadd)
-                    except InvalidOperation:
-                        qadd = None
-                    if produit and qadd and qadd > 0:
-                        prix = produit.prix or Decimal("0")
-                        LignePanier.objects.create(
-                            panier=panier, produit=produit,
-                            quantite=qadd, prix_unitaire=prix)
-                        total += qadd * prix
+                if ajout:
+                    produit, qadd = ajout
+                    prix = produit.prix or Decimal("0")
+                    LignePanier.objects.create(
+                        panier=panier, produit=produit,
+                        quantite=qadd, prix_unitaire=prix)
+                    total += qadd * prix
                 panier.total = total
+                panier.note = request.POST.get("note", "").strip()
                 panier.save()
             messages.success(
                 request, f"Panier n°{panier.numero} mis à jour "
@@ -381,8 +458,23 @@ def panier_detail(request, panier_id):
 
         return redirect("portal:panier_detail", panier.pk)
 
+    # Comparatif souhaité (client) / livré, ligne par ligne
+    souhaitees = {}
+    if panier.commande_id:
+        souhaitees = {lc.produit_id: lc.quantite
+                     for lc in panier.commande.lignes.all()}
+    rows = []
+    for ligne in panier.lignes.select_related("produit"):
+        souh = souhaitees.get(ligne.produit_id)
+        rows.append({
+            "ligne": ligne,
+            "souhaite": souh,
+            "ajuste": souh is not None and souh != ligne.quantite,
+            "step": "0.01" if ligne.produit.unite_vente == "KG" else "1",
+        })
     return render(request, "portal/pro/panier_detail.html", {
         "panier": panier,
+        "rows": rows,
         "produits": exploitant.produits.filter(actif=True),
     })
 
@@ -421,6 +513,12 @@ def order_create(request, slug):
                 continue
             if qty <= 0:
                 continue
+            if (ligne.produit.unite_vente in UNITES_ENTIERES
+                    and qty != qty.to_integral_value()):
+                messages.error(
+                    request, f"« {ligne.produit.nom} » se vend à la pièce : "
+                    "merci de commander un nombre entier.")
+                return redirect("portal:order_create", slug=slug)
             lignes_souhaitees.append((ligne, qty))
             total += qty * ligne.prix_unitaire
         point = exploitant.points_livraison.filter(
@@ -469,10 +567,29 @@ def order_create(request, slug):
 
 @login_required
 def my_orders(request):
+    """Commandes du client ; les paniers validés montrent le contenu
+    livré côte à côte du souhaité, avec le commentaire du producteur."""
     commandes = (request.user.commandes.select_related("exploitant")
                  .prefetch_related("lignes__produit").order_by("-creee_le"))
+    resultats = []
+    for commande in commandes:
+        panier = (Panier.objects.filter(commande=commande)
+                  .prefetch_related("lignes__produit").first())
+        lignes_panier = []
+        if panier:
+            souhaitees = {lc.produit_id: lc.quantite
+                          for lc in commande.lignes.all()}
+            for lp in panier.lignes.all():
+                souh = souhaitees.get(lp.produit_id)
+                lignes_panier.append({
+                    "ligne": lp,
+                    "souhaite": souh,
+                    "ajuste": souh is not None and souh != lp.quantite,
+                })
+        resultats.append({"commande": commande, "panier": panier,
+                          "lignes_panier": lignes_panier})
     return render(request, "portal/my_orders.html",
-                  {"commandes": commandes})
+                  {"resultats": resultats})
 
 
 @login_required

@@ -406,6 +406,9 @@ class Panier(models.Model):
                               default=Statut.PREPARATION, db_index=True)
     total = models.DecimalField("Total (€)", max_digits=8, decimal_places=2,
                                 default=0)
+    note = models.TextField("Commentaire du producteur", blank=True,
+                            help_text="Visible par le client (ajustements, "
+                                      "remplacements éventuels)")
 
     class Meta:
         verbose_name = "Panier"

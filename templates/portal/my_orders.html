@@ -2,7 +2,8 @@
 {% block title %}Mes commandes — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>🧾 Mes commandes</h1>
-{% for commande in commandes %}
+{% for resultat in resultats %}
+  {% with commande=resultat.commande panier=resultat.panier %}
   <div class="card order-card">
     <div class="order-head">
       <strong>{{ commande.exploitant.nom_ferme }}</strong>
@@ -11,9 +12,22 @@
     <p>📅 {{ commande.date_livraison|date:"d/m/Y" }} — 💰 {{ commande.total }} €</p>
     <ul>
       {% for ligne in commande.lignes.all %}
-        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }}</li>
+        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.get_unite_vente_display }}</li>
       {% endfor %}
     </ul>
+    {% if panier %}
+      <p><strong>🧺 Panier n°{{ panier.numero }}</strong> —
+         <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
+         — 💰 {{ panier.total }} €</p>
+      <p class="muted">Contenu livré :</p>
+      <ul>
+        {% for row in resultat.lignes_panier %}
+          <li>{{ row.ligne.produit.nom }} × {{ row.ligne.quantite }} {{ row.ligne.produit.get_unite_vente_display }}
+              {% if row.ajuste %} <em>(souhaité : {{ row.souhaite }})</em> ⚠️ ajusté{% elif row.souhaite is None %} <em>(ajout du producteur)</em>{% endif %}</li>
+        {% endfor %}
+      </ul>
+      {% if panier.note %}<p class="muted">💬 {{ panier.note }}</p>{% endif %}
+    {% endif %}
     {% if commande.statut == 'NOUVELLE' %}
       <form method="post" action="{% url 'portal:order_cancel' commande.pk %}">
         {% csrf_token %}
@@ -21,6 +35,7 @@
       </form>
     {% endif %}
   </div>
+  {% endwith %}
 {% empty %}
   <p class="muted">Vous n'avez pas encore de commande.
      <a href="{% url 'portal:home' %}">Trouvez un producteur !</a></p>
