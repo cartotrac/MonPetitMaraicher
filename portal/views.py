@@ -258,6 +258,7 @@ def harvest_manage(request, semaine_id=None, nouvelle=False):
 
     Ergonomie : les valeurs sont pré-remplies depuis la semaine précédente
     (ou la semaine source choisie) ; les lignes reprises sont signalées.
+    Le PRIX DE RÉFÉRENCE du catalogue préremplit les prix manquants.
     La date (lundi) est modifiable : déplacer la récolte change la semaine
     affichée sur la vitrine (refus propre si déjà existante).
     """
@@ -362,10 +363,14 @@ def harvest_manage(request, semaine_id=None, nouvelle=False):
             groupes[nom_cat] = []
             ordre.append(nom_cat)
         v = valeurs.get(p.pk)
+        # Prix de la ligne de récolte, sinon prix de RÉFÉRENCE du
+        # catalogue (saisi à l'import/création) : préremplit la colonne
+        # prix, reste éditable à cet endroit.
+        prix_affiche = (v[1] if v and v[1] is not None else None) or p.prix
         groupes[nom_cat].append({
             "produit": p,
             "qty": v[0] if v else None,
-            "price": v[1] if v else None,
+            "price": prix_affiche,
             "reprise": bool(v and v[2]),
             "step": "0.01" if p.unite_vente == "KG" else "1",
         })
