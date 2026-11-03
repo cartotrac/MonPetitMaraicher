@@ -30,15 +30,13 @@
     {% if autres %}
       <div class="form-row">
         <span class="muted">Reprendre les valeurs d'une autre semaine :</span>
-        <form method="get" action="" class="inline-form"></form>
-        <select name="copier_select" id="copier-select">
+        <select id="copier-select">
           {% for s in autres %}
             <option value="{{ s.pk }}">Semaine du {{ s.lundi|date:"d/m/Y" }}</option>
           {% endfor %}
         </select>
         <button class="btn btn-sm btn-outline" type="button"
-                onclick="var v=document.getElementById('copier-select').value;
-                         window.location='?copier='+v;">↩️ Recharger</button>
+                onclick="window.location='?copier=' + document.getElementById('copier-select').value;">↩️ Recharger</button>
       </div>
     {% endif %}
   </div>
