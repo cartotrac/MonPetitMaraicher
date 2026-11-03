@@ -45,7 +45,6 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -95,7 +94,11 @@ TIME_ZONE = "Europe/Paris"
 USE_I18N = True
 USE_TZ = True
 
+# Fichiers statiques du projet (CSS, JS) : collectstatic les copie vers
+# STATIC_ROOT, servi en production par config/urls.py. Après chaque
+# modification de static/, relancer : manage.py collectstatic --noinput
 STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
