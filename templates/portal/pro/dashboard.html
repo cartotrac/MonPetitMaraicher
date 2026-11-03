@@ -6,9 +6,12 @@
 <div class="quick-actions">
   <a class="btn" href="{% url 'portal:harvest_new' %}">➕ Nouvelle récolte</a>
   <a class="btn btn-outline" href="{% url 'portal:harvest_list' %}">🧺 Mes récoltes</a>
-  <a class="btn" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
+  <a class="btn" href="{% url 'portal:order_direct' %}">📝 Saisir une commande</a>
+  <a class="btn btn-outline" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
   <a class="btn" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
   <a class="btn btn-outline" href="{% url 'portal:categories_manage' %}">🗂 Gérer mes catégories</a>
+  <a class="btn btn-outline" href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
+  <a class="btn btn-outline" href="{% url 'portal:points_manage' %}">📍 Points & créneaux</a>
   <a class="btn btn-outline" href="{% url 'portal:producer_detail' exploitant.slug %}">Voir ma page publique</a>
 </div>
 
@@ -61,8 +64,12 @@
 
 <section>
   <h2>📍 Points de livraison & créneaux</h2>
-  <p class="muted">À définir depuis l'administration Django pour l'instant
-     (menu « Points de livraison » et « Créneaux de livraison ») — des écrans
-     dédiés sont prévus dans la V2 (issue #9).</p>
+  {% if points %}
+    <p>{{ points|length }} point(s) de livraison —
+       <a href="{% url 'portal:points_manage' %}">gérer les points et créneaux</a></p>
+  {% else %}
+    <p class="muted">Aucun point de livraison : vos clients pourront être
+       livrés sans lieu dédié. <a href="{% url 'portal:points_manage' %}">En ajouter</a></p>
+  {% endif %}
 </section>
 {% endblock %}

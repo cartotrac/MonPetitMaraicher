@@ -108,6 +108,22 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# E-mails sortants (issue #3). Sans EMAIL_HOST, Django journalise au lieu
+# d'envoyer (backend console) et l'interface en informe l'exploitant.
+# AlwaysData : EMAIL_HOST=localhost (SMTP mutualisé) fonctionne aussi.
+if env("EMAIL_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = env("EMAIL_HOST")
+    EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = env("EMAIL_USE_TLS", "0") == "1"
+    EMAIL_USE_SSL = env("EMAIL_USE_SSL", "0") == "1"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL",
+                         "noreply@monpetitmaraicher.cartotrac.fr")
+
 LOGIN_URL = "/comptes/connexion/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"

@@ -3,6 +3,12 @@
 {% block content %}
 <h1>🧺 Paniers</h1>
 
+<div class="quick-actions">
+  <a class="btn" href="{% url 'portal:order_direct' %}">📝 Saisir une commande directe</a>
+  <a class="btn btn-outline" href="{% url 'portal:panier_export' %}{% if date_filter %}?date={{ date_filter }}{% endif %}">⬇️ Export CSV (détail)</a>
+  <a class="btn btn-outline" href="{% url 'portal:panier_export' %}?mode=production{% if date_filter %}&date={{ date_filter }}{% endif %}">⬇️ Export production (livrés)</a>
+</div>
+
 <form method="get" class="inline-form">
   <label for="date">Jour de livraison :</label>
   <input type="date" id="date" name="date" value="{{ date_filter }}">
@@ -21,11 +27,11 @@
        — 💰 {{ panier.total }} €
        — {{ panier.lignes.count }} article(s)</p>
     <p class="muted">✉️ {{ panier.email_client }}{% if panier.telephone_client %} · 📞 {{ panier.telephone_client }}{% endif %}
-       {% if panier.client %}· 💻 client avec compte{% else %}· sans compte{% endif %}</p>
+       {% if panier.client %}· 💻 client avec compte{% else %}· sans compte{% endif %}
+       {% if panier.commande and panier.commande.saisie_exploitant %}· saisie directe{% endif %}</p>
     <a class="btn btn-sm" href="{% url 'portal:panier_detail' panier.pk %}">Préparer / modifier</a>
   </div>
 {% empty %}
-  <p class="muted">Aucun panier pour l'instant. Validez une commande et le panier
-     numéroté sera créé automatiquement.</p>
+  <p class="muted">Aucun panier pour l'instant. Validez une commande (ou <a href="{% url 'portal:order_direct' %}">saisissez-en une directement</a>) et le panier numéroté sera créé.</p>
 {% endfor %}
 {% endblock %}

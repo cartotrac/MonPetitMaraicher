@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Saisir une commande — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>📝 Saisir une commande</h1>
+<p class="muted">Commande passée hors portail (téléphone, marché…) : elle est
+   enregistrée comme validée et le panier numéroté est créé immédiatement.
+   Les prix de référence du catalogue s'appliquent ; le contenu reste
+   ajustable dans la préparation du panier.</p>
+
+<form method="post" class="form">
+  {% csrf_token %}
+  <div class="card param-card">
+    <h3>Client</h3>
+    <div class="form-row">
+      <label>Nom
+        <input type="text" name="nom_client" required
+               placeholder="Nom du client"></label>
+      <label>E-mail
+        <input type="email" name="email_client"
+               placeholder="email (si connu)"></label>
+      <label>Téléphone
+        <input type="tel" name="telephone_client"
+               placeholder="téléphone (si pas d'e-mail)"></label>
+    </div>
+    <p class="muted">E-mail OU téléphone requis. Si l'e-mail correspond à un
+       compte client, la commande est rattachée à son compte.</p>
+    <div class="form-row">
+      <label>Date de livraison
+        <input type="date" name="date_livraison" value="{{ date_defaut }}" required></label>
+      {% if points %}
+      <label>Point de livraison
+        <select name="point_livraison">
+          <option value="">— aucun —</option>
+          {% for point in points %}
+            <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
+          {% endfor %}
+        </select></label>
+      {% endif %}
+      {% if creneaux %}
+      <label>Créneau
+        <select name="creneau">
+          <option value="">— aucun —</option>
+          {% for creneau in creneaux %}
+            <option value="{{ creneau.pk }}">{{ creneau }}
+              {% if creneau.point_livraison %}— {{ creneau.point_livraison.nom }}{% endif %}</option>
+          {% endfor %}
+        </select></label>
+      {% endif %}
+    </div>
+    <label>Note
+      <input type="text" name="note" placeholder="Précisions du client"></label>
+  </div>
+
+  <h2>Produits commandés</h2>
+  <table class="table">
+    <thead><tr><th>Produit</th><th>Quantité</th><th>Prix de référence</th></tr></thead>
+    <tbody>
+    {% for produit in produits %}
+      <tr>
+        <td>{{ produit.nom }} <span class="muted">({{ produit.get_unite_vente_display }})</span>
+          {% if produit.prix is None %}<span class="badge badge-off">prix à définir</span>{% endif %}</td>
+        <td><input type="number" name="qty_{{ produit.pk }}" min="0"
+                   step="{% if produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}"
+                   placeholder="0"></td>
+        <td>{% if produit.prix %}{{ produit.prix }} €{% else %}—{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3" class="muted">Votre catalogue est vide.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="save-bar">
+    <button class="btn btn-lg" type="submit">💾 Enregistrer la commande</button>
+    <a class="btn btn-outline" href="{% url 'portal:panier_list' %}">Annuler</a>
+  </div>
+</form>
+{% endblock %}

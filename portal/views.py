@@ -1,22 +1,26 @@
+import csv
 import datetime
+import io
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import (InscriptionClientForm, InscriptionExploitantForm,
                     ProduitForm)
-from .models import (Categorie, Commande, Exploitant, LigneCommande,
-                    LignePanier, LigneRecolte, Panier, ParametresVitrine,
-                    PreferenceContact, Produit, ProduitStandard,
-                    SemaineRecolte)
+from .models import (Categorie, Commande, CreneauLivraison, Exploitant,
+                    LigneCommande, LignePanier, LigneRecolte, Panier,
+                    ParametresVitrine, PointLivraison, PreferenceContact,
+                    Produit, ProduitStandard, SemaineRecolte)
+from .notifications import notifier_client
 
 # Unités vendues à la pièce : quantités entières uniquement.
 UNITES_ENTIERES = ("PC", "BO", "BQ")
@@ -429,13 +433,129 @@ def _quantite_ajustee(brut, quantite_commandee, produit):
 
 @login_required
 @exploitant_requis
+def order_direct_create(request):
+    """Saisie directe d'une commande par l'exploitant (issue #2) : au
+    téléphone, au marché… La commande est immédiatement validée et le
+    panier numéroté créé (contenu ajustable ensuite). Les prix de
+    référence du catalogue s'appliquent."""
+    exploitant = request.user.exploitant
+    produits = list(exploitant.produits.filter(actif=True)
+                    .select_related("categorie")
+                    .order_by("categorie__position", "nom"))
+    points = exploitant.points_livraison.all()
+    creneaux = exploitant.creneaux.select_related("point_livraison")
+
+    if request.method == "POST":
+        nom_client = request.POST.get("nom_client", "").strip()
+        email_client = request.POST.get("email_client", "").strip()
+        telephone_client = request.POST.get("telephone_client", "").strip()
+        point = exploitant.points_livraison.filter(
+            pk=request.POST.get("point_livraison")).first()
+        creneau = exploitant.creneaux.filter(
+            pk=request.POST.get("creneau")).first()
+        try:
+            date_livraison = datetime.date.fromisoformat(
+                request.POST["date_livraison"])
+        except (KeyError, ValueError):
+            date_livraison = None
+        note = request.POST.get("note", "").strip()
+
+        erreurs = []
+        if not nom_client:
+            erreurs.append("Nom du client requis.")
+        if not email_client and not telephone_client:
+            erreurs.append("E-mail ou téléphone requis (identité contact).")
+        if (date_livraison is None
+                or date_livraison < timezone.localdate()):
+            erreurs.append("Date de livraison invalide "
+                           "(aujourd'hui ou plus tard).")
+
+        lignes, total = [], Decimal("0")
+        for produit in produits:
+            brut = request.POST.get(f"qty_{produit.pk}", "").strip()
+            if not brut:
+                continue
+            try:
+                qty = Decimal(brut)
+            except InvalidOperation:
+                erreurs.append(f"« {produit.nom} » : quantité invalide.")
+                continue
+            if qty <= 0:
+                continue
+            if (produit.unite_vente in UNITES_ENTIERES
+                    and qty != qty.to_integral_value()):
+                erreurs.append(f"« {produit.nom} » se vend à la pièce : "
+                               "quantité entière requise.")
+                continue
+            if produit.prix is None:
+                erreurs.append(f"« {produit.nom} » : aucun prix de "
+                               "référence dans le catalogue.")
+                continue
+            lignes.append((produit, qty, produit.prix))
+            total += qty * produit.prix
+        if not lignes:
+            erreurs.append("Aucun produit commandé.")
+
+        if erreurs:
+            messages.error(request, " ".join(erreurs))
+        else:
+            client = None
+            if email_client:
+                client = User.objects.filter(
+                    email__iexact=email_client).first()
+            with transaction.atomic():
+                commande = Commande.objects.create(
+                    exploitant=exploitant, client=client,
+                    nom_client=nom_client[:150],
+                    email_client=email_client,
+                    telephone_client=telephone_client,
+                    point_livraison=point,
+                    date_livraison=date_livraison,
+                    statut=Commande.Statut.VALIDEE,
+                    validee_le=timezone.now(),
+                    total=total, saisie_exploitant=True, note=note)
+                panier = Panier.objects.create(
+                    exploitant=exploitant, client=client,
+                    nom_client=nom_client[:150],
+                    email_client=email_client,
+                    telephone_client=telephone_client,
+                    numero=Panier.prochain_numero(
+                        exploitant, date_livraison,
+                        client=client, nom_client=nom_client[:150]),
+                    date_livraison=date_livraison, creneau=creneau,
+                    point_livraison=point, commande=commande,
+                    statut=Panier.Statut.PREPARATION,
+                    total=total, note=note)
+                for produit, qty, prix in lignes:
+                    LigneCommande.objects.create(
+                        commande=commande, produit=produit,
+                        quantite=qty, prix_unitaire=prix)
+                    LignePanier.objects.create(
+                        panier=panier, produit=produit,
+                        quantite=qty, prix_unitaire=prix)
+            messages.success(request, "Commande de " + nom_client
+                             + " enregistrée → panier n°"
+                             + str(panier.numero) + " créé.")
+            notifier_client(request, panier, "CONFIRMATION_COMMANDE")
+            return redirect("portal:panier_detail", panier.pk)
+
+    return render(request, "portal/pro/order_direct.html", {
+        "produits": produits,
+        "points": points,
+        "creneaux": creneaux,
+        "date_defaut": timezone.localdate().isoformat(),
+    })
+
+
+@login_required
+@exploitant_requis
 def order_validate(request, commande_id):
     """Validation / refus d'une commande.
 
     L'exploitant peut AJUSTER les quantités au moment de valider (0 ou vide =
     retirer la ligne) et laisser un commentaire visible par le client.
     Le panier numéroté est créé avec le contenu ajusté : point de départ
-    du contenu livré (DATA_MODEL v0.3).
+    du contenu livré (DATA_MODEL v0.3). Le client est notifié.
     """
     exploitant = request.user.exploitant
     commande = get_object_or_404(Commande, pk=commande_id, exploitant=exploitant)
@@ -492,6 +612,7 @@ def order_validate(request, commande_id):
                 request, f"Commande #{commande.pk} validée → "
                 f"panier n°{panier.numero} créé pour "
                 f"{panier.nom_client}.")
+            notifier_client(request, panier, "CONFIRMATION_COMMANDE")
         elif action == "refuse":
             commande.statut = Commande.Statut.REFUSEE
             commande.save()
@@ -521,11 +642,99 @@ def panier_list(request):
 
 @login_required
 @exploitant_requis
+def panier_export_csv(request):
+    """Export CSV (issue #8). Deux modes :
+    - detail (défaut) : ligne par ligne, chaque panier avec son client ;
+    - production : récapitulatif par produit des paniers LIVRÉS/REÇUS
+      (seule source du décompte de production). Filtre date optionnel."""
+    exploitant = request.user.exploitant
+    date_filter = request.GET.get("date", "").strip()
+    mode = request.GET.get("mode", "detail")
+    paniers = (exploitant.paniers.select_related("client", "point_livraison")
+               .prefetch_related("lignes__produit")
+               .order_by("date_livraison", "numero"))
+    if date_filter:
+        try:
+            date_filter = datetime.date.fromisoformat(date_filter).isoformat()
+        except ValueError:
+            date_filter = ""
+        else:
+            paniers = paniers.filter(date_livraison=date_filter)
+    paniers = list(paniers)
+
+    tampon = io.StringIO()
+    writer = csv.writer(tampon, delimiter=";")
+    if mode == "production":
+        writer.writerow(["Produit", "Unite", "Quantite livree",
+                         "Total (EUR)", "Nb paniers"])
+        agg = {}
+        for panier in paniers:
+            if panier.statut not in (Panier.Statut.LIVRE,
+                                     Panier.Statut.RECU):
+                continue
+            for ligne in panier.lignes.all():
+                e = agg.setdefault(ligne.produit_id,
+                                   {"produit": ligne.produit,
+                                    "qte": Decimal("0"),
+                                    "total": Decimal("0"),
+                                    "paniers": set()})
+                e["qte"] += ligne.quantite
+                e["total"] += ligne.quantite * ligne.prix_unitaire
+                e["paniers"].add(panier.pk)
+        for e in sorted(agg.values(), key=lambda x: x["produit"].nom):
+            writer.writerow([
+                e["produit"].nom, e["produit"].get_unite_vente_display(),
+                str(e["qte"]).replace(".", ","),
+                str(e["total"]).replace(".", ","),
+                len(e["paniers"])])
+    else:
+        writer.writerow(["Panier", "Date", "Statut", "Client", "E-mail",
+                         "Telephone", "Point de livraison",
+                         "Produit", "Unite", "Quantite livree",
+                         "Prix unitaire (EUR)", "Total ligne (EUR)",
+                         "Total panier (EUR)"])
+        for panier in paniers:
+            lignes = list(panier.lignes.all())
+            if not lignes:
+                writer.writerow([f"n°{panier.numero}",
+                                 panier.date_livraison.strftime("%d/%m/%Y"),
+                                 panier.get_statut_display(),
+                                 panier.nom_client, panier.email_client,
+                                 panier.telephone_client,
+                                 panier.point_livraison.nom
+                                 if panier.point_livraison else "",
+                                 "", "", "", "", "",
+                                 str(panier.total).replace(".", ",")])
+            for ligne in lignes:
+                writer.writerow([
+                    f"n°{panier.numero}",
+                    panier.date_livraison.strftime("%d/%m/%Y"),
+                    panier.get_statut_display(),
+                    panier.nom_client, panier.email_client,
+                    panier.telephone_client,
+                    panier.point_livraison.nom
+                    if panier.point_livraison else "",
+                    ligne.produit.nom,
+                    ligne.produit.get_unite_vente_display(),
+                    str(ligne.quantite).replace(".", ","),
+                    str(ligne.prix_unitaire).replace(".", ","),
+                    str(ligne.total_ligne()).replace(".", ","),
+                    str(panier.total).replace(".", ",")])
+
+    nom = "paniers_" + (date_filter or "tous") + "_" + mode + ".csv"
+    reponse = HttpResponse("\ufeff" + tampon.getvalue(),
+                           content_type="text/csv; charset=utf-8")
+    reponse["Content-Disposition"] = f'attachment; filename="{nom}"'
+    return reponse
+
+
+@login_required
+@exploitant_requis
 def panier_detail(request, panier_id):
     """Préparation du panier : ajustement du contenu EFFECTIVEMENT livré,
     comparé côte à côte aux quantités souhaitées par le client, avec
-    commentaire visible par le client. Source du décompte de production
-    et de l'export comptable (issue #8)."""
+    commentaire visible par le client. Chaque changement de statut notifie
+    le client (panier prêt, livraison faite) selon son canal préféré."""
     exploitant = request.user.exploitant
     panier = get_object_or_404(Panier, pk=panier_id, exploitant=exploitant)
 
@@ -604,6 +813,11 @@ def panier_detail(request, panier_id):
                 messages.success(
                     request, f"Panier n°{panier.numero} : "
                     f"{panier.get_statut_display()}.")
+                if panier.statut == Panier.Statut.PRET:
+                    notifier_client(request, panier, "PANIER_PRET")
+                elif panier.statut in (Panier.Statut.LIVRE,
+                                       Panier.Statut.RECU):
+                    notifier_client(request, panier, "LIVRAISON_FAITE")
 
         return redirect("portal:panier_detail", panier.pk)
 
@@ -625,6 +839,138 @@ def panier_detail(request, panier_id):
         "panier": panier,
         "rows": rows,
         "produits": exploitant.produits.filter(actif=True),
+    })
+
+
+@login_required
+@exploitant_requis
+def clients_suivi(request):
+    """Suivi « Mes clients » : regroupement par identité contact (compte
+    client ou nom + e-mail/téléphone), cumul des commandes, paniers et
+    chiffre d'affaires, canal de contact préféré."""
+    exploitant = request.user.exploitant
+    q = request.GET.get("q", "").strip().lower()
+    registre = {}
+
+    def enregistrer(client_id, nom, email, tel):
+        cle = ("u%d" % client_id if client_id
+               else "c:%s|%s" % ((nom or "").lower(), (email or "").lower()))
+        if cle not in registre:
+            registre[cle] = {
+                "nom": nom, "email": email or "", "telephone": tel or "",
+                "client_id": client_id,
+                "nb_commandes": 0, "nb_paniers": 0,
+                "total": Decimal("0"), "derniere": None,
+            }
+        return registre[cle]
+
+    for c in exploitant.commandes.all():
+        e = enregistrer(c.client_id, c.nom_client, c.email_client,
+                        c.telephone_client)
+        e["nb_commandes"] += 1
+        if not e["derniere"] or c.date_livraison > e["derniere"]:
+            e["derniere"] = c.date_livraison
+    for p in exploitant.paniers.all():
+        e = enregistrer(p.client_id, p.nom_client, p.email_client,
+                        p.telephone_client)
+        e["nb_paniers"] += 1
+        e["total"] += p.total
+        if not e["derniere"] or p.date_livraison > e["derniere"]:
+            e["derniere"] = p.date_livraison
+
+    canaux = {pc.client_id: pc for pc in
+              PreferenceContact.objects.filter(exploitant=exploitant)}
+    rows = []
+    for e in registre.values():
+        pref = canaux.get(e["client_id"]) if e["client_id"] else None
+        e["canal"] = pref.get_canal_display() if pref else "E-mail"
+        rows.append(e)
+    rows.sort(key=lambda e: (-e["total"], e["nom"].lower()))
+    if q:
+        rows = [e for e in rows
+                if q in e["nom"].lower() or q in e["email"].lower()
+                or q in e["telephone"].lower()]
+    return render(request, "portal/pro/clients.html",
+                  {"rows": rows, "q": request.GET.get("q", "")})
+
+
+@login_required
+@exploitant_requis
+def points_manage(request):
+    """Points de livraison & créneaux (issue #9) : création, suppression,
+    créneaux récurrents (jour, horaires, fréquence, capacité)."""
+    exploitant = request.user.exploitant
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "point_creer":
+            nom = request.POST.get("nom", "").strip()
+            adresse = request.POST.get("adresse", "").strip()
+            ville = request.POST.get("ville", "").strip()
+            code_postal = request.POST.get("code_postal", "").strip()
+            note = request.POST.get("note", "").strip()
+            if not nom or not ville:
+                messages.error(request, "Nom et ville du point requis.")
+            else:
+                PointLivraison.objects.create(
+                    exploitant=exploitant, nom=nom[:150],
+                    adresse=adresse[:255], ville=ville[:100],
+                    code_postal=code_postal[:10], note=note)
+                messages.success(request,
+                                 f"Point « {nom} » créé.")
+        elif action == "point_supprimer":
+            point = get_object_or_404(PointLivraison,
+                                     pk=request.POST.get("pk"),
+                                     exploitant=exploitant)
+            nb = point.creneaux.count()
+            point.delete()
+            message = f"Point « {point.nom} » supprimé"
+            if nb:
+                message += f" (et {nb} créneau(x) rattaché(s))"
+            messages.info(request, message + ".")
+        elif action == "creneau_ajouter":
+            brut_point = request.POST.get("point", "").strip()
+            point = (exploitant.points_livraison
+                     .filter(pk=brut_point).first() if brut_point else None)
+            try:
+                jour = int(request.POST.get("jour", ""))
+                capacite = int(request.POST.get("capacite") or 10)
+                heure_debut = datetime.time.fromisoformat(
+                    request.POST.get("heure_debut", ""))
+                heure_fin = datetime.time.fromisoformat(
+                    request.POST.get("heure_fin", ""))
+            except (TypeError, ValueError):
+                messages.error(request, "Créneau invalide "
+                               "(jour, horaires ou capacité).")
+                return redirect("portal:points_manage")
+            frequence = request.POST.get("frequence", "")
+            if not (1 <= jour <= 7) or heure_debut >= heure_fin:
+                messages.error(request, "Créneau invalide : jour entre "
+                               "lundi et dimanche, fin après le début.")
+            elif frequence not in CreneauLivraison.Frequence.values:
+                messages.error(request, "Fréquence inconnue.")
+            else:
+                CreneauLivraison.objects.create(
+                    exploitant=exploitant, point_livraison=point,
+                    jour=jour, heure_debut=heure_debut,
+                    heure_fin=heure_fin, frequence=frequence,
+                    capacite=capacite)
+                messages.success(request, "Créneau ajouté.")
+        elif action == "creneau_supprimer":
+            creneau = get_object_or_404(CreneauLivraison,
+                                        pk=request.POST.get("pk"),
+                                        exploitant=exploitant)
+            creneau.delete()
+            messages.info(request, "Créneau supprimé.")
+        return redirect("portal:points_manage")
+
+    points = (exploitant.points_livraison
+              .prefetch_related("creneaux").order_by("ville", "nom"))
+    return render(request, "portal/pro/points.html", {
+        "points": points,
+        "jours": CreneauLivraison._meta.get_field("jour").choices,
+        "frequences": CreneauLivraison.Frequence.choices,
+        "creneaux_sans_point": exploitant.creneaux
+                              .filter(point_livraison__isnull=True),
     })
 
 

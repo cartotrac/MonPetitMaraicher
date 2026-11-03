@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Points de livraison — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>📍 Points de livraison & créneaux</h1>
+<p class="muted">Les points de livraison s'affichent sur votre vitrine et sont
+   proposés à la commande. Les créneaux (jour, horaires, fréquence, capacité)
+   cadrent les dates de livraison proposées aux clients.</p>
+
+<section class="harvest-bloc">
+  <h2>➕ Nouveau point</h2>
+  <form method="post" class="form card">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="point_creer">
+    <div class="form-row">
+      <label>Nom <input type="text" name="nom" required placeholder="Ex : Marché couvert"></label>
+      <label>Ville <input type="text" name="ville" required placeholder="Ville"></label>
+    </div>
+    <div class="form-row">
+      <label>Adresse <input type="text" name="adresse" placeholder="Adresse"></label>
+      <label>Code postal <input type="text" name="code_postal" placeholder="CP"></label>
+    </div>
+    <label>Précisions <input type="text" name="note" placeholder="Ex : à côté de la fontaine"></label>
+    <button class="btn" type="submit">Créer le point</button>
+  </form>
+</section>
+
+<section class="harvest-bloc">
+  <h2>➕ Nouveau créneau</h2>
+  <form method="post" class="form card">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="creneau_ajouter">
+    <div class="form-row">
+      <label>Point
+        <select name="point">
+          <option value="">— sans point précis —</option>
+          {% for point in points %}
+            <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
+          {% endfor %}
+        </select></label>
+      <label>Jour
+        <select name="jour">
+          {% for valeur, libelle in jours %}
+            <option value="{{ valeur }}">{{ libelle }}</option>
+          {% endfor %}
+        </select></label>
+    </div>
+    <div class="form-row">
+      <label>Début <input type="time" name="heure_debut" required></label>
+      <label>Fin <input type="time" name="heure_fin" required></label>
+      <label>Fréquence
+        <select name="frequence">
+          {% for valeur, libelle in frequences %}
+            <option value="{{ valeur }}">{{ libelle }}</option>
+          {% endfor %}
+        </select></label>
+      <label>Capacité <input type="number" name="capacite" min="1" value="10"></label>
+    </div>
+    <button class="btn" type="submit">Ajouter le créneau</button>
+  </form>
+</section>
+
+<section class="harvest-bloc">
+  <h2>📍 Mes points</h2>
+  {% for point in points %}
+    <div class="card harvest-item">
+      <div>
+        <strong>{{ point.nom }}</strong> — {{ point.adresse }},
+        {{ point.code_postal }} {{ point.ville }}
+        {% if point.note %}<span class="muted">— {{ point.note }}</span>{% endif %}
+        <ul>
+          {% for creneau in point.creneaux.all %}
+            <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut }}–{{ creneau.heure_fin }},
+                {{ creneau.get_frequence_display|lower }}, capacité {{ creneau.capacite }}
+              <form method="post" class="inline">{% csrf_token %}
+                <input type="hidden" name="action" value="creneau_supprimer">
+                <input type="hidden" name="pk" value="{{ creneau.pk }}">
+                <button class="btn btn-sm btn-danger" type="submit">🗑</button>
+              </form></li>
+          {% empty %}
+            <li class="muted">Aucun créneau sur ce point.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <form method="post" class="inline" onsubmit="return confirm('Supprimer le point « {{ point.nom }} » et ses créneaux ?');">{% csrf_token %}
+        <input type="hidden" name="action" value="point_supprimer">
+        <input type="hidden" name="pk" value="{{ point.pk }}">
+        <button class="btn btn-sm btn-danger" type="submit">🗑 Supprimer</button>
+      </form>
+    </div>
+  {% empty %}
+    <p class="muted">Aucun point de livraison pour l'instant.</p>
+  {% endfor %}
+  {% if creneaux_sans_point %}
+    <div class="card harvest-item">
+      <div><strong>Créneaux généraux (sans point)</strong>
+        <ul>
+          {% for creneau in creneaux_sans_point %}
+            <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut }}–{{ creneau.heure_fin }},
+                {{ creneau.get_frequence_display|lower }}
+              <form method="post" class="inline">{% csrf_token %}
+                <input type="hidden" name="action" value="creneau_supprimer">
+                <input type="hidden" name="pk" value="{{ creneau.pk }}">
+                <button class="btn btn-sm btn-danger" type="submit">🗑</button>
+              </form></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
