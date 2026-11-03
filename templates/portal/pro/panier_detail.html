@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% load l10n %}{% extends "base.html" %}
 {% block title %}Panier n°{{ panier.numero }} — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>🧺 Panier n°{{ panier.numero }} — {{ panier.nom_client }}</h1>
@@ -15,7 +15,7 @@
 <section>
   <h2>Contenu livré</h2>
   <p class="muted">Ajustez les quantités réellement mises dans le panier, côte à côte
-     avec ce que le client avait souhaité. 0 = retirer la ligne, vide = conserver la quantité.
+     avec ce que le client avait souhaité. 0 = retirer la ligne, vide = conserver la quantité actuelle.
      ⚠️ signale un écart avec la commande. C'est ce contenu qui constitue
      le décompte de production et l'export comptable.</p>
   <form method="post" action="{% url 'portal:panier_detail' panier.pk %}">
@@ -35,7 +35,7 @@
             <td>{{ row.ligne.produit.get_unite_vente_display }}</td>
             <td>{% if row.souhaite is not None %}{{ row.souhaite }}{% else %}— (ajout){% endif %}</td>
             <td><input type="number" step="{{ row.step }}" min="0"
-                       name="qty_{{ row.ligne.pk }}" value="{{ row.ligne.quantite }}"></td>
+                       name="qty_{{ row.ligne.pk }}" value="{{ row.ligne.quantite|unlocalize }}"></td>
             <td>{{ row.ligne.prix_unitaire }} €</td>
             <td>{{ row.ligne.total_ligne }} €</td>
           </tr>

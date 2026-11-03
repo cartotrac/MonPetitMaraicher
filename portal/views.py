@@ -388,7 +388,7 @@ def panier_detail(request, panier_id):
             for ligne in panier.lignes.select_related("produit"):
                 brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
                 if brut == "":
-                    ajustes[ligne.pk] = None  # retirée
+                    ajustes[ligne.pk] = ligne.quantite  # vide = conserver
                     continue
                 try:
                     qty = Decimal(brut)

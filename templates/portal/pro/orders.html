@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% load l10n %}{% extends "base.html" %}
 {% block title %}Commandes reçues — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>📥 Commandes reçues</h1>
@@ -34,7 +34,7 @@
             <li>
               <label>
                 <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0"
-                       name="qty_{{ ligne.pk }}" value="{{ ligne.quantite }}">
+                       name="qty_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}">
                 × {{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u)
               </label>
             </li>
