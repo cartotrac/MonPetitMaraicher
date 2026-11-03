@@ -95,12 +95,17 @@ USE_I18N = True
 USE_TZ = True
 
 # Fichiers statiques du projet (CSS, JS) : collectstatic les copie vers
-# STATIC_ROOT, servi en production par config/urls.py. Après chaque
-# modification de static/, relancer : manage.py collectstatic --noinput
-STATIC_URL = "static/"
+# STATIC_ROOT (staticfiles/), servi en production par les « chemins
+# statiques » du panneau AlwaysData (/static/ -> staticfiles) avec, en
+# repli, le service Django de config/urls.py. Les URLs DOIVENT commencer
+# par un slash : sinon les liens statiques deviennent relatifs à la page
+# courante et cassent sur les pages profondes (/espace-pro/...).
+# Après chaque modification de static/ :
+#   manage.py collectstatic --noinput  puis redemarrer le site.
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 LOGIN_URL = "/comptes/connexion/"
