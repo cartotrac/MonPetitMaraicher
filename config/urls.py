@@ -9,8 +9,13 @@ urlpatterns = [
     path("", include("portal.urls")),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Fichiers statiques (CSS…) et médias (logos, photos).
+# En production AlwaysData (WSGI, DEBUG=0), Django les sert lui-même :
+# c'est le plus simple pour un site de cette taille (pas d'alias Apache).
+# REQUIS : lancer « manage.py collectstatic » après chaque modification
+# de fichiers statiques (donc après chaque git pull qui en touche).
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 admin.site.site_header = "MonPetitMaraicher — Administration"
 admin.site.site_title = "MonPetitMaraicher"
