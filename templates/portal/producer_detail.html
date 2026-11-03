@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ exploitant.nom_ferme }} — MonPetitMaraicher{% endblock %}
+{% block extra_style %}<style>:root { --accent: {{ vitrine.couleur_theme|default:'#2e7d32' }}; }</style>{% endblock %}
 {% block content %}
-<div class="producer-head">
-  {% if exploitant.logo %}<img class="producer-logo" src="{{ exploitant.logo.url }}" alt="Logo">{% endif %}
+<div class="producer-head card">
+  {% if exploitant.logo %}<img class="producer-logo" src="{{ exploitant.logo.url }}" alt="Logo">{% else %}<div class="producer-logo placeholder">🌱</div>{% endif %}
   <div>
     <h1>{{ exploitant.nom_ferme }}</h1>
     {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Certifié AB</span>
@@ -13,7 +14,7 @@
   </div>
 </div>
 
-{% if exploitant.description %}<p class="producer-desc">{{ exploitant.description }}</p>{% endif %}
+{% if exploitant.description %}<p class="producer-desc card">{{ exploitant.description }}</p>{% endif %}
 
 <section>
   <h2>🧺 Récolte de la semaine{% if semaine %} (semaine du {{ semaine.lundi|date:"d/m/Y" }}){% endif %}</h2>
@@ -26,7 +27,7 @@
       <tbody>
       {% for ligne in lignes %}
         <tr>
-          <td>{{ ligne.produit.nom }}</td>
+          <td>{% if ligne.produit.origine_standard and ligne.produit.origine_standard.emoji %}{{ ligne.produit.origine_standard.emoji }} {% endif %}{{ ligne.produit.nom }}</td>
           <td>~ {{ ligne.quantite_estimee }} {{ ligne.produit.get_unite_vente_display }}</td>
           <td>{{ ligne.prix_unitaire }} €</td>
         </tr>
@@ -43,6 +44,22 @@
     <p class="muted">Pas encore de récolte publiée cette semaine.</p>
   {% endif %}
 </section>
+
+{% if semaines_avenir %}
+<section>
+  <h2>⏭️ Récoltes à venir</h2>
+  <div class="grid">
+    {% for s in semaines_avenir %}
+      <div class="card">
+        <strong>Semaine du {{ s.lundi|date:"d/m/Y" }}</strong>
+        <p class="muted">{{ s.lignes.count }} produit(s) prévus</p>
+        {% if s.note %}<p>« {{ s.note }} »</p>{% endif %}
+        <p class="muted">Disponible à la commande dès cette semaine-là.</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 
 {% if points_livraison %}
 <section>

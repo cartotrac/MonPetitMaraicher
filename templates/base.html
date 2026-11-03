@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}MonPetitMaraicher{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_style %}{% endblock %}
   {% block extrahead %}{% endblock %}
 </head>
 <body data-geojson-url="{% url 'portal:producers_geojson' %}">

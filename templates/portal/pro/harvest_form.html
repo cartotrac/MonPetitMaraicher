@@ -1,57 +1,76 @@
 {% extends "base.html" %}
-{% block title %}Dispos de la semaine — MonPetitMaraicher{% endblock %}
+{% load l10n %}
+{% block title %}Récolte {% if semaine %}du {{ semaine.lundi|date:"d/m/Y" }}{% else %}nouvelle{% endif %} — MonPetitMaraicher{% endblock %}
 {% block content %}
-<h1>🧺 Disponibilités hebdomadaires</h1>
+<h1>🧺 {% if semaine %}Récolte du {{ semaine.lundi|date:"d/m/Y" }}{% else %}Nouvelle récolte{% endif %}</h1>
 <p>Renseignez la <strong>quantité estimée</strong> et le prix pour chaque produit
-   disponible cette semaine. Ces quantités sont des <strong>estimations</strong> à
-   l'attention des clients : elles ne bloquent ni ne décomptent aucune commande.
-   Laissez vide un produit non disponible.</p>
+   disponible. Ces quantités sont des <strong>estimations</strong> : elles ne
+   bloquent ni ne décomptent aucune commande. Laissez vide un produit non
+   disponible.</p>
 
-{% if semaines %}
-<div class="form-row" style="flex-wrap:wrap;align-items:center">
-  {% for s in semaines %}
-    {% if semaine and s.pk == semaine.pk %}
-      <strong>📅 Semaine du {{ s.lundi|date:"d/m/Y" }}</strong>
-    {% else %}
-      <a href="{% url 'portal:harvest_manage' s.pk %}">Semaine du {{ s.lundi|date:"d/m/Y" }}</a>
-    {% endif %}
-  {% endfor %}
-</div>
+{% if source %}
+  <div class="flash info">💡 Les valeurs <strong>reprises</strong> (marquées
+    « reprise ») viennent de la semaine du {{ source.lundi|date:"d/m/Y" }} :
+    modifiez uniquement ce qui change, laissez le reste tel quel.</div>
 {% endif %}
 
-<form method="post" class="form">
+<form method="post" class="form harvest-form">
   {% csrf_token %}
-  <div class="form-row">
-    <label>Semaine du <input type="date" name="lundi" value="{{ lundi_defaut|date:'Y-m-d' }}"></label>
-    <label><input type="checkbox" name="publiee" {% if not semaine or semaine.publiee %}checked{% endif %}>
-      Publiée aux clients</label>
+  <div class="card param-card">
+    <div class="form-row">
+      <label>Semaine du <input type="date" name="lundi" value="{{ lundi_defaut|date:'Y-m-d' }}"></label>
+      <label class="checkbox"><input type="checkbox" name="publiee" {% if not semaine or semaine.publiee %}checked{% endif %}>
+        Publiée aux clients</label>
+    </div>
+    <p class="muted">Modifiez la date pour déplacer cette récolte vers une autre
+      semaine (impossible si une récolte y existe déjà).</p>
+    <label>Note de la semaine
+      <input type="text" name="note" value="{{ semaine.note|default:'' }}"
+             placeholder="Ex : premières tomates de la saison !"></label>
+    {% if autres %}
+      <div class="form-row">
+        <span class="muted">Reprendre les valeurs d'une autre semaine :</span>
+        <form method="get" action="" class="inline-form"></form>
+        <select name="copier_select" id="copier-select">
+          {% for s in autres %}
+            <option value="{{ s.pk }}">Semaine du {{ s.lundi|date:"d/m/Y" }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-sm btn-outline" type="button"
+                onclick="var v=document.getElementById('copier-select').value;
+                         window.location='?copier='+v;">↩️ Recharger</button>
+      </div>
+    {% endif %}
   </div>
-  <p class="muted">Modifiez la date pour déplacer cette récolte vers une autre
-     semaine (impossible si une récolte y existe déjà : elle s'ouvrira à la
-     place), ou utilisez le lien ci-dessous pour partir d'une page vierge.</p>
-  <p><a class="btn btn-outline" href="{% url 'portal:harvest_new' %}">➕ Nouvelle semaine</a></p>
-  <label>Note de la semaine
-    <input type="text" name="note" value="{{ semaine.note|default:'' }}"
-           placeholder="Ex : premières tomates de la saison !"></label>
 
-  <h2>Produits disponibles</h2>
-  <table class="table">
-    <thead><tr><th>Produit</th><th>Quantité estimée</th><th>Prix unitaire (€)</th></tr></thead>
-    <tbody>
-    {% for row in rows %}
-      <tr>
-        <td>{{ row.produit.nom }} <span class="muted">({{ row.produit.get_unite_vente_display }})</span></td>
-        <td><input type="number" step="0.01" min="0" name="qty_{{ row.produit.pk }}"
-                   value="{{ row.qty|default_if_none:'' }}"></td>
-        <td><input type="number" step="0.01" min="0" name="price_{{ row.produit.pk }}"
-                   value="{{ row.price|default_if_none:'' }}"></td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="3" class="muted">Ajoutez d'abord des produits à votre catalogue.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  <button class="btn btn-lg" type="submit">Enregistrer</button>
-  <a class="btn btn-outline" href="{% url 'portal:dashboard' %}">Annuler</a>
+  {% for nom, rows in paires %}
+    <section class="harvest-cat">
+      <h3>{{ nom }} <span class="muted">({{ rows|length }})</span></h3>
+      <table class="table">
+        <thead><tr><th>Produit</th><th>Quantité estimée</th><th>Prix unitaire (€)</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr class="{% if row.reprise %}reprise{% endif %}">
+            <td>{% if row.produit.origine_standard and row.produit.origine_standard.emoji %}{{ row.produit.origine_standard.emoji }} {% endif %}{{ row.produit.nom }}
+              <span class="muted">({{ row.produit.get_unite_vente_display }})</span>
+              {% if row.reprise %}<span class="badge badge-off">reprise</span>{% endif %}</td>
+            <td><input type="number" step="{{ row.step }}" min="0" name="qty_{{ row.produit.pk }}"
+                       value="{% if row.qty %}{{ row.qty|unlocalize }}{% endif %}"></td>
+            <td><input type="number" step="0.01" min="0" name="price_{{ row.produit.pk }}"
+                       value="{% if row.price %}{{ row.price|unlocalize }}{% endif %}"></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% empty %}
+    <p class="muted">Ajoutez d'abord des produits à votre catalogue
+      (par exemple via « Importer des produits types »).</p>
+  {% endfor %}
+
+  <div class="save-bar">
+    <button class="btn btn-lg" type="submit">💾 Enregistrer la récolte</button>
+    <a class="btn btn-outline" href="{% url 'portal:harvest_list' %}">Annuler</a>
+  </div>
 </form>
 {% endblock %}

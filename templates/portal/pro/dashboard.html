@@ -4,10 +4,11 @@
 <h1>Bienvenue {{ exploitant.nom_ferme }} 👋</h1>
 
 <div class="quick-actions">
+  <a class="btn" href="{% url 'portal:harvest_new' %}">➕ Nouvelle récolte</a>
+  <a class="btn btn-outline" href="{% url 'portal:harvest_list' %}">🧺 Mes récoltes</a>
   <a class="btn" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
   <a class="btn" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
   <a class="btn btn-outline" href="{% url 'portal:categories_manage' %}">🗂 Gérer mes catégories</a>
-  <a class="btn" href="{% url 'portal:harvest_manage' %}">🧺 Saisir mes dispos de la semaine</a>
   <a class="btn btn-outline" href="{% url 'portal:producer_detail' exploitant.slug %}">Voir ma page publique</a>
 </div>
 
@@ -43,14 +44,18 @@
 </section>
 
 <section>
-  <h2>🧺 Récolte actuelle</h2>
-  {% if semaine %}
-    <p>Semaine du {{ semaine.lundi|date:"d/m/Y" }} —
-       {{ semaine.lignes.count }} ligne(s) —
-       {% if semaine.publiee %}publiée ✅{% else %}non publiée ⏸{% endif %}<br>
-       <a href="{% url 'portal:harvest_manage' semaine.pk %}">Modifier la récolte</a></p>
+  <h2>🧺 Mes récoltes</h2>
+  {% if semaines %}
+    <ul class="recoltes-mini">
+      {% for s in semaines %}
+        <li><a href="{% url 'portal:harvest_manage' s.pk %}">Semaine du {{ s.lundi|date:"d/m/Y" }}</a>
+            — {{ s.nb_lignes }} produit(s)
+            {% if s.publiee %}<span class="badge badge-ok">publiée</span>{% else %}<span class="badge badge-off">non publiée</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    <p><a href="{% url 'portal:harvest_list' %}">Toutes mes récoltes →</a></p>
   {% else %}
-    <p class="muted">Aucune récolte saisie. <a href="{% url 'portal:harvest_manage' %}">Créer ma récolte</a></p>
+    <p class="muted">Aucune récolte saisie. <a href="{% url 'portal:harvest_new' %}">Créer ma première récolte</a></p>
   {% endif %}
 </section>
 

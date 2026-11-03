@@ -6,7 +6,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,8 +14,9 @@ from django.utils import timezone
 from .forms import (InscriptionClientForm, InscriptionExploitantForm,
                     ProduitForm)
 from .models import (Categorie, Commande, Exploitant, LigneCommande,
-                    LignePanier, LigneRecolte, Panier, PreferenceContact,
-                    Produit, ProduitStandard, SemaineRecolte)
+                    LignePanier, LigneRecolte, Panier, ParametresVitrine,
+                    PreferenceContact, Produit, ProduitStandard,
+                    SemaineRecolte)
 
 # Unités vendues à la pièce : quantités entières uniquement.
 UNITES_ENTIERES = ("PC", "BO", "BQ")
@@ -67,19 +68,26 @@ def producteurs_geojson(request):
 
 
 def producer_detail(request, slug):
-    """Page publique d'un exploitant : catalogue + récolte de la semaine."""
+    """Page publique d'un exploitant : récolte de la semaine + à venir."""
     exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
     today = timezone.localdate()
     lundi = today - datetime.timedelta(days=today.weekday())
+    semaines_avenir = list(
+        SemaineRecolte.objects.filter(exploitant=exploitant, publiee=True,
+                                      lundi__gt=lundi).order_by("lundi"))
     semaine = (SemaineRecolte.objects.filter(exploitant=exploitant,
                                              publiee=True,
                                              lundi__lte=lundi)
                .order_by("-lundi").first())
     lignes = semaine.lignes.select_related("produit") if semaine else []
+    vitrine, _cree = ParametresVitrine.objects.get_or_create(
+        exploitant=exploitant)
     return render(request, "portal/producer_detail.html", {
         "exploitant": exploitant,
+        "vitrine": vitrine,
         "semaine": semaine,
         "lignes": lignes,
+        "semaines_avenir": semaines_avenir,
         "points_livraison": exploitant.points_livraison.all(),
         "creneaux": exploitant.creneaux.select_related("point_livraison"),
     })
@@ -135,6 +143,10 @@ def dashboard(request):
         "produits": exploitant.produits.filter(actif=True),
         "semaine": SemaineRecolte.objects.filter(exploitant=exploitant)
                    .order_by("-lundi").first(),
+        "semaines": list(SemaineRecolte.objects
+                         .filter(exploitant=exploitant)
+                         .annotate(nb_lignes=Count("lignes"))
+                         .order_by("-lundi")[:6]),
         "points": exploitant.points_livraison.all(),
         "creneaux": exploitant.creneaux.all(),
         "commandes_attente": exploitant.commandes
@@ -186,12 +198,68 @@ def produit_modifier(request, pk):
 
 @login_required
 @exploitant_requis
-def harvest_manage(request, semaine_id=None, nouvelle=False):
-    """Saisie des dispos hebdo (ESTIMATIONS) : quantité estimée + prix.
+def harvest_list(request):
+    """Toutes les récoltes de l'exploitant (fréquence libre : hebdo,
+    moins souvent… c'est lui qui choisit). Publication / dépublication
+    en un clic (impact immédiat sur la vitrine), suppression possible."""
+    exploitant = request.user.exploitant
+    today = timezone.localdate()
+    lundi_courant = today - datetime.timedelta(days=today.weekday())
 
-    La date (lundi) est modifiable : changer la date déplace la récolte et
-    ses lignes vers une autre semaine (refus propre si une récolte existe
-    déjà à cette date). « Nouvelle semaine » ouvre un formulaire vierge.
+    if request.method == "POST":
+        semaine = get_object_or_404(SemaineRecolte,
+                                    pk=request.POST.get("pk"),
+                                    exploitant=exploitant)
+        action = request.POST.get("action")
+        if action == "publier":
+            semaine.publiee = True
+            semaine.save()
+            messages.success(request, "Récolte du "
+                             + semaine.lundi.strftime("%d/%m/%Y")
+                             + " publiée : visible sur la vitrine.")
+        elif action == "depublier":
+            semaine.publiee = False
+            semaine.save()
+            messages.info(request, "Récolte du "
+                          + semaine.lundi.strftime("%d/%m/%Y")
+                          + " masquée de la vitrine.")
+        elif action == "supprimer":
+            lundi_sup = semaine.lundi
+            semaine.delete()
+            messages.info(request, "Récolte du "
+                          + lundi_sup.strftime("%d/%m/%Y") + " supprimée.")
+        return redirect("portal:harvest_list")
+
+    semaines = list(SemaineRecolte.objects
+                    .filter(exploitant=exploitant)
+                    .annotate(nb_lignes=Count("lignes"))
+                    .order_by("-lundi"))
+    courante, a_venir, passees = None, [], []
+    for s in semaines:
+        if s.lundi == lundi_courant:
+            courante = s
+        elif s.lundi > lundi_courant:
+            a_venir.append(s)
+        else:
+            passees.append(s)
+    return render(request, "portal/pro/harvest_list.html", {
+        "courante": courante,
+        "a_venir": a_venir,
+        "passees": passees,
+        "lundi_courant": lundi_courant,
+    })
+
+
+@login_required
+@exploitant_requis
+def harvest_manage(request, semaine_id=None, nouvelle=False):
+    """Saisie d'une récolte (ESTIMATIONS) : quantité estimée + prix, produits
+    regroupés par catégorie.
+
+    Ergonomie : les valeurs sont pré-remplies depuis la semaine précédente
+    (ou la semaine source choisie) ; les lignes reprises sont signalées.
+    La date (lundi) est modifiable : déplacer la récolte change la semaine
+    affichée sur la vitrine (refus propre si déjà existante).
     """
     exploitant = request.user.exploitant
     today = timezone.localdate()
@@ -200,11 +268,6 @@ def harvest_manage(request, semaine_id=None, nouvelle=False):
     if semaine_id:
         semaine = get_object_or_404(SemaineRecolte, pk=semaine_id,
                                    exploitant=exploitant)
-    elif request.method == "GET" and not nouvelle:
-        semaine = (SemaineRecolte.objects.filter(exploitant=exploitant)
-                   .order_by("-lundi").first())
-        if semaine:
-            return redirect("portal:harvest_manage", semaine.pk)
 
     lundi_defaut = lundi
     if nouvelle and not semaine:
@@ -254,22 +317,70 @@ def harvest_manage(request, semaine_id=None, nouvelle=False):
         for ligne in semaine.lignes.all():
             if f"qty_{ligne.produit_id}" not in request.POST:
                 ligne.delete()
-        messages.success(request, "Récolte enregistrée.")
-        return redirect("portal:dashboard")
+        messages.success(request, "Récolte du "
+                         + semaine.lundi.strftime("%d/%m/%Y")
+                         + " enregistrée.")
+        return redirect("portal:harvest_list")
 
-    lignes = {l.produit_id: l for l in semaine.lignes.all()} if semaine else {}
-    rows = [{
-        "produit": p,
-        "qty": lignes[p.pk].quantite_estimee if p.pk in lignes else None,
-        "price": lignes[p.pk].prix_unitaire if p.pk in lignes else None,
-    } for p in exploitant.produits.filter(actif=True)]
+    # ---- Pré-remplissage : semaine source des valeurs reprises ----
+    source = None
+    if request.method == "GET":
+        copier = request.GET.get("copier", "").strip()
+        if copier:
+            source = (SemaineRecolte.objects
+                      .filter(exploitant=exploitant, pk=copier).first())
+        if source is None:
+            reference = semaine.lundi if semaine else lundi_defaut
+            source = (SemaineRecolte.objects
+                      .filter(exploitant=exploitant, lundi__lt=reference)
+                      .order_by("-lundi").first())
+        if source is None:
+            source = (SemaineRecolte.objects
+                      .filter(exploitant=exploitant)
+                      .exclude(pk=semaine.pk if semaine else -1)
+                      .order_by("-lundi").first())
+
+    valeurs = {}   # produit_id -> (quantite, prix, reprise)
+    if semaine:
+        for l in semaine.lignes.all():
+            valeurs[l.produit_id] = (l.quantite_estimee, l.prix_unitaire,
+                                     False)
+    if source and source.pk != (semaine.pk if semaine else None):
+        for l in source.lignes.all():
+            if l.produit_id not in valeurs:
+                valeurs[l.produit_id] = (l.quantite_estimee,
+                                         l.prix_unitaire, True)
+
+    # ---- Produits regroupés par catégorie (position de l'exploitant) ----
+    produits = (exploitant.produits.filter(actif=True)
+                .select_related("categorie")
+                .order_by("categorie__position", "categorie__nom", "nom"))
+    groupes, ordre = {}, []
+    for p in produits:
+        nom_cat = p.categorie.nom if p.categorie else "Sans catégorie"
+        if nom_cat not in groupes:
+            groupes[nom_cat] = []
+            ordre.append(nom_cat)
+        v = valeurs.get(p.pk)
+        groupes[nom_cat].append({
+            "produit": p,
+            "qty": v[0] if v else None,
+            "price": v[1] if v else None,
+            "reprise": bool(v and v[2]),
+            "step": "0.01" if p.unite_vente == "KG" else "1",
+        })
+    paires = [(nom, groupes[nom]) for nom in ordre]
+
     if semaine:
         lundi_defaut = semaine.lundi
+    autres = (SemaineRecolte.objects.filter(exploitant=exploitant)
+              .exclude(pk=semaine.pk if semaine else -1)
+              .order_by("-lundi"))
     return render(request, "portal/pro/harvest_form.html", {
         "semaine": semaine,
-        "semaines": (SemaineRecolte.objects.filter(exploitant=exploitant)
-                     .order_by("-lundi")),
-        "rows": rows,
+        "source": source if source and not semaine else None,
+        "autres": autres,
+        "paires": paires,
         "lundi_defaut": lundi_defaut,
     })
 
@@ -294,7 +405,7 @@ def order_list(request, statut=None):
 
 def _quantite_ajustee(brut, quantite_commandee, produit):
     """Valide une quantité ajustée : Decimal, positive, entière si l'unité
-    se vend à la pièce. Retourne (quantité, erreur_ou_None)."""
+    se vend à la pièce. Retourne (quantite, erreur_ou_None)."""
     if brut == "":
         qty = quantite_commandee
     else:
