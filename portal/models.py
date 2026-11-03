@@ -12,7 +12,7 @@ def banniere_chemin(instance, filename):
 
 
 def illustration_produit_chemin(instance, filename):
-    return f"exploitants/{instance.exploitant.pk}/produits/{instance.slug}.jpg"
+    return f"exploitants/{instance.pk}/produits/{instance.slug}.jpg"
 
 
 class Exploitant(models.Model):
@@ -49,7 +49,7 @@ class Exploitant(models.Model):
     latitude = models.FloatField("Latitude", blank=True, null=True,
                                  help_text="Position sur la carte (optionnel)")
     longitude = models.FloatField("Longitude", blank=True, null=True,
-                                  help_text="Position sur la carte (optionnel)")
+                                   help_text="Position sur la carte (optionnel)")
     visible = models.BooleanField("Visible publiquement", default=True)
     creee_le = models.DateTimeField(auto_now_add=True)
 
@@ -285,8 +285,8 @@ class CreneauLivraison(models.Model):
     heure_debut = models.TimeField("Début")
     heure_fin = models.TimeField("Fin")
     frequence = models.CharField("Fréquence", max_length=1,
-                                 choices=Frequence.choices,
-                                 default=Frequence.HEBDO)
+                                choices=Frequence.choices,
+                                default=Frequence.HEBDO)
     capacite = models.PositiveSmallIntegerField(
         "Capacité (paniers/commandes)", default=10)
 
@@ -358,7 +358,7 @@ class LigneCommande(models.Model):
     """Ligne de commande : panier SOUHAITÉ, prix et quantité figés."""
 
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE,
-                                 related_name="lignes")
+                                related_name="lignes")
     produit = models.ForeignKey(Produit, on_delete=models.PROTECT,
                                 related_name="lignes_commande")
     quantite = models.DecimalField("Quantité", max_digits=8, decimal_places=2)
@@ -373,9 +373,10 @@ class LigneCommande(models.Model):
 
 
 class Panier(models.Model):
-    """Panier numéroté (n°1..X par client et par jour de livraison), préparé
-    pour un client. Le contenu LIVRÉ (LignePanier) est la seule source du
-    décompte de production et de l'export comptable."""
+    """Panier numéroté (n°1..X par JOUR et par POINT DE LIVRAISON) :
+    le dernier panier porte le nombre total de paniers du point ce jour-là.
+    Le contenu LIVRÉ (LignePanier) est la seule source du décompte de
+    production et de l'export comptable."""
 
     class Statut(models.TextChoices):
         PREPARATION = "PREPARATION", "En préparation"
@@ -390,7 +391,7 @@ class Panier(models.Model):
     nom_client = models.CharField("Nom du client", max_length=150)
     email_client = models.EmailField("E-mail du client", blank=True)
     telephone_client = models.CharField("Téléphone du client", max_length=20,
-                                        blank=True)
+                                       blank=True)
     numero = models.PositiveSmallIntegerField("N° de panier")
     date_livraison = models.DateField("Jour de livraison", db_index=True)
     creneau = models.ForeignKey(CreneauLivraison, on_delete=models.SET_NULL,
@@ -420,16 +421,14 @@ class Panier(models.Model):
                 f"le {self.date_livraison}")
 
     @classmethod
-    def prochain_numero(cls, exploitant, date_livraison, client=None,
-                         nom_client=""):
-        """n°1..X par client et par jour (même clé de regroupement que les
-        commandes : compte si loggué, sinon nom de contact)."""
+    def prochain_numero(cls, exploitant, date_livraison, point_livraison=None,
+                         client=None, nom_client=""):
+        """n°1..X par jour et par point de livraison : deux clients
+        commandant le même jour au même point obtiennent 1 et 2. Les
+        paniers sans point dédié forment leur propre séquence."""
         qs = cls.objects.filter(exploitant=exploitant,
-                                date_livraison=date_livraison)
-        if client is not None:
-            qs = qs.filter(client=client)
-        else:
-            qs = qs.filter(client__isnull=True, nom_client=nom_client)
+                                date_livraison=date_livraison,
+                                point_livraison=point_livraison)
         dernier = qs.order_by("-numero").values_list("numero", flat=True).first()
         return (dernier or 0) + 1
 
@@ -564,12 +563,12 @@ class ConfigMessagerie(models.Model):
     smtp_hote = models.CharField("Serveur SMTP", max_length=255, blank=True)
     smtp_port = models.PositiveSmallIntegerField("Port SMTP", default=587)
     smtp_utilisateur = models.CharField("Utilisateur SMTP", max_length=150,
-                                        blank=True)
+                                       blank=True)
     smtp_mot_de_passe = models.CharField("Mot de passe SMTP", max_length=255,
                                          blank=True)
     smtp_expediteur = models.EmailField("Adresse d'expédition", blank=True)
     passerelle_sms = models.CharField("Passerelle SMS", max_length=15,
-                                      choices=PasserelleSMS.choices, blank=True)
+                                     choices=PasserelleSMS.choices, blank=True)
     config_sms = models.JSONField("Configuration passerelle", default=dict,
                                   blank=True)
     quota_journalier = models.PositiveSmallIntegerField(

@@ -1,18 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Mon espace pro — MonPetitMaraicher{% endblock %}
+{% block retour_dashboard %}{% endblock %}
 {% block content %}
 <h1>Bienvenue {{ exploitant.nom_ferme }} 👋</h1>
+
+{% if meteo %}
+<div class="meteo-hero card">
+  <span class="meteo-emoji">{{ meteo.emoji }}</span>
+  <div>
+    <strong>{{ meteo.temperature }} °C — {{ meteo.libelle }}</strong>
+    <div class="muted">Max {{ meteo.max }} °C / min {{ meteo.min }} °C ·
+      vent {{ meteo.vent }} km/h · pluie du jour : {{ meteo.pluie }} mm</div>
+    <div class="muted meteo-lieu">📍 {{ meteo.lieu }} — météo en direct</div>
+  </div>
+</div>
+{% endif %}
+
+{% if points %}
+<div class="points-defile-bande">
+  <span class="points-defile-titre">📍 Mes livraisons :</span>
+  <div class="points-defile">
+    <div class="points-defile-piste">
+      {% for p in points %}<span class="point-puce">📍 {{ p.nom }} — {{ p.ville }}{% if p.code_postal %} ({{ p.code_postal }}){% endif %}</span>{% endfor %}
+      {% for p in points %}<span class="point-puce">📍 {{ p.nom }} — {{ p.ville }}{% if p.code_postal %} ({{ p.code_postal }}){% endif %}</span>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="dashboard-cols">
+<div class="dash-main">
 
 <div class="quick-actions">
   <a class="btn" href="{% url 'portal:harvest_new' %}">➕ Nouvelle récolte</a>
   <a class="btn btn-outline" href="{% url 'portal:harvest_list' %}">🧺 Mes récoltes</a>
   <a class="btn" href="{% url 'portal:order_direct' %}">📝 Saisir une commande</a>
   <a class="btn btn-outline" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
-  <a class="btn" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
+  <a class="btn btn-outline" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
   <a class="btn btn-outline" href="{% url 'portal:categories_manage' %}">🗂 Gérer mes catégories</a>
   <a class="btn btn-outline" href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
   <a class="btn btn-outline" href="{% url 'portal:points_manage' %}">📍 Points & créneaux</a>
-  <a class="btn btn-outline" href="{% url 'portal:producer_detail' exploitant.slug %}">Voir ma page publique</a>
 </div>
 
 <section>
@@ -21,7 +48,7 @@
     <div class="card">
       <strong>Commande #{{ commande.pk }}</strong> — {{ commande.nom_client }}
       pour le {{ commande.date_livraison|date:"d/m/Y" }} ({{ commande.total }} €)
-      <a class="btn btn-sm" href="{% url 'portal:order_list' %}">Traiter</a>
+      <a class="btn btn-sm" href="{% url 'portal:order_list_filtered' 'NOUVELLE' %}">Traiter</a>
     </div>
   {% empty %}
     <p class="muted">Aucune commande en attente. 🎉</p>
@@ -35,15 +62,54 @@
 </section>
 
 <section>
-  <h2>🥕 Mes produits</h2>
-  <ul>
-    {% for produit in produits %}
-      <li>{{ produit.nom }} ({{ produit.get_unite_vente_display }}){% if produit.categorie %} — {{ produit.categorie.nom }}{% endif %}
-        — <a href="{% url 'portal:product_edit' produit.pk %}">modifier</a></li>
-    {% empty %}
-      <li class="muted">Aucun produit. Commencez par <a href="{% url 'portal:catalogue_standard' %}">importer des produits types</a> !</li>
-    {% endfor %}
-  </ul>
+  <h2>🥕 Mes produits
+    {% if paires %}
+      <button type="button" class="btn btn-outline btn-sm btn-bascule-edition"
+              onclick="document.getElementById('bloc-produits').classList.toggle('edition');">✏️ Mode édition</button>
+    {% endif %}
+  </h2>
+  {% if paires %}
+    <form method="post" action="{% url 'portal:product_quick_edit' %}" id="form-produits">
+      {% csrf_token %}
+      <div id="bloc-produits">
+        {% for cat, liste in paires %}
+          <h3>{{ cat }}</h3>
+          <table class="table table-produits">
+            <thead><tr><th>Produit</th><th>Unité</th><th>Prix (€)</th></tr></thead>
+            <tbody>
+              {% for produit in liste %}
+                <tr>
+                  <td>
+                    <span class="view">{{ produit.nom }}</span>
+                    <input class="edit" type="text" name="nom_{{ produit.pk }}" value="{{ produit.nom }}" maxlength="150">
+                  </td>
+                  <td>
+                    <span class="view">{{ produit.get_unite_vente_display }}</span>
+                    <select class="edit" name="unite_{{ produit.pk }}">
+                      {% for code, libelle in unite_choices %}
+                        <option value="{{ code }}" {% if code == produit.unite_vente %}selected{% endif %}>{{ libelle }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <span class="view">{% if produit.prix %}{{ produit.prix }} €{% else %}<span class="muted">non renseigné</span>{% endif %}</span>
+                    <input class="edit" type="text" name="prix_{{ produit.pk }}" value="{% if produit.prix %}{{ produit.prix }}{% endif %}" size="7" inputmode="decimal">
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endfor %}
+        <p class="save-bar">
+          <button class="btn btn-enregistrer" type="submit">💾 Enregistrer les modifications</button>
+          <span class="muted aide-edition">Modifiez libellé, unité ou prix, puis enregistrez. Prix vide = prix effacé.</span>
+        </p>
+      </div>
+    </form>
+    <p class="muted">Le bouton « ✏️ Mode édition » révèle les champs ; la fiche complète reste accessible via <a href="{% url 'portal:product_create' %}">Ajouter un produit</a>.</p>
+  {% else %}
+    <p class="muted">Aucun produit. Commencez par <a href="{% url 'portal:catalogue_standard' %}">importer des produits types</a> !</p>
+  {% endif %}
 </section>
 
 <section>
@@ -72,4 +138,13 @@
        livrés sans lieu dédié. <a href="{% url 'portal:points_manage' %}">En ajouter</a></p>
   {% endif %}
 </section>
+
+</div>
+<aside class="dash-side">
+  <h2>👁 Ma vitrine en direct</h2>
+  <p><a class="btn btn-outline btn-sm" href="{% url 'portal:producer_detail' exploitant.slug %}" target="_blank">Ouvrir la page publique ↗</a></p>
+  <iframe class="apercu-vitrine" src="{% url 'portal:producer_detail' exploitant.slug %}?apercu=1"
+          title="Aperçu de la vitrine publique" loading="lazy"></iframe>
+</aside>
+</div>
 {% endblock %}

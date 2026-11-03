@@ -23,6 +23,8 @@ urlpatterns = [
     path("espace-pro/", views.dashboard, name="dashboard"),
     path("espace-produits/ajouter/", views.produit_creer,
          name="product_create"),
+    path("espace-produits/edition-rapide/", views.produit_edition_rapide,
+         name="product_quick_edit"),
     path("espace-produits/<int:pk>/modifier/", views.produit_modifier,
          name="product_edit"),
     path("catalogue-standard/", views.catalogue_standard,

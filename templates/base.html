@@ -9,7 +9,7 @@
   {% block extra_style %}{% endblock %}
   {% block extrahead %}{% endblock %}
 </head>
-<body data-geojson-url="{% url 'portal:producers_geojson' %}">
+<body data-geojson-url="{% url 'portal:producers_geojson' %}" class="{% if request.GET.apercu %}mode-apercu{% endif %}">
 <header class="site-header">
   <nav class="nav container">
     <a class="brand" href="{% url 'portal:home' %}">🌱 MonPetitMaraicher</a>
@@ -41,6 +41,11 @@
   {% for message in messages %}
     <div class="flash {{ message.tags }}">{{ message }}</div>
   {% endfor %}
+  {% if user.is_authenticated and user.exploitant %}
+    {% block retour_dashboard %}
+      <p class="retour-dashboard"><a class="btn btn-outline btn-sm" href="{% url 'portal:dashboard' %}">⬅ Retour au dashboard</a></p>
+    {% endblock %}
+  {% endif %}
   {% block content %}{% endblock %}
 </main>
 
