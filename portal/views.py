@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from .forms import (InscriptionClientForm, InscriptionExploitantForm,
                     ProduitForm)
+from .meteo import meteo_synthese
 from .models import (Categorie, Commande, CreneauLivraison, Exploitant,
                     LigneCommande, LignePanier, LigneRecolte, Panier,
                     ParametresVitrine, PointLivraison, PreferenceContact,
@@ -141,10 +142,27 @@ exploitant_requis = user_passes_test(est_exploitant, login_url="portal:login")
 @login_required
 @exploitant_requis
 def dashboard(request):
+    """Page centrale du maraîcher : rubriques à gauche, aperçu de la
+    vitrine publique en direct à droite, hero météo et bandeau des points
+    de livraison. Produits rangés par catégorie, éditables sur place
+    (libellé, unité, prix de référence)."""
     exploitant = request.user.exploitant
+    produits = (exploitant.produits.filter(actif=True)
+                .select_related("categorie")
+                .order_by("categorie__position", "categorie__nom", "nom"))
+    groupes, ordre = {}, []
+    for p in produits:
+        nom_cat = p.categorie.nom if p.categorie else "Sans catégorie"
+        if nom_cat not in groupes:
+            groupes[nom_cat] = []
+            ordre.append(nom_cat)
+        groupes[nom_cat].append(p)
+    paires = [(nom, groupes[nom]) for nom in ordre]
     return render(request, "portal/pro/dashboard.html", {
         "exploitant": exploitant,
-        "produits": exploitant.produits.filter(actif=True),
+        "paires": paires,
+        "unite_choices": Produit.Unite.choices,
+        "meteo": meteo_synthese(exploitant),
         "semaine": SemaineRecolte.objects.filter(exploitant=exploitant)
                    .order_by("-lundi").first(),
         "semaines": list(SemaineRecolte.objects
@@ -198,6 +216,49 @@ def produit_modifier(request, pk):
     return render(request, "portal/pro/product_form.html",
                   {"form": form, "titre": "Modifier le produit",
                    "categories_url": "portal:categories_manage"})
+
+
+@login_required
+@exploitant_requis
+def produit_edition_rapide(request):
+    """Mode édition du dashboard : libellé, unité et prix de référence
+    modifiés en place, sans passer par la fiche produit."""
+    exploitant = request.user.exploitant
+    if request.method == "POST":
+        erreurs, modifies = [], 0
+        for produit in exploitant.produits.filter(actif=True):
+            if f"nom_{produit.pk}" not in request.POST:
+                continue
+            nom = request.POST.get(f"nom_{produit.pk}", "").strip()
+            unite = request.POST.get(f"unite_{produit.pk}", "").strip()
+            brut_prix = request.POST.get(f"prix_{produit.pk}", "").strip()
+            if not nom:
+                erreurs.append(f"« {produit.nom} » : nom vide, non modifié.")
+                continue
+            if unite not in Produit.Unite.values:
+                erreurs.append(f"« {nom} » : unité inconnue, non modifié.")
+                continue
+            prix_cible = None
+            if brut_prix:
+                try:
+                    prix_cible = Decimal(brut_prix)
+                except InvalidOperation:
+                    erreurs.append(f"« {nom} » : prix invalide, non modifié.")
+                    continue
+            if (nom != produit.nom or unite != produit.unite_vente
+                    or prix_cible != produit.prix):
+                produit.nom = nom[:150]
+                produit.unite_vente = unite
+                produit.prix = prix_cible
+                produit.save()
+                modifies += 1
+        if erreurs:
+            messages.error(request, " ".join(erreurs))
+        if modifies:
+            messages.success(request, f"{modifies} produit(s) mis à jour.")
+        elif not erreurs:
+            messages.info(request, "Aucune modification à enregistrer.")
+    return redirect("portal:dashboard")
 
 
 @login_required
@@ -521,7 +582,7 @@ def order_direct_create(request):
                     telephone_client=telephone_client,
                     numero=Panier.prochain_numero(
                         exploitant, date_livraison,
-                        client=client, nom_client=nom_client[:150]),
+                        point_livraison=point),
                     date_livraison=date_livraison, creneau=creneau,
                     point_livraison=point, commande=commande,
                     statut=Panier.Statut.PREPARATION,
@@ -595,8 +656,7 @@ def order_validate(request, commande_id):
                     telephone_client=commande.telephone_client,
                     numero=Panier.prochain_numero(
                         exploitant, commande.date_livraison,
-                        client=commande.client,
-                        nom_client=commande.nom_client),
+                        point_livraison=commande.point_livraison),
                     date_livraison=commande.date_livraison,
                     point_livraison=commande.point_livraison,
                     commande=commande,
@@ -1165,7 +1225,7 @@ def order_create(request, slug):
                     quantite=qty, prix_unitaire=ligne.prix_unitaire)
         messages.success(
             request, "Commande envoyée ! Le producteur va la valider, "
-            "vous la retrouverez dans « Mes commandes ».")
+            "vous la retrouvererez dans « Mes commandes ».")
         return redirect("portal:my_orders")
 
     # Dates futures correspondant aux jours de créneaux (28 jours)
