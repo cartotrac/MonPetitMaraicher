@@ -28,7 +28,7 @@ UNITES_ENTIERES = ("PC", "BO", "BQ")
 
 
 def home(request):
-    """Landing : bandeau, recherche, hero, carte des exploitants."""
+    """Landing : bandeau, hero, présentation du portail."""
     exploitants = (Exploitant.objects.filter(visible=True)
                    .exclude(latitude=None, longitude=None)
                    .order_by("nom_ferme"))
@@ -36,7 +36,8 @@ def home(request):
 
 
 def producer_search(request):
-    """Recherche multi-critères : exploitant, produit, ville, département, mode."""
+    """Recherche multi-critères : exploitant, produit, ville, département
+    (ou code postal), mode de production — plus la CARTE des résultats."""
     exploitants = Exploitant.objects.filter(visible=True).order_by("nom_ferme")
     q = request.GET.get("q", "").strip()
     dept = request.GET.get("dept", "").strip()
@@ -44,14 +45,33 @@ def producer_search(request):
     if q:
         exploitants = exploitants.filter(
             Q(nom_ferme__icontains=q) | Q(ville__icontains=q)
+            | Q(code_postal__icontains=q)
+            | Q(departement__icontains=q)
             | Q(produits__nom__icontains=q)
             | Q(produits__categorie__nom__icontains=q)).distinct()
     if dept:
-        exploitants = exploitants.filter(departement=dept)
+        # Département saisi (« 81 », « Tarn »…) OU code postal commençant
+        # par ces chiffres : un exploitant sans champ département rempli
+        # reste trouvable depuis son code postal.
+        exploitants = exploitants.filter(
+            Q(departement__iexact=dept)
+            | Q(code_postal__istartswith=dept)).distinct()
     if mode:
         exploitants = exploitants.filter(mode_production=mode)
+    exploitants = list(exploitants)
+    # Données carto : uniquement les résultats filtrés avec coordonnées.
+    carte_data = [{
+        "nom_ferme": e.nom_ferme,
+        "mode_production": e.mode_production,
+        "ville": e.ville,
+        "latitude": e.latitude,
+        "longitude": e.longitude,
+        "url": e.get_absolute_url(),
+    } for e in exploitants
+        if e.latitude is not None and e.longitude is not None]
     return render(request, "portal/search_results.html", {
         "exploitants": exploitants,
+        "carte_data": carte_data,
         "q": q, "dept": dept, "mode": mode,
     })
 
@@ -73,7 +93,8 @@ def producteurs_geojson(request):
 
 
 def producer_detail(request, slug):
-    """Page publique d'un exploitant : récolte de la semaine + à venir."""
+    """Page publique d'un exploitant : récolte de la semaine + à venir,
+    météo en direct à la ferme et bandeau des créneaux de livraison."""
     exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
     today = timezone.localdate()
     lundi = today - datetime.timedelta(days=today.weekday())
@@ -93,6 +114,7 @@ def producer_detail(request, slug):
         "semaine": semaine,
         "lignes": lignes,
         "semaines_avenir": semaines_avenir,
+        "meteo": meteo_synthese(exploitant),
         "points_livraison": exploitant.points_livraison.all(),
         "creneaux": exploitant.creneaux.select_related("point_livraison"),
     })
@@ -143,9 +165,9 @@ exploitant_requis = user_passes_test(est_exploitant, login_url="portal:login")
 @exploitant_requis
 def dashboard(request):
     """Page centrale du maraîcher : rubriques à gauche, aperçu de la
-    vitrine publique en direct à droite, hero météo et bandeau des points
-    de livraison. Produits rangés par catégorie, éditables sur place
-    (libellé, unité, prix de référence)."""
+    vitrine publique en direct à droite, hero météo et bandeau des
+    créneaux de livraison (jour + horaires). Produits rangés par
+    catégorie, éditables sur place (libellé, unité, prix)."""
     exploitant = request.user.exploitant
     produits = (exploitant.produits.filter(actif=True)
                 .select_related("categorie")
@@ -170,7 +192,7 @@ def dashboard(request):
                          .annotate(nb_lignes=Count("lignes"))
                          .order_by("-lundi")[:6]),
         "points": exploitant.points_livraison.all(),
-        "creneaux": exploitant.creneaux.all(),
+        "creneaux": exploitant.creneaux.select_related("point_livraison"),
         "commandes_attente": exploitant.commandes
                              .filter(statut=Commande.Statut.NOUVELLE)
                              .order_by("-creee_le")[:10],
@@ -1106,7 +1128,7 @@ def catalogue_copier(request):
 def categories_manage(request):
     """Gestion des catégories de l'exploitant (issue #5) : créer,
     renommer, réordonner, supprimer. Supprimer ne touche pas les produits
-    (ils passent « sans catégorie")."""
+    (ils passent « sans catégorie»)."""
     exploitant = request.user.exploitant
     if request.method == "POST":
         action = request.POST.get("action")
@@ -1165,9 +1187,18 @@ def order_create(request, slug):
     """Le client choisit produits/quantités/date et soumet sa commande.
 
     Les quantités affichées sont des estimations : aucune commande n'est
-    bloquée par une quantité indicative.
+    bloquée par une quantité indicative. Un exploitant ne peut pas se
+    commander à lui-même via la vitrine : il doit passer par la saisie
+    directe de son espace pro.
     """
     exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
+    if (hasattr(request.user, "exploitant")
+            and request.user.exploitant.pk == exploitant.pk):
+        messages.info(request, "Vous êtes le producteur de cette ferme : "
+                     "utilisez « Saisir une commande » dans votre espace "
+                     "pro pour enregistrer une commande (la vôtre par "
+                     "exemple).")
+        return redirect("portal:producer_detail", slug=slug)
     today = timezone.localdate()
     lundi = today - datetime.timedelta(days=today.weekday())
     semaine = (SemaineRecolte.objects.filter(exploitant=exploitant,
@@ -1225,7 +1256,7 @@ def order_create(request, slug):
                     quantite=qty, prix_unitaire=ligne.prix_unitaire)
         messages.success(
             request, "Commande envoyée ! Le producteur va la valider, "
-            "vous la retrouvererez dans « Mes commandes ».")
+            "vous la retrouverez dans « Mes commandes ».")
         return redirect("portal:my_orders")
 
     # Dates futures correspondant aux jours de créneaux (28 jours)

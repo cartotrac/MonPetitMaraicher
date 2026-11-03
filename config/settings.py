@@ -46,7 +46,7 @@ MIDDLEWARE = [
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.contrib.messages.middleware.MessagesMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -69,6 +69,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+
+# L'aperçu de la vitrine dans le dashboard est une iframe du même domaine :
+# autoriser l'affichage same-origin (le DENY par défaut bloquait l'aperçu).
+X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # SQLite par défaut (dev / instance mono-ferme) ; PostgreSQL en prod (voir .env.example)
 DATABASES = {

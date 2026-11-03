@@ -112,7 +112,9 @@ def envoyer_sms(exploitant, texte):
 
 def notifier_client(request, panier, type_msg):
     """Notifie le client du panier selon son canal préféré (e-mail par
-    défaut). Feedback via messages Django. Retourne True si envoyé."""
+    défaut). Feedback via messages Django — TOUJOURS informatif : une
+    notification non envoyée n'invalide jamais la commande/le panier,
+    qui sont déjà créés à ce stade. Retourne True si envoyé."""
     pref = None
     if panier.client_id:
         pref = (PreferenceContact.objects
@@ -130,31 +132,36 @@ def notifier_client(request, panier, type_msg):
 
     if canal == PreferenceContact.Canal.SMS:
         if not panier.telephone_client:
-            messages.info(request, "Canal préféré SMS mais numéro absent : "
-                          "aucun envoi effectué.")
+            messages.info(request, "ℹ️ SMS non envoyé : numéro de téléphone "
+                          "absent. La commande, elle, est bien enregistrée.")
             return False
         ok, info = envoyer_sms(panier.exploitant, corps)
         if ok:
             messages.success(request, "📱 SMS " + info + ".")
         else:
-            messages.info(request, "SMS non envoyé : " + info + ".")
+            messages.info(request, "ℹ️ SMS non envoyé (" + info
+                          + "). La commande, elle, est bien enregistrée.")
         return ok
 
     # Canal e-mail
     if not panier.email_client:
-        messages.info(request, "E-mail du client absent : aucun envoi "
-                      "effectué.")
+        messages.info(request, "ℹ️ Notification e-mail non envoyée : "
+                      "adresse du client absente. La commande, elle, est "
+                      "bien enregistrée.")
         return False
     if not getattr(settings, "EMAIL_HOST", ""):
-        messages.info(request, "E-mail non configuré : ajoutez EMAIL_HOST "
-                      "(et identifiants) dans le .env puis redémarrez le "
-                      "site. Rien n'a été envoyé.")
+        messages.info(request, "ℹ️ Notification e-mail non envoyée : "
+                      "serveur e-mail non configuré (ajoutez EMAIL_HOST "
+                      "dans le .env puis redémarrez). La commande, elle, "
+                      "est bien enregistrée — rien n'est perdu.")
         return False
     try:
         send_mail(objet, corps, settings.DEFAULT_FROM_EMAIL,
                   [panier.email_client], fail_silently=False)
     except Exception as err:
-        messages.info(request, f"Échec d'envoi e-mail : {err}")
+        messages.info(request, "ℹ️ Notification e-mail non envoyée (échec "
+                      "SMTP : " + str(err) + "). La commande, elle, est "
+                      "bien enregistrée.")
         return False
     messages.success(request, "✉️ E-mail envoyé à " + panier.email_client + ".")
     return True
