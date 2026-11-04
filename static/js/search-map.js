@@ -9,7 +9,8 @@
    Superpositions administratives (chargees a la demande, au premier
    affichage uniquement) :
    - Regions, Departements, Communes : france-geojson (gregoiredavid)
-   - EPCI : API decoupage administratif geo.api.gouv.fr
+   Les departements (numero + nom) et communes (nom) portent une
+   etiquette permanente, revelee au-dela d'un seuil de zoom.
 */
 
 var CAT_STYLES = {
@@ -24,11 +25,12 @@ var bloc = document.getElementById("donnees-carte");
 var carte = L.map("carte-recherche").setView([46.6, 2.4], 6);
 
 /* ------------------------------------------------------------------ fonds */
+/* Fond « Plan » : OpenFreeMap (liberté, tuiles raster PNG sans clé —
+   CARTO exige désormais une clé et les tuiles OSM directes renvoient 403). */
 var fondPlan = L.tileLayer(
-  "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-    subdomains: "abcd",
-    maxZoom: 20,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  "https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://openfreemap.org/">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   });
 
 var fondOrtho = L.tileLayer(
@@ -49,22 +51,22 @@ var COUCHES_ADMIN = {
   },
   "Départements": {
     url: FOND_ADMIN + "departements.geojson",
-    style: { color: "#1565c0", weight: 1.5, fill: false, opacity: 0.8 }
-  },
-  "EPCI": {
-    url: "https://geo.api.gouv.fr/epcis?format=geojson&geometry=contour",
-    style: { color: "#00897b", weight: 1.5, fill: false, opacity: 0.8 }
+    style: { color: "#1565c0", weight: 1.5, fill: false, opacity: 0.8 },
+    etiquette: "dep"      // numéro + nom affichés au-delà du zoom label
   },
   "Communes": {
     url: FOND_ADMIN + "communes-version-simplifiee.geojson",
-    style: { color: "#ef6c00", weight: 0.8, fill: false, opacity: 0.7 }
+    style: { color: "#ef6c00", weight: 0.8, fill: false, opacity: 0.7 },
+    etiquette: "com"      // nom affiché au-delà du zoom label
   }
 };
 
 /* Zoom minimum à partir duquel chaque couche administrative devient
    disponible : en dessous, elle est grisée dans le contrôle et son
    chargement est refusé (trop de tuiles/features pour l'emprise). */
-var SEUILS = { "Régions": 0, "Départements": 6, "EPCI": 8, "Communes": 10 };
+var SEUILS = { "Régions": 0, "Départements": 6, "Communes": 10 };
+/* Zoom minimum pour afficher les étiquettes (noms) des couches actives */
+var SEUILS_LABELS = { "dep": 8, "com": 12 };
 
 var couchesAdmin = {};
 Object.keys(COUCHES_ADMIN).forEach(function (nom) {
@@ -109,6 +111,17 @@ function majCouleurs() {
   });
 }
 
+// Afficher / masquer les étiquettes (noms) selon le zoom et l'activation
+function majLabels() {
+  var conteneur = carte.getContainer();
+  ["dep", "com"].forEach(function (cle) {
+    var nomCouche = (cle === "dep") ? "Départements" : "Communes";
+    var actif = carte.hasLayer(couchesAdmin[nomCouche])
+      && carte.getZoom() >= (SEUILS_LABELS[cle] || 0);
+    conteneur.classList.toggle("labels-" + cle + "-on", actif);
+  });
+}
+
 // Les couches administratives se chargent au premier affichage seulement,
 // et uniquement si le zoom est suffisant
 carte.on("overlayadd", function (e) {
@@ -130,15 +143,31 @@ carte.on("overlayadd", function (e) {
         if (nom) {
           couche.bindPopup("<strong>" + nom + "</strong>");
         }
+        // Étiquette permanente : masquée par défaut (classe CSS) et
+        // révélée par majLabels au-delà du seuil de zoom de sa couche.
+        if (conf.etiquette) {
+          var etiquette = nom;
+          if (conf.etiquette === "dep") {
+            var code = props.code || props.CODE || props.code_dep || "";
+            etiquette = (code ? code + " — " : "") + nom;
+          }
+          couche.bindTooltip(etiquette, {
+            permanent: true,
+            direction: "center",
+            className: "label-admin label-" + conf.etiquette
+          });
+        }
       }
     });
     couchesAdmin[e.name].addLayer(geo);
+    majLabels();
   }).catch(function () {
     conf.chargee = false;  // permet de retenter en recochant la couche
   });
 });
 
-carte.on("zoomend", majCouleurs);
+carte.on("zoomend", function () { majCouleurs(); majLabels(); });
+carte.on("overlayremove", majLabels);
 carte.whenReady(majCouleurs);
 
 /* --------------------------------------------------------------- legende */
