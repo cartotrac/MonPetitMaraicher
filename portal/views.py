@@ -107,7 +107,23 @@ def producer_detail(request, slug):
                                              publiee=True,
                                              lundi__lte=lundi)
                .order_by("-lundi").first())
-    lignes = semaine.lignes.select_related("produit") if semaine else []
+    lignes = list(semaine.lignes.select_related("produit__categorie",
+                                                "produit__origine_standard")
+                  if semaine else [])
+    # Produits regroupés par catégorie (même présentation que côté
+    # maraîcher) : tri par position de catégorie puis nom.
+    lignes.sort(key=lambda l: (
+        (l.produit.categorie.position if l.produit.categorie else 9999)
+        or 9999,
+        l.produit.categorie.nom if l.produit.categorie else "zz",
+        l.produit.nom))
+    groupes, courant = [], None
+    for ligne in lignes:
+        nom_cat = (ligne.produit.categorie.nom
+                   if ligne.produit.categorie else "Autres produits")
+        if not groupes or groupes[-1][0] != nom_cat:
+            groupes.append((nom_cat, []))
+        groupes[-1][1].append(ligne)
     vitrine, _cree = ParametresVitrine.objects.get_or_create(
         exploitant=exploitant)
     return render(request, "portal/producer_detail.html", {
@@ -115,6 +131,7 @@ def producer_detail(request, slug):
         "vitrine": vitrine,
         "semaine": semaine,
         "lignes": lignes,
+        "groupes_categories": groupes,
         "semaines_avenir": semaines_avenir,
         "meteo": meteo_synthese(exploitant),
         "points_livraison": exploitant.points_livraison.all(),
@@ -1252,7 +1269,6 @@ def categories_manage(request):
 
 # ---------------------------------------------------------------- client
 
-@login_required
 def order_create(request, slug):
     """Le client choisit produits/quantités/date et soumet sa commande.
 
@@ -1260,6 +1276,10 @@ def order_create(request, slug):
     bloquée par une quantité indicative. Un exploitant ne peut pas se
     commander à lui-même via la vitrine : il doit passer par la saisie
     directe de son espace pro.
+
+    Sans compte (nouveau client) : la commande est possible en
+    renseignant nom + e-mail OU téléphone — le producteur recontacte le
+    client au moment de la validation.
     """
     exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
     if (exploitant_pour(request.user) is not None
@@ -1317,21 +1337,45 @@ def order_create(request, slug):
             messages.error(request,
                            "Commande invalide : vérifiez les quantités et la date.")
             return redirect("portal:order_create", slug=slug)
-        nom_client = (request.user.get_full_name() or request.user.username)
+        if request.user.is_authenticated:
+            client, nom_client = request.user, (
+                request.user.get_full_name() or request.user.username)
+            email_client, telephone_client = request.user.email, ""
+        else:
+            client = None
+            nom_client = request.POST.get("nom_client", "").strip()
+            email_client = request.POST.get("email_client", "").strip()
+            telephone_client = request.POST.get(
+                "telephone_client", "").strip()
+            if not nom_client:
+                messages.error(request, "Merci d'indiquer votre nom.")
+                return redirect("portal:order_create", slug=slug)
+            if not email_client and not telephone_client:
+                messages.error(request, "Sans compte, indiquez un e-mail ou "
+                               "un téléphone pour que le producteur puisse "
+                               "vous recontacter.")
+                return redirect("portal:order_create", slug=slug)
         with transaction.atomic():
             commande = Commande.objects.create(
-                exploitant=exploitant, client=request.user,
-                nom_client=nom_client, email_client=request.user.email,
+                exploitant=exploitant, client=client,
+                nom_client=nom_client[:150], email_client=email_client,
+                telephone_client=telephone_client,
                 point_livraison=point, date_livraison=date_livraison,
                 note=request.POST.get("note", ""), total=total)
             for ligne, qty in lignes_souhaitees:
                 LigneCommande.objects.create(
                     commande=commande, produit=ligne.produit,
                     quantite=qty, prix_unitaire=ligne.prix_unitaire)
+        if client:
+            messages.success(
+                request, "Commande envoyée ! Le producteur va la valider, "
+                "vous la retrouverez dans « Mes commandes ».")
+            return redirect("portal:my_orders")
+        contact = email_client or telephone_client
         messages.success(
-            request, "Commande envoyée ! Le producteur va la valider, "
-            "vous la retrouverez dans « Mes commandes ».")
-        return redirect("portal:my_orders")
+            request, "Commande envoyée ! Le producteur vous recontactera "
+            f"via {contact} pour valider votre commande.")
+        return redirect("portal:producer_detail", slug=slug)
 
     # Dates futures correspondant aux jours de créneaux (28 jours)
     jours = {c.jour for c in exploitant.creneaux.all()}

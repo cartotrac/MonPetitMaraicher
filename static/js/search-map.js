@@ -1,5 +1,16 @@
 /* Carte Leaflet de la page de recherche : affiche les RESULTATS FILTRES.
-   Les données viennent du bloc json_script "donnees-carte" du template. */
+   Les données viennent du bloc json_script "donnees-carte" du template.
+
+   Fonds de carte (sans cle, conformes aux conditions d'utilisation — les
+   tuiles OpenStreetMap directes renvoient 403 aux serveurs benevoles) :
+   - Plan    : CARTO Voyager (basemap CARTO/OSM)
+   - Ortho   : Esri World Imagery (photographies aeriennes)
+
+   Superpositions administratives (chargees a la demande, au premier
+   affichage uniquement) :
+   - Regions, Departements, Communes : france-geojson (gregoiredavid)
+   - EPCI : API decoupage administratif geo.api.gouv.fr
+*/
 
 var CAT_STYLES = {
   AB:       { color: "#1b5e20", label: "Agriculture Biologique (AB)" },
@@ -12,11 +23,79 @@ var CAT_STYLES = {
 var bloc = document.getElementById("donnees-carte");
 var carte = L.map("carte-recherche").setView([46.6, 2.4], 6);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 18,
-  attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>"
-}).addTo(carte);
+/* ------------------------------------------------------------------ fonds */
+var fondPlan = L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    subdomains: "abcd",
+    maxZoom: 20,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  });
 
+var fondOrtho = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19,
+    attribution: "Esri, Maxar, Earthstar Geographics"
+  });
+
+fondPlan.addTo(carte);
+
+/* ------------------------------------------- superpositions administratives */
+var FOND_ADMIN = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/";
+
+var COUCHES_ADMIN = {
+  "Régions": {
+    url: FOND_ADMIN + "regions.geojson",
+    style: { color: "#8e24aa", weight: 2, fill: false, opacity: 0.9 }
+  },
+  "Départements": {
+    url: FOND_ADMIN + "departements.geojson",
+    style: { color: "#1565c0", weight: 1.5, fill: false, opacity: 0.8 }
+  },
+  "EPCI": {
+    url: "https://geo.api.gouv.fr/epcis?format=geojson&geometry=contour",
+    style: { color: "#00897b", weight: 1.5, fill: false, opacity: 0.8 }
+  },
+  "Communes": {
+    url: FOND_ADMIN + "communes-version-simplifiee.geojson",
+    style: { color: "#ef6c00", weight: 0.8, fill: false, opacity: 0.7 }
+  }
+};
+
+var couchesAdmin = {};
+Object.keys(COUCHES_ADMIN).forEach(function (nom) {
+  couchesAdmin[nom] = L.layerGroup();
+});
+
+// Un seul contrôle de couches : fonds (plan/ortho) + superpositions
+L.control.layers(
+  { "Plan": fondPlan, "Ortho (vue aérienne)": fondOrtho },
+  couchesAdmin,
+  { position: "topleft" }
+).addTo(carte);
+
+// Les couches administratives se chargent au premier affichage seulement
+carte.on("overlayadd", function (e) {
+  var conf = COUCHES_ADMIN[e.name];
+  if (!conf || conf.chargee) return;
+  conf.chargee = true;
+  fetch(conf.url).then(function (r) { return r.json(); }).then(function (data) {
+    var geo = L.geoJSON(data, {
+      style: conf.style,
+      onEachFeature: function (feature, couche) {
+        var props = feature.properties || {};
+        var nom = props.nom || props.NOM || props.code || props.CODE || "";
+        if (nom) {
+          couche.bindPopup("<strong>" + nom + "</strong>");
+        }
+      }
+    });
+    couchesAdmin[e.name].addLayer(geo);
+  }).catch(function () {
+    conf.chargee = false;  // permet de retenter en recochant la couche
+  });
+});
+
+/* --------------------------------------------------------------- legende */
 var legend = L.control({ position: "bottomright" });
 legend.onAdd = function () {
   var div = L.DomUtil.create("div", "map-legend");

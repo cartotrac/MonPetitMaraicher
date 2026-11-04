@@ -22,6 +22,28 @@
     </tbody>
   </table>
 
+  {% if not user.is_authenticated %}
+    <div class="card param-card">
+      <h3>Vous n'avez pas de compte ? Pas de souci 🌱</h3>
+      <p class="muted">Laissez vos coordonnées : le producteur vous recontactera
+         par e-mail ou téléphone pour valider votre commande. (Créer un compte
+         vous permet de suivre vos commandes et d'être notifié.)</p>
+      <div class="form-row">
+        <label>Votre nom *
+          <input type="text" name="nom_client" required
+                 placeholder="Prénom et nom"></label>
+        <label>Votre e-mail
+          <input type="email" name="email_client"
+                 placeholder="email (si vous en avez un)"></label>
+        <label>ou votre téléphone
+          <input type="tel" name="telephone_client"
+                 placeholder="06 … (si pas d'e-mail)"></label>
+      </div>
+      <p class="muted">E-mail OU téléphone obligatoire : sans moyen de
+         contact, le producteur ne pourra pas vous répondre.</p>
+    </div>
+  {% endif %}
+
   {% if points_livraison %}
     <label>Point de livraison / retrait (requis)
       <select name="point_livraison" required>

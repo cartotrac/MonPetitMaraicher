@@ -107,8 +107,12 @@ class ProduitForm(forms.ModelForm):
 class ProfilExploitantForm(forms.ModelForm):
     """Édition de sa fiche par un maraîcher (badge SIRET inclus)."""
     logo_externe = forms.URLField(
-        label="Lien logo externe (drive, cloud, réseau — rien n'est "
-              "hébergé sur le portail)", required=False)
+        label="Lien logo externe (drive, cloud, réseau — alternative au "
+              "fichier : rien n'est hébergé sur le portail)", required=False)
+    field_order = ["nom_ferme", "siret", "mode_production", "logo",
+                   "logo_externe", "description", "adresse", "ville",
+                   "code_postal", "departement", "telephone", "latitude",
+                   "longitude"]
 
     class Meta:
         model = Exploitant

@@ -60,23 +60,25 @@
   {% if lignes %}
     <p class="muted">Les quantités sont des estimations : elles vous informent des
        disponibilités attendues. Le producteur ajuste au moment de la préparation.</p>
-    <table class="table">
-      <thead><tr><th>Produit</th><th>Disponibilité estimée</th><th>Prix</th></tr></thead>
-      <tbody>
-      {% for ligne in lignes %}
-        <tr>
-          <td>{% if ligne.produit.origine_standard and ligne.produit.origine_standard.emoji %}{{ ligne.produit.origine_standard.emoji }} {% endif %}{{ ligne.produit.nom }}</td>
-          <td>~ {{ ligne.quantite_estimee }} {{ ligne.produit.unite_courte }}</td>
-          <td>{{ ligne.prix_unitaire }} €</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% if user.is_authenticated %}
-      <a class="btn" href="{% url 'portal:order_create' exploitant.slug %}">Commander</a>
-    {% else %}
-      <p><a href="{% url 'login' %}">Connectez-vous</a> ou
-         <a href="{% url 'portal:register_client' %}">créez un compte</a> pour commander.</p>
+    {% for nom_cat, lignes_cat in groupes_categories %}
+      <h3>{{ nom_cat }} <span class="muted">({{ lignes_cat|length }})</span></h3>
+      <table class="table">
+        <thead><tr><th>Produit</th><th>Disponibilité estimée</th><th>Prix</th></tr></thead>
+        <tbody>
+        {% for ligne in lignes_cat %}
+          <tr>
+            <td>{% if ligne.produit.origine_standard and ligne.produit.origine_standard.emoji %}{{ ligne.produit.origine_standard.emoji }} {% endif %}{{ ligne.produit.nom }}</td>
+            <td>~ {{ ligne.quantite_estimee }} {{ ligne.produit.unite_courte }}</td>
+            <td>{{ ligne.prix_unitaire }} €</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% endfor %}
+    <a class="btn" href="{% url 'portal:order_create' exploitant.slug %}">Commander</a>
+    {% if not user.is_authenticated %}
+      <span class="muted">— sans compte : indiquez simplement un e-mail ou
+        un téléphone, le producteur vous recontactera.</span>
     {% endif %}
   {% else %}
     <p class="muted">Pas encore de récolte publiée cette semaine.</p>
