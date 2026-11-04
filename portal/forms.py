@@ -104,18 +104,11 @@ class ProduitForm(forms.ModelForm):
                 self.instance.attributs or {}).get("image_url", "")
 
 
-class ProfilClientForm(forms.Form):
-    """Édition de ses informations par un client connecté."""
-
-    prenom = forms.CharField(label="Prénom", max_length=150, required=False)
-    nom = forms.CharField(label="Nom", max_length=150, required=False)
-    email = forms.EmailField(label="E-mail")
-    telephone = forms.CharField(label="Téléphone", max_length=20,
-                                required=False)
-
-
 class ProfilExploitantForm(forms.ModelForm):
     """Édition de sa fiche par un maraîcher (badge SIRET inclus)."""
+    logo_externe = forms.URLField(
+        label="Lien logo externe (drive, cloud, réseau — rien n'est "
+              "hébergé sur le portail)", required=False)
 
     class Meta:
         model = Exploitant
@@ -125,7 +118,19 @@ class ProfilExploitantForm(forms.ModelForm):
         labels = {"nom_ferme": "Nom de l'exploitation",
                   "siret": "SIRET (14 chiffres)",
                   "mode_production": "Mode de production",
-                  "logo": "Logo miniature",
+                  "logo": "Logo miniature (fichier)",
                   "description": "Présentation",
+                  "departement": "Département (auto si vide : 2 premiers chiffres du code postal)",
                   "latitude": "Latitude (optionnel, pour la carte)",
                   "longitude": "Longitude (optionnel, pour la carte)"}
+
+
+class ProfilPersonnelForm(forms.Form):
+    """Informations personnelles du compte individuel (client, maraîcher
+    propriétaire ou membre d'une équipe) : prénom, nom, e-mail, téléphone."""
+
+    prenom = forms.CharField(label="Prénom", max_length=150, required=False)
+    nom = forms.CharField(label="Nom", max_length=150, required=False)
+    email = forms.EmailField(label="E-mail")
+    telephone = forms.CharField(label="Téléphone", max_length=20,
+                                required=False)

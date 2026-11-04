@@ -45,6 +45,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -61,8 +62,12 @@ TEMPLATES = [
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
+                "django.template.context_processors.csrf",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # Exploitation gérée par le compte courant (propriétaire ou
+                # membre de l'équipe) : naviguation et menus partagés.
+                "portal.context.exploitant_contexte",
             ],
         },
     },
@@ -73,6 +78,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 # L'aperçu de la vitrine dans le dashboard est une iframe du même domaine :
 # autoriser l'affichage same-origin (le DENY par défaut bloquait l'aperçu).
 X_FRAME_OPTIONS = "SAMEORIGIN"
+
+# CSRF : en https, Django vérifie l'en-tête Origin du navigateur contre la
+# liste des origines de confiance. Renseigner dans .env l'URL exacte du site,
+# avec scheme et domaine : ex. https://monpetitmaraicher.cartotrac.fr
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in env("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
 
 # SQLite par défaut (dev / instance mono-ferme) ; PostgreSQL en prod (voir .env.example)
 DATABASES = {

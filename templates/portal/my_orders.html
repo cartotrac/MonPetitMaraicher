@@ -12,7 +12,7 @@
     <p>📅 {{ commande.date_livraison|date:"d/m/Y" }} — 💰 {{ commande.total }} €</p>
     <ul>
       {% for ligne in commande.lignes.all %}
-        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.get_unite_vente_display }}</li>
+        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.unite_courte }}</li>
       {% endfor %}
     </ul>
     {% if panier %}
@@ -22,7 +22,7 @@
       <p class="muted">Contenu livré :</p>
       <ul>
         {% for row in resultat.lignes_panier %}
-          <li>{{ row.ligne.produit.nom }} × {{ row.ligne.quantite }} {{ row.ligne.produit.get_unite_vente_display }}
+          <li>{{ row.ligne.produit.nom }} × {{ row.ligne.quantite }} {{ row.ligne.produit.unite_courte }}
               {% if row.ajuste %} <em>(souhaité : {{ row.souhaite }})</em> ⚠️ ajusté{% elif row.souhaite is None %} <em>(ajout du producteur)</em>{% endif %}</li>
         {% endfor %}
       </ul>

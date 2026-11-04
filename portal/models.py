@@ -71,6 +71,10 @@ class Exploitant(models.Model):
                 slug = f"{base}-{n}"
                 n += 1
             self.slug = slug
+        # Département déduit du code postal (2 premiers chiffres) s'il
+        # n'est pas saisi : la recherche « 81 » / « Tarn » s'appuie dessus.
+        if not self.departement and self.code_postal:
+            self.departement = self.code_postal[:2]
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -640,3 +644,44 @@ class ParametresVitrine(models.Model):
     def __str__(self):
         return f"Vitrine de {self.exploitant}"
 
+
+
+class MembreExploitation(models.Model):
+    """Compte individuel rattaché à une exploitation : plusieurs
+    personnes (famille, salariés, associés) peuvent gérer la même ferme
+    — même SIRET — sans y être « propriétaire » du compte.
+
+    Le propriétaire reste l'utilisateur porteur du OneToOneField
+    Exploitant.user ; les membres accèdent aux mêmes espace pro,
+    commandes et paniers via exploitant_pour().
+    """
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE,
+                                 related_name="membre_exploitation")
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                    related_name="membres")
+    telephone = models.CharField("Téléphone", max_length=20, blank=True)
+    ajoute_le = models.DateTimeField("Ajouté le", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Membre de l'exploitation"
+        verbose_name_plural = "Membres de l'exploitation"
+        ordering = ["ajoute_le"]
+
+    def __str__(self):
+        return (f"{self.user.get_full_name() or self.user.username}"
+                f" — {self.exploitant.nom_ferme}")
+
+
+def exploitant_pour(user):
+    """L'exploitation gérée par ce compte, ou None : soit le compte
+    propriétaire (Exploitant.user), soit un membre rattaché."""
+    if user is None or not getattr(user, "is_authenticated", False):
+        return None
+    exploitant = getattr(user, "exploitant", None)
+    if exploitant is not None:
+        return exploitant
+    membre = getattr(user, "membre_exploitation", None)
+    if membre is not None:
+        return membre.exploitant
+    return None

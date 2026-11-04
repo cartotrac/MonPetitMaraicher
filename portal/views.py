@@ -15,12 +15,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import (InscriptionClientForm, InscriptionExploitantForm,
-                    ProduitForm, ProfilClientForm, ProfilExploitantForm)
+                    ProduitForm, ProfilExploitantForm, ProfilPersonnelForm)
 from .meteo import meteo_synthese
 from .models import (Categorie, Commande, CreneauLivraison, Exploitant,
-                    LigneCommande, LignePanier, LigneRecolte, Panier,
-                    ParametresVitrine, PointLivraison, PreferenceContact,
-                    Produit, ProduitStandard, ProfilClient, SemaineRecolte)
+                    LigneCommande, LignePanier, LigneRecolte,
+                    MembreExploitation, Panier, ParametresVitrine,
+                    PointLivraison, PreferenceContact, Produit,
+                    ProduitStandard, ProfilClient, SemaineRecolte,
+                    exploitant_pour)
 from .notifications import notifier_client
 
 # Unités vendues à la pièce : quantités entières uniquement.
@@ -165,7 +167,8 @@ def register_client(request):
 
 
 def est_exploitant(user):
-    return user.is_authenticated and hasattr(user, "exploitant")
+    # Propriétaire de l'exploitation OU membre rattaché (équipe).
+    return exploitant_pour(user) is not None
 
 
 exploitant_requis = user_passes_test(est_exploitant, login_url="portal:login")
@@ -180,7 +183,7 @@ def dashboard(request):
     vitrine publique en direct à droite, hero météo et bandeau des
     créneaux de livraison (jour + horaires). Produits rangés par
     catégorie, éditables sur place (libellé, unité, prix)."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     produits = (exploitant.produits.filter(actif=True)
                 .select_related("categorie")
                 .order_by("categorie__position", "categorie__nom", "nom"))
@@ -216,7 +219,7 @@ def dashboard(request):
 @login_required
 @exploitant_requis
 def produit_creer(request):
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     if request.method == "POST":
         form = ProduitForm(request.POST, request.FILES, exploitant=exploitant)
         if form.is_valid():
@@ -238,10 +241,10 @@ def produit_creer(request):
 @exploitant_requis
 def produit_modifier(request, pk):
     produit = get_object_or_404(Produit, pk=pk,
-                                exploitant=request.user.exploitant)
+                                exploitant=exploitant_pour(request.user))
     if request.method == "POST":
         form = ProduitForm(request.POST, request.FILES, instance=produit,
-                           exploitant=request.user.exploitant)
+                           exploitant=exploitant_pour(request.user))
         if form.is_valid():
             produit = form.save(commit=False)
             _enregistrer_image_externe(produit,
@@ -251,7 +254,7 @@ def produit_modifier(request, pk):
             return redirect("portal:dashboard")
     else:
         form = ProduitForm(instance=produit,
-                           exploitant=request.user.exploitant)
+                           exploitant=exploitant_pour(request.user))
     return render(request, "portal/pro/product_form.html",
                   {"form": form, "titre": "Modifier le produit",
                    "categories_url": "portal:categories_manage"})
@@ -262,7 +265,7 @@ def produit_modifier(request, pk):
 def produit_edition_rapide(request):
     """Mode édition du dashboard : libellé, unité et prix de référence
     modifiés en place, sans passer par la fiche produit."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     if request.method == "POST":
         erreurs, modifies = [], 0
         for produit in exploitant.produits.filter(actif=True):
@@ -306,7 +309,7 @@ def harvest_list(request):
     """Toutes les récoltes de l'exploitant (fréquence libre : hebdo,
     moins souvent… c'est lui qui choisit). Publication / dépublication
     en un clic (impact immédiat sur la vitrine), suppression possible."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     today = timezone.localdate()
     lundi_courant = today - datetime.timedelta(days=today.weekday())
 
@@ -366,7 +369,7 @@ def harvest_manage(request, semaine_id=None, nouvelle=False):
     La date (lundi) est modifiable : déplacer la récolte change la semaine
     affichée sur la vitrine (refus propre si déjà existante).
     """
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     today = timezone.localdate()
     lundi = today - datetime.timedelta(days=today.weekday())
     semaine = None
@@ -499,7 +502,7 @@ def harvest_manage(request, semaine_id=None, nouvelle=False):
 def order_list(request, statut=None):
     """Commandes reçues, avec contact client (e-mail, téléphone, canal
     préféré si le client en a exprimé un)."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     commandes = exploitant.commandes.order_by("-creee_le")
     if statut:
         commandes = commandes.filter(statut=statut)
@@ -539,7 +542,7 @@ def order_direct_create(request):
     téléphone, au marché… La commande est immédiatement validée et le
     panier numéroté créé (contenu ajustable ensuite). Les prix de
     référence du catalogue s'appliquent."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     produits = list(exploitant.produits.filter(actif=True)
                     .select_related("categorie")
                     .order_by("categorie__position", "nom"))
@@ -669,7 +672,7 @@ def order_validate(request, commande_id):
     Le panier numéroté est créé avec le contenu ajusté : point de départ
     du contenu livré (DATA_MODEL v0.3). Le client est notifié.
     """
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     commande = get_object_or_404(Commande, pk=commande_id, exploitant=exploitant)
     if (request.method == "POST"
             and commande.statut == Commande.Statut.NOUVELLE):
@@ -753,7 +756,7 @@ def order_validate(request, commande_id):
 @exploitant_requis
 def panier_list(request):
     """Liste des paniers, filtrable par jour de livraison."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     paniers = (exploitant.paniers.select_related("client", "point_livraison")
                .prefetch_related("lignes__produit")
                .order_by("-date_livraison", "numero"))
@@ -776,7 +779,7 @@ def panier_export_csv(request):
     - detail (défaut) : ligne par ligne, chaque panier avec son client ;
     - production : récapitulatif par produit des paniers LIVRÉS/REÇUS
       (seule source du décompte de production). Filtre date optionnel."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     date_filter = request.GET.get("date", "").strip()
     mode = request.GET.get("mode", "detail")
     paniers = (exploitant.paniers.select_related("client", "point_livraison")
@@ -864,7 +867,7 @@ def panier_detail(request, panier_id):
     comparé côte à côte aux quantités souhaitées par le client, avec
     commentaire visible par le client. Chaque changement de statut notifie
     le client (panier prêt, livraison faite) selon son canal préféré."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     panier = get_object_or_404(Panier, pk=panier_id, exploitant=exploitant)
 
     if request.method == "POST":
@@ -977,7 +980,7 @@ def clients_suivi(request):
     """Suivi « Mes clients » : regroupement par identité contact (compte
     client ou nom + e-mail/téléphone), cumul des commandes, paniers et
     chiffre d'affaires, canal de contact préféré."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     q = request.GET.get("q", "").strip().lower()
     registre = {}
 
@@ -1028,7 +1031,7 @@ def clients_suivi(request):
 def points_manage(request):
     """Points de livraison & créneaux (issue #9) : création, suppression,
     créneaux récurrents (jour, horaires, fréquence, capacité)."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "point_creer":
@@ -1110,7 +1113,7 @@ def points_manage(request):
 def catalogue_standard(request):
     """Catalogue embarqué de produits types (issue #1) : base de départ
     copiable en un clic, avec traçabilité origine_standard."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     standards = ProduitStandard.objects.order_by("categorie", "nom")
     deja_copies = set(Produit.objects.filter(
         exploitant=exploitant,
@@ -1136,7 +1139,7 @@ def catalogue_copier(request):
     """Copie les produits types sélectionnés dans le catalogue de
     l'exploitant : catégorie créée si besoin, prix optionnel, traçabilité
     origine_standard (issue #1)."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     if request.method == "POST":
         ids = request.POST.getlist("std")
         copies = 0
@@ -1176,7 +1179,7 @@ def categories_manage(request):
     """Gestion des catégories de l'exploitant (issue #5) : créer,
     renommer, réordonner, supprimer. Supprimer ne touche pas les produits
     (ils passent « sans catégorie»)."""
-    exploitant = request.user.exploitant
+    exploitant = exploitant_pour(request.user)
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "creer":
@@ -1239,8 +1242,8 @@ def order_create(request, slug):
     directe de son espace pro.
     """
     exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
-    if (hasattr(request.user, "exploitant")
-            and request.user.exploitant.pk == exploitant.pk):
+    if (exploitant_pour(request.user) is not None
+            and exploitant_pour(request.user).pk == exploitant.pk):
         messages.info(request, "Vous êtes le producteur de cette ferme : "
                      "utilisez « Saisir une commande » dans votre espace "
                      "pro pour enregistrer une commande (la vôtre par "
@@ -1364,27 +1367,37 @@ def order_cancel(request, commande_id):
     return redirect("portal:my_orders")
 
 
-
 # ----------------------------------------------------------- editions profil
+
+def _enregistrer_infos_perso(request, redirect_vers):
+    """Enregistre prenom / nom / e-mail du compte courant, et son
+    telephone dans ProfilClient (commun clients et maraichers)."""
+    profil, _cree = ProfilClient.objects.get_or_create(user=request.user)
+    form = ProfilPersonnelForm(request.POST)
+    if form.is_valid():
+        user = request.user
+        user.first_name = form.cleaned_data["prenom"]
+        user.last_name = form.cleaned_data["nom"]
+        user.email = form.cleaned_data["email"]
+        user.save()
+        profil.telephone = form.cleaned_data["telephone"]
+        profil.save()
+        messages.success(request, "Vos informations personnelles ont été "
+                         "mises à jour.")
+        return redirect(redirect_vers)
+    return form
+
 
 @login_required
 def profil_client(request):
     """Le client édite ses informations : prenom, nom, e-mail, telephone."""
     profil, _cree = ProfilClient.objects.get_or_create(user=request.user)
     if request.method == "POST":
-        form = ProfilClientForm(request.POST)
-        if form.is_valid():
-            user = request.user
-            user.first_name = form.cleaned_data["prenom"]
-            user.last_name = form.cleaned_data["nom"]
-            user.email = form.cleaned_data["email"]
-            user.save()
-            profil.telephone = form.cleaned_data["telephone"]
-            profil.save()
-            messages.success(request, "Vos informations ont été mises à jour.")
-            return redirect("portal:my_orders")
+        form = _enregistrer_infos_perso(request, "portal:my_orders")
+        if not hasattr(form, "is_valid"):
+            return form  # redirection déjà émise
     else:
-        form = ProfilClientForm(initial={
+        form = ProfilPersonnelForm(initial={
             "prenom": request.user.first_name,
             "nom": request.user.last_name,
             "email": request.user.email,
@@ -1396,15 +1409,28 @@ def profil_client(request):
 @login_required
 @exploitant_requis
 def profil_exploitant(request):
-    """Le maraicher édite sa fiche : ferme, SIRET, adresse, coordonnees
-    carto… La validite du SIRET (cle de Luhn) determine le badge public
-    « Compte pro vérifié » ou « Producteur particulier »."""
-    exploitant = request.user.exploitant
+    """Fiche de l'exploitation : ferme, SIRET, adresse, coordonnees
+    carto, logo (fichier OU lien externe). La validite du SIRET (cle de
+    Luhn) determine le badge public. Le departement est deduit du code
+    postal s'il n'est pas saisi."""
+    exploitant = exploitant_pour(request.user)
+    vitrine, _cree = ParametresVitrine.objects.get_or_create(
+        exploitant=exploitant)
     if request.method == "POST":
         form = ProfilExploitantForm(request.POST, request.FILES,
                                     instance=exploitant)
         if form.is_valid():
             form.save()
+            # Logo externe : stocke dans les parametres de vitrine
+            # (JSONB reseaux), aucun fichier heberge par le portail.
+            reseaux = dict(vitrine.reseaux or {})
+            url = form.cleaned_data.get("logo_externe", "").strip()
+            if url:
+                reseaux["logo_url"] = url
+            else:
+                reseaux.pop("logo_url", None)
+            vitrine.reseaux = reseaux
+            vitrine.save()
             if exploitant.siret and not exploitant.siret_valide:
                 messages.warning(
                     request, "Fiche enregistrée, mais le numéro SIRET "
@@ -1414,6 +1440,90 @@ def profil_exploitant(request):
                 messages.success(request, "Votre fiche a été mise à jour.")
             return redirect("portal:dashboard")
     else:
-        form = ProfilExploitantForm(instance=exploitant)
+        form = ProfilExploitantForm(
+            instance=exploitant,
+            initial={"logo_externe": (vitrine.reseaux or {}).get(
+                "logo_url", "")})
     return render(request, "portal/pro/profil_exploitant.html",
                   {"form": form, "exploitant": exploitant})
+
+
+@login_required
+@exploitant_requis
+def profil_personnel(request):
+    """Informations personnelles du compte maraicher individuel (prenom,
+    nom, e-mail, telephone) : chaque membre de l'equipe garde son
+    identite propre, la fiche exploitation restant partagee."""
+    profil, _cree = ProfilClient.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        resultat = _enregistrer_infos_perso(request, "portal:profil_personnel")
+        if not hasattr(resultat, "is_valid"):
+            return resultat  # redirection
+        form = resultat
+    else:
+        form = ProfilPersonnelForm(initial={
+            "prenom": request.user.first_name,
+            "nom": request.user.last_name,
+            "email": request.user.email,
+            "telephone": profil.telephone,
+        })
+    return render(request, "portal/pro/profil_personnel.html",
+                  {"form": form})
+
+
+@login_required
+@exploitant_requis
+def equipe_manage(request):
+    """Equipe de l'exploitation : plusieurs comptes individuels gerent la
+    meme ferme (meme SIRET). Le proprietaire rattache un compte existant
+    par e-mail ou identifiant ; un compte possedant deja sa propre
+    exploitation est refuse."""
+    exploitant = exploitant_pour(request.user)
+    est_proprietaire = (hasattr(request.user, "exploitant")
+                        and request.user.exploitant.pk == exploitant.pk)
+    if request.method == "POST" and est_proprietaire:
+        action = request.POST.get("action")
+        if action == "ajouter":
+            cle = request.POST.get("membre", "").strip()
+            if not cle:
+                messages.error(request, "Renseignez l'e-mail ou "
+                               "l'identifiant du compte à rattacher.")
+                return redirect("portal:equipe_manage")
+            user = (User.objects.filter(email__iexact=cle).first()
+                    or User.objects.filter(username__iexact=cle).first())
+            if user is None:
+                messages.error(
+                    request, f"Aucun compte « {cle} » : la personne doit "
+                    "d'abord créer un compte sur le portail, vous pourrez "
+                    "ensuite la rattacher à l'exploitation.")
+            elif hasattr(user, "exploitant"):
+                messages.error(
+                    request, f"« {cle} » possède déjà sa propre "
+                    "exploitation : impossible de le rattacher en membre.")
+            elif hasattr(user, "membre_exploitation"):
+                messages.error(
+                    request, f"« {cle} » est déjà membre d'une "
+                    "exploitation.")
+            else:
+                MembreExploitation.objects.create(
+                    user=user, exploitant=exploitant,
+                    telephone=request.POST.get("telephone", "").strip())
+                messages.success(
+                    request, f"{user.get_full_name() or user.username} "
+                    "rattaché(e) à l'exploitation : ce compte accède "
+                    "désormais au même espace pro.")
+        elif action == "retirer":
+            membre = exploitant.membres.filter(
+                pk=request.POST.get("membre_id")).first()
+            if membre:
+                nom = membre.user.get_full_name() or membre.user.username
+                membre.delete()
+                messages.info(request, f"{nom} n'est plus membre de "
+                               "l'exploitation.")
+        return redirect("portal:equipe_manage")
+    membres = exploitant.membres.select_related("user").all()
+    return render(request, "portal/pro/equipe.html", {
+        "exploitant": exploitant,
+        "membres": membres,
+        "est_proprietaire": est_proprietaire,
+    })
