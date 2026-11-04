@@ -17,7 +17,7 @@
 
 {% regroup paniers by date_livraison as jours %}
 {% for jour in jours %}
-  <details class="groupe-jour" {% if forloop.first %}open{% endif %}>
+  <details class="groupe-jour {% if jour.grouper < today %}cal-passe{% elif jour.grouper == today %}cal-courante{% else %}cal-avenir{% endif %}" {% if forloop.first %}open{% endif %}>
     <summary>📅 {{ jour.grouper|date:"l d F Y" }}
       {% for statut, nb, libelle in jours_badges|get_item:jour.grouper %}
         <span class="badge badge-{{ statut }}">{{ nb }} {{ libelle|lower }}</span>

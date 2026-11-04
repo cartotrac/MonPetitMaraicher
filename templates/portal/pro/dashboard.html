@@ -148,7 +148,7 @@
   <div class="cal-semaines">
     {% for s in calendrier %}
       {% if s.semaine %}
-        <a class="cal-semaine {% if s.passe %}passe{% endif %}"
+        <a class="cal-semaine {% if s.passe %}passe{% endif %} cal-{{ s.etat }}"
            href="{% url 'portal:harvest_manage' s.semaine.pk %}">
           <span class="cal-dates">{{ s.lundi|date:"d/m" }} → {{ s.dimanche|date:"d/m/Y" }}</span><br>
           {% if s.semaine.publiee %}
@@ -159,7 +159,7 @@
           <span class="muted">{{ s.nb_lignes }} produit(s)</span>
         </a>
       {% else %}
-        <a class="cal-semaine {% if s.passe %}passe{% endif %}"
+        <a class="cal-semaine {% if s.passe %}passe{% endif %} cal-{{ s.etat }}"
            href="{% url 'portal:harvest_new' %}">
           <span class="cal-dates">{{ s.lundi|date:"d/m" }} → {{ s.dimanche|date:"d/m/Y" }}</span><br>
           <span class="cal-etat muted">➕ créer le {{ exploitant.vocab.recolte }}</span>

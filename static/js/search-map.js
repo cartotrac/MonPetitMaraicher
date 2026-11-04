@@ -213,14 +213,14 @@ exploitants.forEach(function (e) {
   var symbole = (activite || "🌾 Autre").split(" ")[0];
   var badgeDemo = e.est_demo
     ? '<br><span class="badge badge-demo">🧪 DÉMO</span>' : "";
-  /* Marqueur : pastille couleur du mode de production + symbole de
-     l'activité en exposant (🥬 🍎 🐄 🧀 🍯 🍺 🌾) — le symbole
-     apparaît aussi dans le popup, avec le libellé complet. */
+  /* Marqueur compact : le symbole d'activité est le corps du marqueur,
+     la couleur du mode de production est portée par une petite pastille
+     en bas à droite (peu d'espace pris sur la carte). */
   var icone = L.divIcon({
     className: "marker-exploitant",
-    html: '<span class="marker-point" style="background:' + style.color + '"></span>' +
-          '<span class="marker-activite">' + symbole + "</span>",
-    iconSize: [26, 26], iconAnchor: [13, 13]
+    html: '<span class="marker-activite">' + symbole + "</span>" +
+          '<span class="marker-point" style="background:' + style.color + '"></span>',
+    iconSize: [22, 22], iconAnchor: [11, 11]
   });
   var marker = L.marker([e.latitude, e.longitude], { icon: icone }).bindPopup(
     "<strong>" + e.nom_ferme + "</strong>" +

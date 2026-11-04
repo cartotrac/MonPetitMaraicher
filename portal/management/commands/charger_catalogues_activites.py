@@ -2,17 +2,22 @@
 
 Le catalogue historique reste classé « maraîcher » (activite par
 défaut) ; cette commande crée les listes des autres activités
-(arboriculture, élevage, fromagerie, ruche) et repositionne
-explicitement les produits existants en maraîcher.
+(arboriculture, élevage, fromagerie, ruches, brasserie) et repositionne
+explicitement les produits existants en maraîcher. Elle complète aussi
+l'emoji de tout produit type qui n'en a pas (recherche par mot-clé,
+indépendante des accents et de la casse).
 
 Usage :  python manage.py charger_catalogues_activites
 """
+import unicodedata
+
 from django.core.management.base import BaseCommand
 
 from portal.models import Exploitant, ProduitStandard
 
 # (nom, categorie, unite, emoji, saisons)
-CATALOGUES = {    Exploitant.Activite.ARBORICULTEUR: [
+CATALOGUES = {
+    Exploitant.Activite.ARBORICULTEUR: [
         ("Pomme", "Fruits", "KG", "🍎", ["automne", "hiver"]),
         ("Pomme à jus", "Fruits", "KG", "🍎", ["automne"]),
         ("Poire", "Fruits", "KG", "🍐", ["automne"]),
@@ -149,15 +154,28 @@ EMOJIS_PAR_MOTCLE = [
     ("poulet", "🐔"), ("canard", "🦆"), ("oie", "🦢"),
     ("dinde", "🦃"), ("lapin", "🐇"), ("escargot", "🐌"),
     ("truite", "🐟"), ("saumon", "🐟"), ("poisson", "🐟"),
+    ("blette", "🥬"), ("cardon", "🌿"), ("châtaigne", "🌰"),
+    ("chataigne", "🌰"), ("coing", "🍏"), ("figue", "🫒"),
+    ("mûre", "🫐"), ("mure", "🫐"), ("panais", "🥕"),
+    ("salsifis", "🥕"), ("cerfeuil", "🌿"), ("topinambour", "🥔"),
+    ("mesclun", "🥬"), ("sucrine", "🥬"), ("chicorée", "🥬"),
+    ("chicoree", "🥬"), ("estragon", "🌿"), ("romarin", "🌿"),
+    ("sauge", "🌿"), ("girolle", "🍄"), ("pleurote", "🍄"),
+    ("cèpe", "🍄"), ("cepe", "🍄"), ("cidre", "🍹"),
+    ("perry", "🍹"), ("poiré", "🍹"),
 ]
 
 
 def emoji_pour_nom(nom):
-    """Emoji deviné par mot-clé du nom du produit (sans accent,
-    minuscule). Défaut : symbole de l'activité (🥬 maraîcher)."""
-    texte = nom.lower()
+    """Emoji deviné par mot-clé du nom du produit — comparaison SANS
+    accent ni casse (« Échalote » → échalote → 🧅). Défaut : symbole
+    de l'activité (🥬 maraîcher)."""
+    texte = unicodedata.normalize("NFKD", nom.lower())
+    texte = "".join(c for c in texte if not unicodedata.combining(c))
     for motcle, emoji in EMOJIS_PAR_MOTCLE:
-        if motcle in texte:
+        cle = unicodedata.normalize("NFKD", motcle)
+        cle = "".join(c for c in cle if not unicodedata.combining(c))
+        if cle in texte:
             return emoji
     return ""
 

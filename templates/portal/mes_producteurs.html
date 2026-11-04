@@ -15,13 +15,13 @@
     <h2>🚜 Favoris fournisseurs</h2>
     <div class="grid producers">
       {% for exploitant in favoris_fournisseurs %}
-        <a class="card" href="{% url 'portal:producer_detail' exploitant.slug %}">
+        <div class="card">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
-          <h2>{{ exploitant.nom_ferme }}</h2>
+          <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
-        </a>
+        </div>
       {% empty %}
         <p class="muted">Aucun fournisseur favori : ajoutez vos fermes
            d'approvisionnement depuis leur page (bouton
@@ -34,13 +34,13 @@
     <h2>🤝 Favoris clients pro</h2>
     <div class="grid producers">
       {% for exploitant in favoris_clients %}
-        <a class="card" href="{% url 'portal:producer_detail' exploitant.slug %}">
+        <div class="card">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
-          <h2>{{ exploitant.nom_ferme }}</h2>
+          <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
-        </a>
+        </div>
       {% empty %}
         <p class="muted">Aucun client pro en favori.</p>
       {% endfor %}
@@ -51,13 +51,13 @@
     <h2>🔁 Fermes déjà commandées</h2>
     <div class="grid producers">
       {% for exploitant in deja_commandes %}
-        <a class="card" href="{% url 'portal:producer_detail' exploitant.slug %}">
+        <div class="card">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
-          <h2>{{ exploitant.nom_ferme }}</h2>
+          <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
-        </a>
+        </div>
       {% empty %}
         <p class="muted">Vous n'avez pas encore commandé chez d'autres
            fermes du portail.</p>
@@ -72,13 +72,13 @@
     <h2>⭐ Mes favoris</h2>
     <div class="grid producers">
       {% for exploitant in favoris %}
-        <a class="card" href="{% url 'portal:producer_detail' exploitant.slug %}">
+        <div class="card">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
-          <h2>{{ exploitant.nom_ferme }}</h2>
+          <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
-        </a>
+        </div>
       {% empty %}
         <p class="muted">Aucun favori pour l'instant : ajoutez vos producteurs
            préférés depuis leur page (bouton ☆).</p>
@@ -90,13 +90,13 @@
     <h2>🔁 Producteurs déjà commandés</h2>
     <div class="grid producers">
       {% for exploitant in deja_commandes %}
-        <a class="card" href="{% url 'portal:producer_detail' exploitant.slug %}">
+        <div class="card">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
-          <h2>{{ exploitant.nom_ferme }}</h2>
+          <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
-        </a>
+        </div>
       {% empty %}
         <p class="muted">Vous n'avez pas encore commandé.
            <a href="{% url 'portal:producer_search' %}">Trouvez un producteur près de chez vous !</a></p>

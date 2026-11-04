@@ -109,6 +109,7 @@
 {% endif %}
 
 <section>
+<section class="cal-courante">
   <h2>🧺 Récolte de la semaine{% if semaine %} (semaine du {{ semaine.lundi|date:"d/m/Y" }}){% endif %}</h2>
   {% if semaine and semaine.note %}<p class="flash info">{{ semaine.note }}</p>{% endif %}
   {% if lignes %}
@@ -149,7 +150,7 @@
   <h2>⏭️ Récoltes à venir</h2>
   <div class="grid">
     {% for s in semaines_avenir %}
-      <div class="card">
+      <div class="card cal-avenir">
         <strong>Semaine du {{ s.lundi|date:"d/m/Y" }}</strong>
         <p class="muted">{{ s.lignes.count }} produit(s) prévus</p>
         {% if s.note %}<p>« {{ s.note }} »</p>{% endif %}

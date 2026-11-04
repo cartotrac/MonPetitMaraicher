@@ -359,6 +359,11 @@ def _calendrier_recoltes(exploitant):
             "semaine": s,
             "nb_lignes": s.nb_lignes if s else 0,
             "passe": lundi < lundi_courant,
+            # Code couleur calendrier : bleu passé, vert semaine
+            # courante, orange à venir (dashboard + vitrine publique).
+            "etat": ("passe" if lundi < lundi_courant
+                     else "courante" if lundi == lundi_courant
+                     else "avenir"),
         })
     return calendrier
 
@@ -1025,6 +1030,7 @@ def order_list(request, statut=None):
     return render(request, "portal/pro/orders.html", {
         "commandes": commandes, "filtre_statut": statut,
         "points": exploitant.points_livraison.all(),
+        "today": timezone.localdate(),
         "jours_badges": _badges_par_jour(commandes, "statut",
                                          Commande.Statut.choices),
     })
@@ -1314,6 +1320,7 @@ def panier_list(request):
         panier.groupes_lignes = _groupes_lignes(list(panier.lignes.all()))
     return render(request, "portal/pro/paniers.html", {
         "paniers": paniers,
+        "today": timezone.localdate(),
         "jours_badges": _badges_par_jour(paniers, "statut",
                                          Panier.Statut.choices),
     })

@@ -195,13 +195,27 @@ details.bloc-replie > summary .aide-replier { font-size: 0.7em;
 
 /* ---- Carte recherche : marqueur = pastille couleur (mode de
        production) + symbole d'activité en exposant ---- */
-.marker-exploitant { position: relative; width: 26px; height: 26px; }
-.marker-point { position: absolute; inset: 4px; border-radius: 50%;
+.marker-exploitant { position: relative; width: 22px; height: 22px; }
+.marker-activite { position: absolute; inset: 0; font-size: 15px;
+                   line-height: 22px; text-align: center; }
+.marker-point { position: absolute; right: -2px; bottom: -2px;
+                width: 9px; height: 9px; border-radius: 50%;
                 border: 1.5px solid #fff;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
-.marker-activite { position: absolute; top: -7px; right: -9px;
-                   font-size: 12px; line-height: 1;
-                   filter: drop-shadow(0 0 2px #fff)
-                           drop-shadow(0 0 2px #fff); }
+                box-shadow: 0 0 2px rgba(0, 0, 0, 0.5); }
 .legend-symbole { font-size: 0.85rem; margin-top: 0.3rem; }
 .legend-symbole span { margin-right: 0.5rem; white-space: nowrap; }
+
+/* ---- Code couleur calendrier : bleu passé, vert semaine/date
+       courante, orange à venir (dashboard, vitrine, jours de livraison) ---- */
+.cal-passe, a.cal-passe, .cal-semaine.passe {
+  background: #e3f2fd !important; border-color: #90caf9 !important; }
+.cal-courante, a.cal-courante {
+  background: #e8f5e9 !important; border-color: #66bb6a !important; }
+.cal-avenir, a.cal-avenir {
+  background: #fff3e0 !important; border-color: #ffb74d !important; }
+details.groupe-jour.cal-passe > summary { color: #1565c0; }
+details.groupe-jour.cal-courante > summary { color: #2e7d32;
+  font-weight: 700; }
+details.groupe-jour.cal-avenir > summary { color: #ef6c00; }
+section.cal-courante { background: #e8f5e9; border-radius: 0.6rem;
+                       padding: 0.6rem; }
