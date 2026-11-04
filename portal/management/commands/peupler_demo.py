@@ -44,6 +44,7 @@ from itertools import count
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
+from django.utils.text import slugify
 from django.utils import timezone
 
 from portal.models import (Bulletin, Categorie, Commande, CreneauLivraison,
@@ -542,6 +543,7 @@ class Command(BaseCommand):
         # de chaque produit devient une catégorie du producteur) ;
         # les prix progressent au sein de chaque catégorie.
         produits = []
+        slugs_vus = set()
         for source in spec["mix"]:
             qs = ProduitStandard.objects.filter(
                 activite=source["activite"])
@@ -552,6 +554,15 @@ class Command(BaseCommand):
                         exploitant=exploitant,
                         origine_standard=std).exists():
                     continue
+                # Les catalogues croisés peuvent contenir des produits
+                # homonymes (ex. « Fraise » en maraîcher et en fruits) :
+                # le slug du produit étant dérivé du nom, on ne garde
+                # que le premier pour éviter la collision (exploitant,
+                # slug).
+                slug_produit = slugify(std.nom)
+                if slug_produit in slugs_vus:
+                    continue
+                slugs_vus.add(slug_produit)
                 cat, _cree = Categorie.objects.get_or_create(
                     exploitant=exploitant, nom=std.categorie)
                 if _cree:
