@@ -1,6 +1,7 @@
 {% extends "base.html" %}
+{% load unites %}
 {% load l10n %}
-{% block title %}Commandes reçues — MonPetitMaraicher{% endblock %}
+{% block title %}Commandes reçues — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>📥 Commandes reçues</h1>
 <div class="quick-actions">
@@ -33,7 +34,7 @@
          {% if commande.canal_pref %} · 💬 contact préféré : {{ commande.canal_pref }}{% endif %}</p>
       <ul>
         {% for ligne in commande.lignes.all %}
-          <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.unite_courte }} ({{ ligne.prix_unitaire }} €/u)</li>
+          <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)</li>
         {% endfor %}
       </ul>
       {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}

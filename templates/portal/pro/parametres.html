@@ -1,14 +1,23 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Paramètres — MonPetitMaraicher{% endblock %}
+{% block title %}Paramètres — MonPetitProducteurLocal{% endblock %}
 {% block extra_style %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
 {% block content %}
 <h1>⚙️ Paramètres</h1>
 <p class="muted">Tout ce qui concerne votre compte et votre exploitation,
-   sur une seule page : votre profil, votre ferme{% if est_proprietaire %},
-   votre équipe et la messagerie (e-mails, SMS){% else %} et votre ferme{% endif %}.</p>
+   sur une seule page. Les sections Équipe et Messagerie sont réservées au
+   propriétaire de l'exploitation.</p>
 
-<section class="harvest-bloc">
+<nav class="quick-actions" aria-label="Sections des paramètres">
+  <a class="btn btn-outline btn-sm" href="#profil">👤 Mon profil</a>
+  <a class="btn btn-outline btn-sm" href="#ferme">🚜 Ma ferme</a>
+  {% if est_proprietaire %}
+    <a class="btn btn-outline btn-sm" href="#equipe">👨‍🌾 Mon équipe</a>
+    <a class="btn btn-outline btn-sm" href="#messagerie">✉️ Messagerie</a>
+  {% endif %}
+</nav>
+
+<section class="harvest-bloc" id="profil">
   <h2>👤 Mon profil</h2>
   <p class="muted">Votre identité de compte individuel : prénom, nom,
      e-mail, téléphone et photo (lien externe). Modifier votre nom met à
@@ -21,29 +30,31 @@
   </form>
 </section>
 
-<section class="harvest-bloc">
+<section class="harvest-bloc" id="ferme">
   <h2>🚜 Ma ferme</h2>
-  <p class="muted">Ces informations sont affichées sur votre vitrine publique
-     (SIRET, logo, réseaux, position). Le département est déduit du code
-     postal si vide.</p>
+  <p class="muted">Ces informations sont affichées sur votre vitrine
+     publique : activité, SIRET, logo (fichier ou lien externe), réseaux
+     sociaux, position. Le département est déduit du code postal si vous
+     le laissez vide.</p>
   <form method="post" enctype="multipart/form-data" class="form card">
     {% csrf_token %}
     <input type="hidden" name="section" value="ferme">
-    <p class="muted">Cliquez sur la carte pour positionner la ferme :
-       latitude/longitude sont renseignées automatiquement.</p>
     <div id="carte-ferme" data-pick-map data-lat-input="id_latitude"
          data-lon-input="id_longitude" style="height: 300px; border-radius: 8px; margin-bottom: 1rem;"></div>
+    <p class="muted">👆 Cliquez sur la carte pour positionner la ferme :
+       latitude/longitude sont renseignées automatiquement.</p>
     {{ form_ferme.as_p }}
     <button class="btn" type="submit">💾 Enregistrer ma fiche</button>
   </form>
 </section>
 
 {% if est_proprietaire %}
-<section class="harvest-bloc">
+<section class="harvest-bloc" id="equipe">
   <h2>👨‍🌾 Mon équipe</h2>
   <p class="muted">Plusieurs comptes peuvent gérer la même ferme
      (même SIRET). Rattachez un compte existant par e-mail ou
-     identifiant.</p>
+     identifiant : la personne doit d'abord créer son compte sur le
+     portail.</p>
   <div class="card">
     <p><strong>Gérant :</strong> {{ request.user.get_full_name|default:request.user.username }}</p>
     <ul>
@@ -73,7 +84,7 @@
   </div>
 </section>
 
-<section class="harvest-bloc">
+<section class="harvest-bloc" id="messagerie">
   <h2>✉️ Messagerie (e-mails & SMS)</h2>
   <p class="muted">Serveur SMTP d'envoi de vos publications (newsletters,
      annonces) : renseignez-le ici pour que vos e-mails partent au nom de

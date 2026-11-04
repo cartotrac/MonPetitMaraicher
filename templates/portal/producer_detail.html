@@ -1,11 +1,13 @@
 {% extends "base.html" %}
-{% block title %}{{ exploitant.nom_ferme }} — MonPetitMaraicher{% endblock %}
+{% load unites %}
+{% block title %}{{ exploitant.nom_ferme }} — MonPetitProducteurLocal{% endblock %}
 {% block extra_style %}<style>:root { --accent: {{ vitrine.couleur_theme|default:'#2e7d32' }}; }</style>{% endblock %}
 {% block content %}
 <div class="producer-head card">
   {% if exploitant.logo %}<img class="producer-logo" src="{{ exploitant.logo.url }}" alt="Logo">{% elif vitrine.reseaux.logo_url %}<img class="producer-logo" src="{{ vitrine.reseaux.logo_url }}" alt="Logo">{% else %}<div class="producer-logo placeholder">🌱</div>{% endif %}
   <div>
     <h1>{{ exploitant.nom_ferme }}</h1>
+    <span class="badge badge-activite">{{ exploitant.get_activite_display }}</span>
     {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Certifié AB</span>
     {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
     {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Agriculture paysanne</span>
@@ -97,7 +99,7 @@
         {% for ligne in lignes_cat %}
           <tr>
             <td>{% if ligne.produit.origine_standard and ligne.produit.origine_standard.emoji %}{{ ligne.produit.origine_standard.emoji }} {% endif %}{{ ligne.produit.nom }}</td>
-            <td>~ {{ ligne.quantite_estimee }} {{ ligne.produit.unite_courte }}</td>
+            <td>~ {{ ligne.quantite_estimee }} {{ ligne.quantite_estimee|unite:ligne.produit }}</td>
             <td>{{ ligne.prix_unitaire }} €</td>
           </tr>
         {% endfor %}

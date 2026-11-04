@@ -28,6 +28,19 @@ class Exploitant(models.Model):
         RAISONNE = "RAISONNE", "Agriculture raisonnée"
         CONV = "CONV", "Conventionnelle"
 
+    class Activite(models.TextChoices):
+        """Segmentation des producteurs locaux : les pros existants sont
+        des maraîchers ; d'autres activités (élevage, fromagerie,
+        arboriculture…) arriveront, avec leurs propres listes de
+        produits. La recherche publique filtre par activité et les
+        vignettes l'affichent."""
+        MARAICHER = "MARAICHER", "Maraîcher·ère"
+        ARBORICULTEUR = "ARBORICULTEUR", "Arboriculteur·rice"
+        ELEVEUR = "ELEVEUR", "Éleveur·euse"
+        FROMAGER = "FROMAGER", "Fromager·ère"
+        APICULTEUR = "APICULTEUR", "Apiculteur·rice"
+        AUTRE = "AUTRE", "Autre production locale"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE,
                                 related_name="exploitant")
     nom_ferme = models.CharField("Nom de l'exploitation", max_length=150)
@@ -37,6 +50,12 @@ class Exploitant(models.Model):
     mode_production = models.CharField(
         "Mode de production", max_length=10,
         choices=ModeProduction.choices, default=ModeProduction.CONV)
+    activite = models.CharField(
+        "Activité", max_length=15, choices=Activite.choices,
+        default=Activite.MARAICHER,
+        help_text="Les pros déjà enregistrés sont typés maraîcher ; "
+                  "d'autres activités (élevage, fromagerie, arboriculture…)"
+                  "arriveront avec leurs listes de produits dédiées.")
     logo = models.ImageField("Logo miniature", upload_to=logo_chemin,
                              blank=True, null=True)
     description = models.TextField("Présentation de l'exploitation", blank=True)
@@ -227,10 +246,25 @@ class Produit(models.Model):
     # Libellé d'unité pour l'affichage public : « kg », « pièce(s) »…
     UNITES_COURTES = {"KG": "kg", "PC": "pièce(s)", "BO": "botte(s)",
                       "BQ": "barquette(s)"}
+    # Singulier / pluriel accordés à la quantité (kg invariable).
+    UNITES_ACCORD = {"KG": ("kg", "kg"), "PC": ("pièce", "pièces"),
+                     "BO": ("botte", "bottes"),
+                     "BQ": ("barquette", "barquettes")}
 
     @property
     def unite_courte(self):
         return self.UNITES_COURTES.get(self.unite_vente, self.unite_vente)
+
+    def unite_pour(self, quantite):
+        """Libellé d'unité accordé à la quantité : 1 pièce, 2 pièces ;
+        0,5 kg, 3 kg (le kilogramme est invariable)."""
+        try:
+            q = float(quantite or 0)
+        except (TypeError, ValueError):
+            q = 0
+        singulier, pluriel = self.UNITES_ACCORD.get(
+            self.unite_vente, (self.unite_vente, self.unite_vente))
+        return pluriel if q > 1 else singulier
 
     @property
     def image_externe(self):

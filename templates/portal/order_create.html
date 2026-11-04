@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Commander chez {{ exploitant.nom_ferme }} — MonPetitMaraicher{% endblock %}
+{% load unites %}
+{% block title %}Commander chez {{ exploitant.nom_ferme }} — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>🛒 Commander chez {{ exploitant.nom_ferme }}</h1>
 
@@ -25,8 +26,8 @@
       <tr>
         <td>{{ offre.produit.nom }}</td>
         {% if mode == 'recolte' %}
-          <td class="muted">~ {{ offre.estime }} {{ offre.produit.unite_courte }}</td>
-          <td>{% if offre.reste > 0 %}<strong>~ {{ offre.reste|floatformat:"-2" }} {{ offre.produit.unite_courte }}</strong>{% else %}<span class="muted">complet</span>{% endif %}</td>
+          <td class="muted">~ {{ offre.estime }} {{ offre.estime|unite:offre.produit }}</td>
+          <td>{% if offre.reste > 0 %}<strong>~ {{ offre.reste|floatformat:"-2" }} {{ offre.reste|unite:offre.produit }}</strong>{% else %}<span class="muted">complet</span>{% endif %}</td>
         {% endif %}
         <td>{{ offre.prix }} €</td>
         <td><input type="number" step="{% if offre.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="{{ offre.cle }}" placeholder="0" {% if offre.reste is not None and offre.reste <= 0 %}disabled title="Complet : déjà commandé cette semaine"{% endif %}></td>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Mes catégories — MonPetitMaraicher{% endblock %}
+{% block title %}Mes catégories — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>🗂 Mes catégories</h1>
 
@@ -45,7 +45,8 @@
      les catégories se créeront automatiquement.</p>
 {% endfor %}
 <p class="muted">Supprimer une catégorie ne supprime pas les produits :
-   ils passent « sans catégorie » et vous pouvez les reclasser en les
+   ils passent « sans catégorie 
+» et vous pouvez les reclasser en les
    modifiant.</p>
 <p><a href="{% url 'portal:dashboard' %}">← Retour à l'espace pro</a></p>
 {% endblock %}

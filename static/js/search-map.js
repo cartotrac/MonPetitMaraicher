@@ -187,10 +187,19 @@ legend.addTo(carte);
 var markers = [];
 var present = {};
 var exploitants = JSON.parse(bloc.textContent);
+var ACTIVITES = {
+  "MARAICHER": "Maraîcher·ère",
+  "ARBORICULTEUR": "Arboriculteur·rice",
+  "ELEVEUR": "Éleveur·euse",
+  "FROMAGER": "Fromager·ère",
+  "APICULTEUR": "Apiculteur·rice",
+  "AUTRE": "Autre production locale"
+};
 
 exploitants.forEach(function (e) {
   present[e.mode_production] = true;
   var style = CAT_STYLES[e.mode_production] || CAT_STYLES.CONV;
+  var activite = ACTIVITES[e.activite] || "";
   var marker = L.circleMarker([e.latitude, e.longitude], {
     radius: 8,
     color: "#fff",
@@ -198,7 +207,9 @@ exploitants.forEach(function (e) {
     fillColor: style.color,
     fillOpacity: 0.85
   }).bindPopup(
-    "<strong>" + e.nom_ferme + "</strong><br>" + (e.ville || "") +
+    "<strong>" + e.nom_ferme + "</strong>" +
+    (activite ? '<br><span class="muted">' + activite + "</span>" : "") +
+    "<br>" + (e.ville || "") +
     '<br><a href="' + e.url + '">Voir la ferme →</a>'
   );
   marker._category = e.mode_production;

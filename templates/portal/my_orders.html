@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Mes commandes — MonPetitMaraicher{% endblock %}
+{% load unites %}
+{% block title %}Mes commandes — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>🧾 Mes commandes</h1>
 <p class="muted">Vos commandes sont regroupées par jour de livraison, du plus
@@ -20,7 +21,7 @@
     <p>📅 {{ commande.date_livraison|date:"d/m/Y" }} — 💰 {{ commande.total }} €</p>
     <ul>
       {% for ligne in commande.lignes.all %}
-        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.unite_courte }}</li>
+        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.quantite|unite:ligne.produit }}</li>
       {% endfor %}
     </ul>
     {% if panier %}
@@ -30,7 +31,7 @@
       <p class="muted">Contenu livré :</p>
       <ul>
         {% for row in resultat.lignes_panier %}
-          <li>{{ row.ligne.produit.nom }} × {{ row.ligne.quantite }} {{ row.ligne.produit.unite_courte }}
+          <li>{{ row.ligne.produit.nom }} × {{ row.ligne.quantite }} {{ row.ligne.quantite|unite:row.ligne.produit }}
               {% if row.ajuste %} <em>(souhaité : {{ row.souhaite }})</em> ⚠️ ajusté{% elif row.souhaite is None %} <em>(ajout du producteur)</em>{% endif %}</li>
         {% endfor %}
       </ul>

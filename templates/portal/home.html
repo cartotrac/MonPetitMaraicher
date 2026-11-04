@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Producteurs locaux — MonPetitMaraicher{% endblock %}
+{% block title %}Producteurs locaux — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 
 {# ---- Bandeau d'action ---- #}
@@ -13,8 +13,9 @@
 <section class="hero">
   <h1>Du champ à votre table, en circuit court</h1>
   <p class="hero-lead">
-    MonPetitMaraicher met en relation les maraîchers et petits producteurs indépendants
-    avec les clients de leur territoire. Chaque producteur reste maître de ses prix,
+    MonPetitProducteurLocal met en relation les producteurs locaux indépendants —
+    maraîchers, arboriculteurs, éleveurs, fromagers, apiculteurs… — avec les
+    clients de leur territoire. Chaque producteur reste maître de ses prix,
     de ses produits et de ses clients : le portail est un outil au service des
     circuits courts, pas un intermédiaire. Un bien commun, libre et réplicable.
   </p>
@@ -30,7 +31,7 @@
   </div>
   <p class="hero-lead muted">La carte des producteurs se trouve désormais sur la
      <a href="{% url 'portal:producer_search' %}">page de recherche</a>, avec les
-     résultats filtrés par produit, localité et mode de production.</p>
+     résultats filtrés par activité, produit, localité et mode de production.</p>
 </section>
 
 {% endblock %}

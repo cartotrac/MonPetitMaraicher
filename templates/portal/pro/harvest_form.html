@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load l10n %}
-{% block title %}Récolte {% if semaine %}du {{ semaine.lundi|date:"d/m/Y" }}{% else %}nouvelle{% endif %} — MonPetitMaraicher{% endblock %}
+{% block title %}Récolte {% if semaine %}du {{ semaine.lundi|date:"d/m/Y" }}{% else %}nouvelle{% endif %} — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>🧺 {% if semaine %}Récolte du {{ semaine.lundi|date:"d/m/Y" }}{% else %}Nouvelle récolte{% endif %}</h1>
 <p>Renseignez la <strong>quantité estimée</strong> et le prix pour chaque produit
@@ -36,7 +36,8 @@
           {% endfor %}
         </select>
         <button class="btn btn-sm btn-outline" type="button"
-                onclick="window.location='?copier=' + document.getElementById('copier-select').value;">↩️ Recharger</button>
+                onclick="window.location='?copier=' + document.getElement
+ById('copier-select').value;">↩️ Recharger</button>
       </div>
     {% endif %}
   </div>

@@ -1,0 +1,25 @@
+
+/* ---- Avatars (photo de profil externe, clients et équipe) ---- */
+.avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover;
+          flex: none; }
+.avatar-small { width: 36px; height: 36px; margin-right: 0.5rem; }
+.avatar-placeholder { display: flex; align-items: center; justify-content: center;
+                      background: var(--accent-light); font-size: 1.5rem;
+                      color: var(--accent-dark); }
+.membre-equipe { display: flex; gap: 0.9rem; align-items: center; }
+.reseaux-bloc { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.8rem 0 1.4rem; }
+
+/* ---- Étiquettes des couches administratives (carte recherche) ---- */
+.label-admin { background: transparent; border: none; box-shadow: none;
+               font-weight: 600; color: #333; pointer-events: none;
+               text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; }
+.label-admin::before { display: none; }
+.label-com { font-size: 0.68rem; font-weight: 400; color: #8d4b00; }
+/* Une étiquette n'apparaît que si sa couche est active ET le zoom suffisant :
+   la carte reçoit .labels-dep-on / .labels-com-on via majLabels() */
+#carte-recherche:not(.labels-dep-on) .label-dep { display: none; }
+#carte-recherche:not(.labels-com-on) .label-com { display: none; }
+
+/* ---- Badge activité sur les vignettes producteurs ---- */
+.badge-activite { background: var(--accent-light); color: var(--accent-dark);
+                 font-weight: 600; margin-right: 0.3rem; }

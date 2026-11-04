@@ -21,12 +21,7 @@ urlpatterns = [
 
     # Espace pro
     path("espace-pro/", views.dashboard, name="dashboard"),
-    path("espace-pro/profil/", views.profil_exploitant,
-         name="profil_exploitant"),
-    path("espace-pro/profil/personnel/", views.profil_personnel,
-         name="profil_personnel"),
     path("parametres/", views.parametres, name="parametres"),
-    path("espace-pro/equipe/", views.equipe_manage, name="equipe_manage"),
     path("espace-produits/ajouter/", views.produit_creer,
          name="product_create"),
     path("espace-produits/edition-rapide/", views.produit_edition_rapide,

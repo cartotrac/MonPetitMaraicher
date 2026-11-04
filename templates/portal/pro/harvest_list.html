@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Mes récoltes — MonPetitMaraicher{% endblock %}
+{% block title %}Mes récoltes — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>🧺 Mes récoltes</h1>
 <p class="muted">Chaque semaine publiée apparaît sur votre vitrine et devient
@@ -40,7 +40,8 @@
 <section class="harvest-bloc">
   <h2>⏭️ Récoltes à venir</h2>
   {% for s in a_venir %}
-    <div class="card harvest-item{% if not s.publiee %} is-hidden{% endif %}">
+    <div class="card harvest-item
+{% if not s.publiee %} is-hidden{% endif %}">
       <div class="harvest-item-head">
         <strong>Semaine du {{ s.lundi|date:"d/m/Y" }}</strong>
         <span class="badge {{ s.publiee|yesno:'badge-ok,badge-off' }}">
@@ -78,7 +79,8 @@
       </div>
       <div class="harvest-actions">
         <a class="btn btn-sm btn-outline" href="{% url 'portal:harvest_manage' s.pk %}">✏️ Modifier</a>
-        <form method="post" class="inline" onsubmit="return confirm('Supprimer la récolte du {{ s.lundi|date:'d/m/Y' }} ?');">{% csrf_token %}
+        <form method="post" class="inline" onsubmit="return
+ confirm('Supprimer la récolte du {{ s.lundi|date:'d/m/Y' }} ?');">{% csrf_token %}
           <input type="hidden" name="pk" value="{{ s.pk }}">
           <input type="hidden" name="action" value="supprimer">
           <button class="btn btn-sm btn-danger" type="submit">🗑</button>

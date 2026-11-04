@@ -18,6 +18,9 @@ class InscriptionExploitantForm(UserCreationForm):
         ("RAISONNE", "Agriculture raisonnée"),
         ("CONV", "Conventionnelle"),
     ])
+    activite = forms.ChoiceField(
+        label="Activité", choices=Exploitant.Activite.choices,
+        initial=Exploitant.Activite.MARAICHER)
     logo = forms.ImageField(label="Logo miniature", required=False)
     description = forms.CharField(label="Présentation", widget=forms.Textarea,
                                   required=False)
@@ -47,6 +50,8 @@ class InscriptionExploitantForm(UserCreationForm):
                 nom_ferme=self.cleaned_data["nom_ferme"],
                 siret=self.cleaned_data.get("siret", ""),
                 mode_production=self.cleaned_data["mode_production"],
+                activite=self.cleaned_data.get(
+                    "activite", Exploitant.Activite.MARAICHER),
                 logo=self.cleaned_data.get("logo"),
                 description=self.cleaned_data.get("description", ""),
                 adresse=self.cleaned_data.get("adresse", ""),
@@ -114,17 +119,18 @@ class ProfilExploitantForm(forms.ModelForm):
         label="Site web de l'exploitation", required=False)
     facebook = forms.URLField(label="Page Facebook", required=False)
     instagram = forms.URLField(label="Compte Instagram", required=False)
-    field_order = ["nom_ferme", "siret", "mode_production", "logo",
-                   "logo_externe", "description", "adresse", "ville",
+    field_order = ["nom_ferme", "activite", "siret", "mode_production",
+                   "logo", "logo_externe", "description", "adresse", "ville",
                    "code_postal", "departement", "telephone", "latitude",
                    "longitude"]
 
     class Meta:
         model = Exploitant
-        fields = ["nom_ferme", "siret", "mode_production", "logo",
-                  "description", "adresse", "ville", "code_postal",
+        fields = ["nom_ferme", "activite", "siret", "mode_production",
+                  "logo", "description", "adresse", "ville", "code_postal",
                   "departement", "telephone", "latitude", "longitude"]
         labels = {"nom_ferme": "Nom de l'exploitation",
+                  "activite": "Activité",
                   "siret": "SIRET (14 chiffres)",
                   "mode_production": "Mode de production",
                   "logo": "Logo miniature (fichier)",

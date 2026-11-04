@@ -1,14 +1,20 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Recherche — MonPetitMaraicher{% endblock %}
+{% block title %}Recherche — MonPetitProducteurLocal{% endblock %}
 {% block extrahead %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 {% endblock %}
 {% block content %}
-<h1>🔍 Chercher un cultivateur</h1>
+<h1>🔍 Chercher un producteur local</h1>
 <form class="search-bar" method="get" action="{% url 'portal:producer_search' %}">
   <input type="text" name="q" placeholder="Produit, ferme, ville ou code postal…" value="{{ q }}">
   <input type="text" name="dept" placeholder="Dépt. ou code postal (ex : 81)" value="{{ dept }}" size="10">
+  <select name="activite">
+    <option value="">Toutes les activités</option>
+    {% for code, libelle in activites %}
+      <option value="{{ code }}" {% if activite == code %}selected{% endif %}>{{ libelle }}</option>
+    {% endfor %}
+  </select>
   <select name="mode">
     <option value="">Tous les modes de production</option>
     <option value="AB" {% if mode == 'AB' %}selected{% endif %}>Bio (AB)</option>
@@ -22,14 +28,14 @@
 
 <section class="map-section">
   <div class="map-header">
-    <h2>🗺️ Carte des cultivateurs trouvés</h2>
+    <h2>🗺️ Carte des producteurs trouvés</h2>
     <button id="btn-geoloc" class="btn" type="button">📍 Me géolocaliser</button>
   </div>
   {% if carte_data %}
     <div id="carte-recherche" class="map-canvas"></div>
     {{ carte_data|json_script:"donnees-carte" }}
   {% else %}
-    <p class="muted">Aucun cultivateur géolocalisé dans ces résultats :
+    <p class="muted">Aucun producteur géolocalisé dans ces résultats :
        les fermes concernées n'ont pas renseigné de position sur la carte.</p>
   {% endif %}
 </section>
@@ -41,6 +47,7 @@
         <img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">
       {% endif %}
       <h2>{{ exploitant.nom_ferme }}</h2>
+      <span class="badge badge-activite">{{ exploitant.get_activite_display }}</span>
       {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
       {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
       {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
@@ -50,7 +57,7 @@
       {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
     </a>
   {% empty %}
-    <p>Aucun cultivateur ne correspond à votre recherche.</p>
+    <p>Aucun producteur ne correspond à votre recherche.</p>
   {% endfor %}
 </div>
 {% endblock %}

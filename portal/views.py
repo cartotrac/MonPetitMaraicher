@@ -49,6 +49,7 @@ def producer_search(request):
     q = request.GET.get("q", "").strip()
     dept = request.GET.get("dept", "").strip()
     mode = request.GET.get("mode", "").strip()
+    activite = request.GET.get("activite", "").strip()
     if q:
         exploitants = exploitants.filter(
             Q(nom_ferme__icontains=q) | Q(ville__icontains=q)
@@ -65,11 +66,14 @@ def producer_search(request):
             | Q(code_postal__istartswith=dept)).distinct()
     if mode:
         exploitants = exploitants.filter(mode_production=mode)
+    if activite:
+        exploitants = exploitants.filter(activite=activite)
     exploitants = list(exploitants)
     # Données carto : uniquement les résultats filtrés avec coordonnées.
     carte_data = [{
         "nom_ferme": e.nom_ferme,
         "mode_production": e.mode_production,
+        "activite": e.activite,
         "ville": e.ville,
         "latitude": e.latitude,
         "longitude": e.longitude,
@@ -79,7 +83,8 @@ def producer_search(request):
     return render(request, "portal/search_results.html", {
         "exploitants": exploitants,
         "carte_data": carte_data,
-        "q": q, "dept": dept, "mode": mode,
+        "activites": Exploitant.Activite.choices,
+        "q": q, "dept": dept, "mode": mode, "activite": activite,
     })
 
 
@@ -91,6 +96,7 @@ def producteurs_geojson(request):
         "slug": e.slug,
         "nom_ferme": e.nom_ferme,
         "mode_production": e.mode_production,
+        "activite": e.activite,
         "ville": e.ville,
         "latitude": e.latitude,
         "longitude": e.longitude,
@@ -1712,141 +1718,6 @@ def profil_client(request):
             "photo_externe": profil.photo_url,
         })
     return render(request, "portal/profil_client.html", {"form": form})
-
-
-@login_required
-@exploitant_requis
-@proprietaire_requis
-def profil_exploitant(request):
-    """Fiche de l'exploitation : ferme, SIRET, adresse, coordonnees
-    carto, logo (fichier OU lien externe). La validite du SIRET (cle de
-    Luhn) determine le badge public. Le departement est deduit du code
-    postal s'il n'est pas saisi."""
-    exploitant = exploitant_pour(request.user)
-    vitrine, _cree = ParametresVitrine.objects.get_or_create(
-        exploitant=exploitant)
-    if request.method == "POST":
-        form = ProfilExploitantForm(request.POST, request.FILES,
-                                    instance=exploitant)
-        if form.is_valid():
-            form.save()
-            # Logo externe + réseaux/site : stockés dans les paramètres
-            # de vitrine (JSONB reseaux), aucun fichier hébergé.
-            reseaux = dict(vitrine.reseaux or {})
-            url = form.cleaned_data.get("logo_externe", "").strip()
-            if url:
-                reseaux["logo_url"] = url
-            else:
-                reseaux.pop("logo_url", None)
-            for cle in ("site_web", "facebook", "instagram"):
-                valeur = form.cleaned_data.get(cle, "").strip()
-                if valeur:
-                    reseaux[cle] = valeur
-                else:
-                    reseaux.pop(cle, None)
-            vitrine.reseaux = reseaux
-            vitrine.save()
-            if exploitant.siret and not exploitant.siret_valide:
-                messages.warning(
-                    request, "Fiche enregistrée, mais le numéro SIRET "
-                    "n'est pas valide (14 chiffres attendus) : votre "
-                    "vitrine affichera « Producteur particulier ».")
-            else:
-                messages.success(request, "Votre fiche a été mise à jour.")
-            return redirect("portal:dashboard")
-    else:
-        reseaux = dict(vitrine.reseaux or {})
-        form = ProfilExploitantForm(
-            instance=exploitant,
-            initial={"logo_externe": reseaux.get("logo_url", ""),
-                     "site_web": reseaux.get("site_web", ""),
-                     "facebook": reseaux.get("facebook", ""),
-                     "instagram": reseaux.get("instagram", "")})
-    return render(request, "portal/pro/profil_exploitant.html",
-                  {"form": form, "exploitant": exploitant})
-
-
-@login_required
-@exploitant_requis
-def profil_personnel(request):
-    """Informations personnelles du compte maraicher individuel (prenom,
-    nom, e-mail, telephone) : chaque membre de l'equipe garde son
-    identite propre, la fiche exploitation restant partagee."""
-    profil, _cree = ProfilClient.objects.get_or_create(user=request.user)
-    if request.method == "POST":
-        resultat = _enregistrer_infos_perso(request, "portal:profil_personnel")
-        if not hasattr(resultat, "is_valid"):
-            return resultat  # redirection
-        form = resultat
-    else:
-        form = ProfilPersonnelForm(initial={
-            "prenom": request.user.first_name,
-            "nom": request.user.last_name,
-            "email": request.user.email,
-            "telephone": profil.telephone,
-            "photo_externe": profil.photo_url,
-        })
-    return render(request, "portal/pro/profil_personnel.html",
-                  {"form": form})
-
-
-@login_required
-@exploitant_requis
-@proprietaire_requis
-def equipe_manage(request):
-    """Equipe de l'exploitation : plusieurs comptes individuels gerent la
-    meme ferme (meme SIRET). Le proprietaire rattache un compte existant
-    par e-mail ou identifiant ; un compte possedant deja sa propre
-    exploitation est refuse."""
-    exploitant = exploitant_pour(request.user)
-    est_proprietaire = (hasattr(request.user, "exploitant")
-                        and request.user.exploitant.pk == exploitant.pk)
-    if request.method == "POST" and est_proprietaire:
-        action = request.POST.get("action")
-        if action == "ajouter":
-            cle = request.POST.get("membre", "").strip()
-            if not cle:
-                messages.error(request, "Renseignez l'e-mail ou "
-                               "l'identifiant du compte à rattacher.")
-                return redirect("portal:equipe_manage")
-            user = (User.objects.filter(email__iexact=cle).first()
-                    or User.objects.filter(username__iexact=cle).first())
-            if user is None:
-                messages.error(
-                    request, f"Aucun compte « {cle} » : la personne doit "
-                    "d'abord créer un compte sur le portail, vous pourrez "
-                    "ensuite la rattacher à l'exploitation.")
-            elif hasattr(user, "exploitant"):
-                messages.error(
-                    request, f"« {cle} » possède déjà sa propre "
-                    "exploitation : impossible de le rattacher en membre.")
-            elif hasattr(user, "membre_exploitation"):
-                messages.error(
-                    request, f"« {cle} » est déjà membre d'une "
-                    "exploitation.")
-            else:
-                MembreExploitation.objects.create(
-                    user=user, exploitant=exploitant,
-                    telephone=request.POST.get("telephone", "").strip())
-                messages.success(
-                    request, f"{user.get_full_name() or user.username} "
-                    "rattaché(e) à l'exploitation : ce compte accède "
-                    "désormais au même espace pro.")
-        elif action == "retirer":
-            membre = exploitant.membres.filter(
-                pk=request.POST.get("membre_id")).first()
-            if membre:
-                nom = membre.user.get_full_name() or membre.user.username
-                membre.delete()
-                messages.info(request, f"{nom} n'est plus membre de "
-                               "l'exploitation.")
-        return redirect("portal:equipe_manage")
-    membres = exploitant.membres.select_related("user").all()
-    return render(request, "portal/pro/equipe.html", {
-        "exploitant": exploitant,
-        "membres": membres,
-        "est_proprietaire": est_proprietaire,
-    })
 
 
 @login_required
