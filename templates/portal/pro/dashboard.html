@@ -45,9 +45,11 @@
   <a class="btn" href="{% url 'portal:harvest_new' %}">➕ Nouvelle récolte</a>
   <a class="btn btn-outline" href="{% url 'portal:harvest_list' %}">🧺 Mes récoltes</a>
   <a class="btn" href="{% url 'portal:order_direct' %}">📝 Saisir une commande</a>
-  <a class="btn btn-outline" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
-  <a class="btn btn-outline" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
-  <a class="btn btn-outline" href="{% url 'portal:categories_manage' %}">🗂 Gérer mes catégories</a>
+  {% if est_proprietaire %}
+    <a class="btn btn-outline" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
+    <a class="btn btn-outline" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
+    <a class="btn btn-outline" href="{% url 'portal:categories_manage' %}">🗂 Gérer mes catégories</a>
+  {% endif %}
   <a class="btn btn-outline" href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
   <a class="btn btn-outline" href="{% url 'portal:points_manage' %}">📍 Points & créneaux</a>
 </div>
@@ -94,7 +96,7 @@
                     <input class="edit" type="text" name="nom_{{ produit.pk }}" value="{{ produit.nom }}" maxlength="150">
                   </td>
                   <td>
-                    <span class="view">{{ produit.get_unite_vente_display }}</span>
+                    <span class="view">{{ produit.unite_courte }}</span>
                     <select class="edit" name="unite_{{ produit.pk }}">
                       {% for code, libelle in unite_choices %}
                         <option value="{{ code }}" {% if code == produit.unite_vente %}selected{% endif %}>{{ libelle }}</option>
@@ -116,9 +118,11 @@
         </p>
       </div>
     </form>
-    <p class="muted">Le bouton « ✏️ Mode édition » révèle les champs ; la fiche complète reste accessible via <a href="{% url 'portal:product_create' %}">Ajouter un produit</a>.</p>
+    {% if est_proprietaire %}
+      <p class="muted">Le bouton « ✏️ Mode édition » révèle les champs ; la fiche complète reste accessible via <a href="{% url 'portal:product_create' %}">Ajouter un produit</a>.</p>
+    {% endif %}
   {% else %}
-    <p class="muted">Aucun produit. Commencez par <a href="{% url 'portal:catalogue_standard' %}">importer des produits types</a> !</p>
+    <p class="muted">Aucun produit. {% if est_proprietaire %}Commencez par <a href="{% url 'portal:catalogue_standard' %}">importer des produits types</a> !{% else %}Demandez au gestionnaire principal d'importer le catalogue.{% endif %}</p>
   {% endif %}
 </section>
 
@@ -144,8 +148,8 @@
     <p>{{ points|length }} point(s) de livraison —
        <a href="{% url 'portal:points_manage' %}">gérer les points et créneaux</a></p>
   {% else %}
-    <p class="muted">Aucun point de livraison : vos clients pourront être
-       livrés sans lieu dédié. <a href="{% url 'portal:points_manage' %}">En ajouter</a></p>
+    <p class="muted">Aucun point de livraison : créez-en un pour numéroter
+       les paniers. <a href="{% url 'portal:points_manage' %}">En ajouter</a></p>
   {% endif %}
 </section>
 

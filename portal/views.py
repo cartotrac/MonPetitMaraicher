@@ -174,6 +174,21 @@ def est_exploitant(user):
 exploitant_requis = user_passes_test(est_exploitant, login_url="portal:login")
 
 
+def proprietaire_requis(fonction):
+    """Réservé au gestionnaire principal (compte propriétaire de
+    l'exploitation) : fiche ferme/SIRET, équipe, catalogue et catégories.
+    Les membres de l'équipe n'ont accès qu'à la gestion courante :
+    récoltes, commandes, paniers, points de livraison."""
+    def wrapper(request, *args, **kwargs):
+        if not hasattr(request.user, "exploitant"):
+            messages.error(
+                request, "Action réservée au gestionnaire principal de "
+                "l'exploitation (fiche ferme, SIRET, équipe, catalogue).")
+            return redirect("portal:dashboard")
+        return fonction(request, *args, **kwargs)
+    return wrapper
+
+
 # ---------------------------------------------------------------- espace pro
 
 @login_required
@@ -218,6 +233,7 @@ def dashboard(request):
 
 @login_required
 @exploitant_requis
+@proprietaire_requis
 def produit_creer(request):
     exploitant = exploitant_pour(request.user)
     if request.method == "POST":
@@ -239,6 +255,7 @@ def produit_creer(request):
 
 @login_required
 @exploitant_requis
+@proprietaire_requis
 def produit_modifier(request, pk):
     produit = get_object_or_404(Produit, pk=pk,
                                 exploitant=exploitant_pour(request.user))
@@ -1110,6 +1127,7 @@ def points_manage(request):
 
 @login_required
 @exploitant_requis
+@proprietaire_requis
 def catalogue_standard(request):
     """Catalogue embarqué de produits types (issue #1) : base de départ
     copiable en un clic, avec traçabilité origine_standard."""
@@ -1135,6 +1153,7 @@ def catalogue_standard(request):
 
 @login_required
 @exploitant_requis
+@proprietaire_requis
 def catalogue_copier(request):
     """Copie les produits types sélectionnés dans le catalogue de
     l'exploitant : catégorie créée si besoin, prix optionnel, traçabilité
@@ -1175,6 +1194,7 @@ def catalogue_copier(request):
 
 @login_required
 @exploitant_requis
+@proprietaire_requis
 def categories_manage(request):
     """Gestion des catégories de l'exploitant (issue #5) : créer,
     renommer, réordonner, supprimer. Supprimer ne touche pas les produits
@@ -1408,6 +1428,7 @@ def profil_client(request):
 
 @login_required
 @exploitant_requis
+@proprietaire_requis
 def profil_exploitant(request):
     """Fiche de l'exploitation : ferme, SIRET, adresse, coordonnees
     carto, logo (fichier OU lien externe). La validite du SIRET (cle de
@@ -1473,6 +1494,7 @@ def profil_personnel(request):
 
 @login_required
 @exploitant_requis
+@proprietaire_requis
 def equipe_manage(request):
     """Equipe de l'exploitation : plusieurs comptes individuels gerent la
     meme ferme (meme SIRET). Le proprietaire rattache un compte existant
