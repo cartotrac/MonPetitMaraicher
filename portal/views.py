@@ -296,7 +296,7 @@ def dashboard(request):
     catégorie, éditables sur place (libellé, unité, prix)."""
     exploitant = exploitant_pour(request.user)
     produits = (exploitant.produits.filter(actif=True)
-                .select_related("categorie")
+                .select_related("categorie", "origine_standard")
                 .order_by("categorie__position", "categorie__nom",
                           "position", "nom"))
     groupes, ordre = {}, []
@@ -778,7 +778,7 @@ def harvest_manage(request, semaine_id=None, nouvelle=False):
 
     # ---- Produits regroupés par catégorie (position de l'exploitant) ----
     produits = (exploitant.produits.filter(actif=True)
-                .select_related("categorie")
+                .select_related("categorie", "origine_standard")
                 .order_by("categorie__position", "categorie__nom", "nom"))
     groupes, ordre = {}, []
     for p in produits:
@@ -825,7 +825,7 @@ def order_list(request, statut=None):
         commandes = commandes.filter(statut=statut)
     canaux = {p.client_id: p.get_canal_display()
               for p in PreferenceContact.objects.filter(exploitant=exploitant)}
-    commandes = list(commandes.prefetch_related("lignes__produit",
+    commandes = list(commandes.prefetch_related("lignes__produit__origine_standard",
                                                 "client__profil_client"))
     for c in commandes:
         c.canal_pref = canaux.get(c.client_id) if c.client_id else None
@@ -862,7 +862,7 @@ def order_direct_create(request):
     référence du catalogue s'appliquent."""
     exploitant = exploitant_pour(request.user)
     produits = list(exploitant.produits.filter(actif=True)
-                    .select_related("categorie")
+                    .select_related("categorie", "origine_standard")
                     .order_by("categorie__position", "nom"))
     points = exploitant.points_livraison.all()
     creneaux = exploitant.creneaux.select_related("point_livraison")
@@ -1179,11 +1179,20 @@ def panier_detail(request, panier_id):
     le client (panier prêt, livraison faite) selon son canal préféré."""
     exploitant = exploitant_pour(request.user)
     panier = get_object_or_404(Panier, pk=panier_id, exploitant=exploitant)
+    verrouille = panier.statut in (Panier.Statut.LIVRE,
+                                   Panier.Statut.RECU)
 
     if request.method == "POST":
         action = request.POST.get("action")
 
         if action == "lignes":
+            if verrouille:
+                messages.warning(
+                    request, "🔒 Panier n°%d livré : le contenu livré est "
+                    "verrouillé (lecture seule). Repassez le statut à "
+                    "« Prêt » ou « En préparation » pour le modifier."
+                    % panier.numero)
+                return redirect("portal:panier_detail", panier.pk)
             ajustes, erreurs, total = {}, [], Decimal("0")
             for ligne in panier.lignes.select_related("produit"):
                 brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
@@ -1269,7 +1278,7 @@ def panier_detail(request, panier_id):
         souhaitees = {lc.produit_id: lc.quantite
                      for lc in panier.commande.lignes.all()}
     rows = []
-    for ligne in panier.lignes.select_related("produit"):
+    for ligne in panier.lignes.select_related("produit__origine_standard"):
         souh = souhaitees.get(ligne.produit_id)
         rows.append({
             "ligne": ligne,
@@ -1280,7 +1289,9 @@ def panier_detail(request, panier_id):
     return render(request, "portal/pro/panier_detail.html", {
         "panier": panier,
         "rows": rows,
-        "produits": exploitant.produits.filter(actif=True),
+        "verrouille": verrouille,
+        "produits": (exploitant.produits.filter(actif=True)
+                     .select_related("origine_standard")),
     })
 
 
@@ -1635,7 +1646,7 @@ def _offres_commande(exploitant, semaine):
             o["produit"].nom))
         return offres, "recolte"
     for produit in (exploitant.produits.filter(actif=True)
-                    .select_related("categorie")
+                    .select_related("categorie", "origine_standard")
                     .order_by("categorie__position", "categorie__nom",
                               "position", "nom")):
         if produit.prix is None:

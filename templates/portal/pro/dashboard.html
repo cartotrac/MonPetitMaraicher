@@ -5,7 +5,8 @@
 <h1>Bienvenue {{ exploitant.nom_ferme }} 👋</h1>
 <nav class="quick-actions" aria-label="Rubriques du dashboard">
   <a class="btn btn-outline btn-sm" href="#commandes">⏳ Commandes</a>
-  <a class="btn btn-outline btn-sm" href="#produits">🥕 Produits</a>
+  <a class="btn btn-outline btn-sm" href="#produits"
+     onclick="document.getElementById('produits').open=true;">🥕 Produits</a>
   <a class="btn btn-outline btn-sm" href="#recoltes">🧺 Récoltes</a>
   <a class="btn btn-outline btn-sm" href="#points">📍 Points &amp; créneaux</a>
   <a class="btn btn-outline btn-sm" href="#vitrine">👁 Ma vitrine</a>
@@ -79,11 +80,12 @@
      <a href="{% url 'portal:panier_list' %}">gérer les paniers</a></p>
 </section>
 
-<section id="produits">
-  <h2>🥕 Mes produits
+<details id="produits" class="bloc-replie">
+  <summary><h2>🥕 Mes produits <span class="muted aide-replier">(cliquez pour déplier la liste)</span></h2></summary>
+  <p class="retour-edition">
       <button type="button" class="btn btn-outline btn-sm btn-bascule-edition"
-              onclick="document.getElementById('bloc-produits').classList.toggle('edition');">✏️ Mode édition</button>
-  </h2>
+              onclick="event.preventDefault();document.getElementById('bloc-produits').classList.toggle('edition');">✏️ Mode édition</button>
+  </p>
   {% if not paires %}
     <p class="muted view">Aucun produit pour l'instant — passez en mode
        édition pour en ajouter (ou <a href="{% url 'portal:catalogue_standard' %}">importez le catalogue de produits types</a>).</p>
@@ -111,7 +113,7 @@
               {% for produit in liste %}
                 <tr>
                   <td>
-                    <span class="view">{{ produit.nom }}</span>
+                    <span class="view">{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }}</span>
                     <input class="edit" type="text" name="nom_{{ produit.pk }}" value="{{ produit.nom }}" maxlength="150">
                   </td>
                   <td>
@@ -189,7 +191,7 @@
          directement ici ; le catalogue de produits types reste
          <a href="{% url 'portal:catalogue_standard' %}">importable en un clic</a>.</p>
     {% endif %}
-</section>
+</details>
 
 <section id="recoltes">
   <h2>🧺 Mes récoltes</h2>

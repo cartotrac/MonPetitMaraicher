@@ -69,7 +69,7 @@
     <tbody>
     {% for produit in produits %}
       <tr>
-        <td>{{ produit.nom }} <span class="muted">({{ produit.unite_courte }})</span>
+        <td>{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }} <span class="muted">({{ produit.unite_courte }})</span>
           {% if produit.prix is None %}<span class="badge badge-off">prix à définir</span>{% endif %}</td>
         <td><input type="number" name="qty_{{ produit.pk }}" min="0"
                    step="{% if produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}"

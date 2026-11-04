@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load l10n %}
+{% load l10n %}{% load unites %}
 {% block title %}Panier n°{{ panier.numero }} — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>🧺 Panier n°{{ panier.numero }} — {% if panier.client %}{{ panier.client.get_full_name|default:panier.client.username }}{% else %}{{ panier.nom_client }}{% endif %}</h1>
@@ -18,6 +18,36 @@
 
 <section>
   <h2>Contenu livré</h2>
+  {% if verrouille %}
+    <div class="flash warning">🔒 Panier <strong>livré</strong> : le contenu est
+      <strong>verrouillé en lecture seule</strong> — c'est ce contenu qui
+      constitue le décompte de production et l'export comptable. Pour le
+      modifier, repassez d'abord le statut à « Prêt » ou « En préparation »
+      ci-dessous.</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Produit</th><th>Unité</th><th>Souhaité (client)</th>
+          <th>Livré</th><th>Prix/u</th><th>Total ligne</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }}{% if row.ajuste %} ⚠️ ajusté{% endif %}</td>
+            <td>{{ row.ligne.produit.get_unite_vente_display }}</td>
+            <td>{% if row.souhaite is not None %}{{ row.souhaite }}{% else %}— (ajout){% endif %}</td>
+            <td>{{ row.ligne.quantite|qte }}</td>
+            <td>{{ row.ligne.prix_unitaire }} €</td>
+            <td>{{ row.ligne.total_ligne }} €</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="muted">Panier vide.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if panier.note %}<p class="muted">💬 Commentaire client : {{ panier.note }}</p>{% endif %}
+  {% else %}
   <p class="muted">Ajustez les quantités réellement mises dans le panier, côte à côte
      avec ce que le client avait souhaité. 0 = retirer la ligne, vide = conserver la quantité actuelle.
      ⚠️ signale un écart avec la commande. C'est ce contenu qui constitue
@@ -35,7 +65,7 @@
       <tbody>
         {% for row in rows %}
           <tr>
-            <td>{{ row.ligne.produit.nom }}{% if row.ajuste %} ⚠️ ajusté{% endif %}</td>
+            <td>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }}{% if row.ajuste %} ⚠️ ajusté{% endif %}</td>
             <td>{{ row.ligne.produit.get_unite_vente_display }}</td>
             <td>{% if row.souhaite is not None %}{{ row.souhaite }}{% else %}— (ajout){% endif %}</td>
             <td><input type="number" step="{{ row.step }}" min="0"
@@ -54,7 +84,7 @@
         <select name="produit_ajout">
           <option value="">—</option>
           {% for produit in produits %}
-            <option value="{{ produit.pk }}">{{ produit.nom }}{% if produit.prix %} ({{ produit.prix }} €/u){% endif %}</option>
+            <option value="{{ produit.pk }}">{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }}{% if produit.prix %} ({{ produit.prix }} €/u){% endif %}</option>
           {% endfor %}
         </select>
       </label>
@@ -67,6 +97,7 @@
       <textarea name="note" rows="2">{{ panier.note }}</textarea>
     </label>
   </form>
+  {% endif %}
 </section>
 
 <section>

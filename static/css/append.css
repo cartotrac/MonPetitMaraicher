@@ -46,3 +46,17 @@
 .footer-plan a { color: inherit; opacity: 0.85; }
 .footer-plan a:hover { opacity: 1; text-decoration: underline; }
 
+/* ---- Bloc repliable (dashboard « Mes produits » replié par défaut) ---- */
+details.bloc-replie { margin-bottom: 1.4rem; }
+details.bloc-replie > summary { cursor: pointer; }
+details.bloc-replie > summary h2 { display: inline-block;
+                                  margin: 0 0 0.4rem 0; }
+details.bloc-replie > summary .aide-replier { font-size: 0.7em;
+                                             font-weight: 400; }
+.retour-edition { margin: 0.2rem 0 0.8rem 0; }
+
+/* ---- Panier livré : bandeau de verrouillage lecture seule ---- */
+.flash.warning { background: #fff4e5; border: 1px solid #f5a623;
+                 color: #6b4e00; }
+
+

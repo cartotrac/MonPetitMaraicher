@@ -34,7 +34,7 @@
          {% if commande.canal_pref %} · 💬 contact préféré : {{ commande.canal_pref }}{% endif %}</p>
       <ul>
         {% for ligne in commande.lignes.all %}
-          <li>{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)</li>
+          <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)</li>
         {% endfor %}
       </ul>
       {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}
@@ -48,7 +48,7 @@
                 <label>
                   <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0"
                          name="qty_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}">
-                  × {{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u)
+                  × {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u)
                 </label>
               </li>
             {% endfor %}

@@ -254,6 +254,14 @@ class Produit(models.Model):
     def __str__(self):
         return f"{self.nom} ({self.exploitant.nom_ferme})"
 
+    @property
+    def emoji(self):
+        """Emoji du produit type d'origine (🥕, 🍅…), affiché côté
+        client comme dans les listes maraîcher."""
+        if self.origine_standard_id and self.origine_standard:
+            return self.origine_standard.emoji or ""
+        return ""
+
     def save(self, *args, **kwargs):
         if not self.slug:
             from django.utils.text import slugify
