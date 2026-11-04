@@ -483,6 +483,9 @@ FERMES = [
           "Les Trois-Îlets", "97229", 14.540, -61.035)],
         [(5, "08:00", "12:00", 0)],
         "Poulets de plein air — commande avant le jeudi.",
+        "Produits de la semaine à l'Élevage des Trois-Îlets",
+        "Porc créole, volailles de plein air et boudin de la "
+        "ferme. Miel de forêt tropicale en supplément du colis."),
     # ── Micro-brasseries (mode boutique / stock à date) ───────────
     _ferme_spec(
         "demo.brasserie.sor", "Brasserie du Sor", A.MICRO_BRASSEUR, M.AB,
