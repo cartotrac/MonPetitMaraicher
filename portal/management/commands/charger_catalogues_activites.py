@@ -75,6 +75,26 @@ CATALOGUES = {
         ("Gelée royale", "Ruche", "PC", "👑", []),
         ("Cire d'abeille", "Ruche", "PC", "🕯️", []),
     ],
+    Exploitant.Activite.MICRO_BRASSEUR: [
+        ("Blonde", "Bières", "PC", "🍺", []),
+        ("Blonde de garde", "Bières", "PC", "🍺", []),
+        ("Ambrée", "Bières", "PC", "🍺", []),
+        ("Rousse", "Bières", "PC", "🍺", []),
+        ("Brune", "Bières", "PC", "🍺", []),
+        ("Blanche", "Bières", "PC", "🍺", []),
+        ("IPA", "Bières", "PC", "🍺", []),
+        ("APA", "Bières", "PC", "🍺", []),
+        ("Saison", "Bières", "PC", "🍺", []),
+        ("Stout", "Bières", "PC", "🍺", []),
+        ("Porter", "Bières", "PC", "🍺", []),
+        ("Triple", "Bières", "PC", "🍺", []),
+        ("Weizen", "Bières", "PC", "🍺", []),
+        ("Bière sans alcool", "Bières", "PC", "🫙", []),
+        ("Bière de Noël", "Bières", "PC", "🎄", ["hiver"]),
+        ("Fût 10 L", "Fûts", "PC", "🛢️", []),
+        ("Fût 20 L", "Fûts", "PC", "🛢️", []),
+        ("Fût 30 L", "Fûts", "PC", "🛢️", []),
+    ],
 }
 
 

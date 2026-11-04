@@ -39,12 +39,18 @@ class Exploitant(models.Model):
         ELEVEUR = "ELEVEUR", "Éleveur·euse"
         FROMAGER = "FROMAGER", "Fromager·ère"
         APICULTEUR = "APICULTEUR", "Apiculteur·rice"
+        MICRO_BRASSEUR = "MICRO_BRASSEUR", "Micro-brasseur·euse"
         AUTRE = "AUTRE", "Autre production locale"
+
+    class ModeFonctionnement(models.TextChoices):
+        RECOLTE = "RECOLTE", "Récoltes hebdomadaires (paniers)"
+        BOUTIQUE = "BOUTIQUE", "Boutique / stock à date"
 
     # Visuel de chaque activité (vignettes, badges, popups de carte)
     ACTIVITE_EMOJIS = {"MARAICHER": "🥬", "ARBORICULTEUR": "🍎",
                        "ELEVEUR": "🐄", "FROMAGER": "🧀",
-                       "APICULTEUR": "🍯", "AUTRE": "🌾"}
+                       "APICULTEUR": "🍯", "MICRO_BRASSEUR": "🍺",
+                       "AUTRE": "🌾"}
 
     user = models.OneToOneField(User, on_delete=models.CASCADE,
                                 related_name="exploitant")
@@ -79,6 +85,18 @@ class Exploitant(models.Model):
     # vignettes, la fiche et la carte l'affichent clairement comme DÉMO.
     est_demo = models.BooleanField("Exploitation de démonstration",
                                     default=False)
+    # Mode de fonctionnement : les maraîchers et arboriculteurs publient
+    # des récoltes hebdomadaires livrées en paniers ; les fromagers,
+    # éleveurs et micro-brasseurs tiennent plutôt une boutique avec un
+    # stock renouvelé à date, des points de vente et des horaires
+    # d'ouverture. Les libellés du portail s'adaptent.
+    mode_fonctionnement = models.CharField(
+        "Mode de fonctionnement", max_length=10,
+        choices=ModeFonctionnement.choices,
+        blank=True,
+        help_text=("Récoltes : la semaine se publie et se commande en "
+                   "paniers. Boutique : un stock de produits à date est "
+                   "vendu en direct aux points de vente."))
     creee_le = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -92,6 +110,39 @@ class Exploitant(models.Model):
     @property
     def emoji_activite(self):
         return self.ACTIVITE_EMOJIS.get(self.activite, "🌾")
+
+    @property
+    def en_mode_boutique(self):
+        return (self.mode_fonctionnement
+                == self.ModeFonctionnement.BOUTIQUE)
+
+    @property
+    def vocab(self):
+        """Libellés adaptés au mode de fonctionnement : « récoltes »,
+        « points de livraison » et « créneaux » pour le mode paniers
+        hebdo ; « stock à date », « points de vente » et « horaires
+        d'ouverture » pour le mode boutique."""
+        if self.en_mode_boutique:
+            return {
+                "recolte": "stock", "recoltes": "stocks à date",
+                "recoltes_titre": "Mon stock à date",
+                "nouvelle_recolte": "➕ Nouveau stock",
+                "recolte_hebdo": "stock de la semaine",
+                "point": "point de vente", "points": "Points de vente",
+                "point_livraison": "Point de vente / retrait",
+                "creneau": "horaire d'ouverture",
+                "creneaux": "horaires d'ouverture",
+            }
+        return {
+            "recolte": "récolte", "recoltes": "récoltes",
+            "recoltes_titre": "Mes récoltes",
+            "nouvelle_recolte": "➕ Nouvelle récolte",
+            "recolte_hebdo": "récolte de la semaine",
+            "point": "point de livraison", "points": "Points de livraison",
+            "point_livraison": "Point de livraison / retrait",
+            "creneau": "créneau de livraison",
+            "creneaux": "créneaux de livraison",
+        }
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -107,6 +158,16 @@ class Exploitant(models.Model):
         # n'est pas saisi : la recherche « 81 » / « Tarn » s'appuie dessus.
         if not self.departement and self.code_postal:
             self.departement = self.code_postal[:2]
+        # Mode de fonctionnement par défaut selon l'activité : récoltes
+        # hebdomadaires pour maraîchers et arboriculteurs, boutique /
+        # stock à date pour les autres (fromager, éleveur, ruche,
+        # micro-brasserie…). L'exploitant peut changer dans Paramètres.
+        if not self.mode_fonctionnement:
+            self.mode_fonctionnement = (
+                self.ModeFonctionnement.BOUTIQUE
+                if self.activite not in (self.Activite.MARAICHER,
+                                         self.Activite.ARBORICULTEUR)
+                else self.ModeFonctionnement.RECOLTE)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):

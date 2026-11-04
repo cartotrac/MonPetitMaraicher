@@ -5,12 +5,12 @@
 <h1>🛒 Commander chez {{ exploitant.nom_ferme }}</h1>
 
 {% if mode == 'recolte' %}
-  <p>Récolte de la semaine du {{ semaine.lundi|date:"d/m/Y" }}.
+  <p>{{ exploitant.vocab.recolte|capfirst }} de la semaine du {{ semaine.lundi|date:"d/m/Y" }}.
      La « dispo restante » est l'estimation du producteur moins ce qui est
      déjà commandé cette semaine. Le producteur confirme au moment de la
      préparation.</p>
 {% else %}
-  <div class="flash warning">⚠️ Le producteur n'a pas publié de récolte
+  <div class="flash warning">⚠️ Le producteur n'a pas publié de {{ exploitant.vocab.recolte }}
     cette semaine : voici la liste de ses produits aux prix de référence.
     <strong>Les quantités commandées restent soumises à sa validation et
     aux disponibilités réelles</strong> — il vous recontacte pour ajuster
@@ -66,7 +66,7 @@
   {% endif %}
 
   {% if points_livraison %}
-    <label>Point de livraison / retrait (requis)
+    <label>{{ exploitant.vocab.point_livraison }} (requis)
       <select name="point_livraison" required>
         {% for point in points_livraison %}
           <option value="{{ point.pk }}" data-jours="{{ points_jours|get_item:point.pk }}" {% if point.pk|stringformat:"s" == point_choisi %}selected{% endif %}>{{ point.nom }} — {{ point.ville }}</option>

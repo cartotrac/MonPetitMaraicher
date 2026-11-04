@@ -36,6 +36,7 @@ Comptes créés (mot de passe : demo1234!) :
     Corse       : demo.corse.eleveur, demo.corse.fromager
     Réunion     : demo.reunion.maraicher, demo.reunion.arboriculteur
     Martinique  : demo.martinique.maraicher, demo.martinique.eleveur
+    Brasseries : demo.brasserie.sor, demo.brasserie.leguer
     Clients     : demo.cliente, demo.client
 """
 import datetime
@@ -482,9 +483,45 @@ FERMES = [
           "Les Trois-Îlets", "97229", 14.540, -61.035)],
         [(5, "08:00", "12:00", 0)],
         "Poulets de plein air — commande avant le jeudi.",
-        "Produits de la semaine à l'Élevage des Trois-Îlets",
-        "Porc créole, volailles de plein air et boudin de la "
-        "ferme. Miel de forêt tropicale en supplément du colis."),
+    # ── Micro-brasseries (mode boutique / stock à date) ───────────
+    _ferme_spec(
+        "demo.brasserie.sor", "Brasserie du Sor", A.MICRO_BRASSEUR, M.AB,
+        "81600", "Route de Cordes, lieu-dit Les Chais",
+        "Gaillac", 43.898, 1.898, "05 63 00 00 20",
+        "Micro-brasserie bio au bord du Sor : blondes, ambrées, IPA et "
+        "bières de saison brassées en petits lots, fûts et bouteilles "
+        "en vente directe à la boutique de la brasserie.",
+        Decimal("4.00"),
+        [{"activite": A.MICRO_BRASSEUR, "limite": 18},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Boutique de la brasserie", "Route de Cordes",
+          "Gaillac", "81600", 43.897, 1.899),
+         ("Marché de Gaillac", "Place du marché couvert",
+          "Gaillac", "81600", 43.900, 1.895)],
+        [(5, "16:00", "19:30", 0), (6, "08:30", "12:30", 1)],
+        "Nouvelle IPA aux houblons du Tarn — série limitée !",
+        "Bières de la semaine à la Brasserie du Sor",
+        "L'IPA aux houblons locaux arrive en fûts et en bouteilles ; "
+        "la rousse de garde et la blanche restent disponibles toute la "
+        "semaine en boutique. Miel de bruyère de la ferme voisine."),
+    _ferme_spec(
+        "demo.brasserie.leguer", "Brasserie du Léguer", A.MICRO_BRASSEUR,
+        M.RAISONNE, "22300", "Quai du Léguer, zone du Rosmeur",
+        "Lannion", 48.732, -3.478, "02 96 00 00 21",
+        "Micro-brasserie lannionnaise en agriculture raisonnée : "
+        "blondes et brunes maltées, weizen épicée et stout au blé noir, "
+        "fûts 20 L pour les Associations et bouteilles en boutique.",
+        Decimal("4.20"),
+        [{"activite": A.MICRO_BRASSEUR, "limite": 18},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Boutique de la brasserie", "2 quai du Léguer",
+          "Lannion", "22300", 48.733, -3.477)],
+        [(3, "15:00", "19:00", 0), (5, "15:00", "19:00", 0)],
+        "Stout au blé noir : le lot de novembre arrive en boutique.",
+        "Bières de la semaine à la Brasserie du Léguer",
+        "Blonde, ambrée et weizen en bouteilles et en fûts ; le stout "
+        "au blé noir arrive mercredi. Miel de sarrasin des ruches de "
+        "la baie de Lannion en complément."),
 ]
 
 CLIENTS = [
@@ -756,7 +793,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Démonstration prête : {len(FERMES)} fermes fictives "
             "(Tarn et départements limitrophes, Bretagne, Loire, Corse, "
-            "Réunion, Martinique) avec catalogues multi-catégories, "
+            "Réunion, Martinique + 2 micro-brasseries en boutique) avec "
             f"{len(CLIENTS)} clients, commandes à valider, paniers en "
             "préparation, prêts et livrés (lecture seule)."))
         self.stdout.write("Connexion producteur : demo.maraicher, "
