@@ -12,7 +12,6 @@
   <a class="btn btn-outline btn-sm" href="#profil">👤 Mon profil</a>
   <a class="btn btn-outline btn-sm" href="#ferme">🚜 Ma ferme</a>
   {% if est_proprietaire %}
-    <a class="btn btn-outline btn-sm" href="#equipe">👨‍🌾 Mon équipe</a>
     <a class="btn btn-outline btn-sm" href="#messagerie">✉️ Messagerie</a>
   {% endif %}
 </nav>
@@ -57,41 +56,6 @@
 </section>
 
 {% if est_proprietaire %}
-<section class="harvest-bloc" id="equipe">
-  <h2>👨‍🌾 Mon équipe</h2>
-  <div class="card">
-    <p class="muted">Plusieurs comptes peuvent gérer la même ferme
-       (même SIRET). Rattachez un compte existant par e-mail ou
-       identifiant : la personne doit d'abord créer son compte sur le
-       portail.</p>
-    <p><strong>Gérant :</strong> {{ request.user.get_full_name|default:request.user.username }}</p>
-    <ul>
-      {% for membre in membres %}
-        <li>{{ membre.user.get_full_name|default:membre.user.username }}
-            {% if membre.telephone %}<span class="muted">({{ membre.telephone }})</span>{% endif %}
-          <form method="post" class="inline">{% csrf_token %}
-            <input type="hidden" name="section" value="equipe">
-            <input type="hidden" name="action" value="retirer">
-            <input type="hidden" name="membre_id" value="{{ membre.pk }}">
-            <button class="btn btn-sm btn-danger" type="submit">Retirer</button>
-          </form></li>
-      {% empty %}
-        <li class="muted">Aucun associé rattaché pour l'instant.</li>
-      {% endfor %}
-    </ul>
-    <form method="post" class="form-inline">
-      {% csrf_token %}
-      <input type="hidden" name="section" value="equipe">
-      <input type="hidden" name="action" value="ajouter">
-      <label>Compte à rattacher (e-mail ou identifiant)
-        <input type="text" name="membre" placeholder="email@exemple.fr"></label>
-      <label>Téléphone (facultatif)
-        <input type="text" name="telephone" size="12"></label>
-      <button class="btn" type="submit">➕ Rattacher</button>
-    </form>
-  </div>
-</section>
-
 <section class="harvest-bloc" id="messagerie">
   <h2>✉️ Messagerie (e-mails & SMS)</h2>
   <p class="muted">Serveur SMTP d'envoi de vos publications (newsletters,

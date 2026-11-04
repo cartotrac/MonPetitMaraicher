@@ -92,7 +92,7 @@
       {% csrf_token %}
       <div id="bloc-produits" class="edition">
         {% for cat, liste in paires %}
-          <h3>{{ cat.nom|default:"Sans catégorie" }}
+          <h3 class="cat-titre" data-cat="{{ cat.pk }}" data-nom="{{ cat.nom|default:'Sans catégorie' }}">{{ cat.nom|default:"Sans catégorie" }}
             {% if cat.pk %}
               <span class="edit">
                 <input type="text" name="nom_cat_{{ cat.pk }}" value="{{ cat.nom }}" maxlength="80" size="16">
@@ -109,7 +109,7 @@
             <thead><tr><th>Produit</th><th>Catégorie</th></tr></thead>
             <tbody>
               {% for produit in liste %}
-                <tr>
+                <tr draggable="true" data-pk="{{ produit.pk }}" title="Glissez-déposez cette ligne sur le titre d'une catégorie pour la déplacer">
                   <td>{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }}</td>
                   <td>
                     <select name="categorie_cible_{{ produit.pk }}">
@@ -135,7 +135,9 @@
       </div>
     </form>
     <p class="muted">Ici : créer, renommer, réordonner ou supprimer les
-       catégories, et déplacer les produits d'une catégorie à l'autre (⇄).
+       catégories, et déplacer les produits d'une catégorie à l'autre :
+       glissez-déposez une ligne sur le titre d'une catégorie
+       (ou choisissez-la dans la liste puis ⇄).
        L'édition complète des produits (libellé, unité, prix, ordre, ajout,
        retrait en lot) se fait sur la page
        <a href="{% url 'portal:product_list' %}">Produits</a> du menu
@@ -200,6 +202,60 @@
   var cible = document.querySelector(
     "details" + location.hash.replace(/[^\w-]/g, ""));
   if (cible) { cible.open = true; cible.scrollIntoView(); }
+})();
+</script>
+<script>
+/* Glisser-déposer des produits entre catégories : chaque ligne de la
+   rubrique « Mes produits » est déplaçable sur le titre d'une catégorie
+   (ou « Sans catégorie ») ; la ligne est réaffectée côté serveur comme
+   avec le ⇄ (même action « appliquer_categorie »). */
+(function () {
+  function init() {
+    var dragged = null;
+    document.querySelectorAll(
+        "#bloc-produits tbody tr").forEach(function (tr) {
+      tr.addEventListener("dragstart", function () {
+        dragged = this;
+        this.classList.add("drag-en-cours");
+      });
+      tr.addEventListener("dragend", function () {
+        this.classList.remove("drag-en-cours");
+      });
+    });
+    document.querySelectorAll(
+        "#bloc-produits h3.cat-titre").forEach(function (h3) {
+      h3.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        this.classList.add("drop-sur");
+      });
+      h3.addEventListener("dragleave", function () {
+        this.classList.remove("drop-sur");
+      });
+      h3.addEventListener("drop", function (e) {
+        e.preventDefault();
+        this.classList.remove("drop-sur");
+        if (!dragged) { return; }
+        var pk = dragged.dataset.pk,
+            cat = h3.dataset.cat || "";
+        dragged = null;
+        if (!pk) { return; }
+        var select = document.querySelector(
+          "#form-produits select[name='categorie_cible_" + pk + "']");
+        if (!select || select.value === cat) { return; }
+        if (!confirm("Déplacer ce produit vers « " +
+                     (h3.dataset.nom || "Sans catégorie") + " » ?")) {
+          return;
+        }
+        select.value = cat;
+        var bouton = document.querySelector(
+          "#form-produits button[name='appliquer_categorie']" +
+          "[value='" + pk + "']");
+        if (bouton) { bouton.click(); }
+      });
+    });
+  }
+  if (document.readyState !== "loading") { init(); }
+  else { document.addEventListener("DOMContentLoaded", init); }
 })();
 </script>
 {% endblock %}

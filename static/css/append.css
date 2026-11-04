@@ -219,3 +219,15 @@ details.groupe-jour.cal-courante > summary { color: #2e7d32;
 details.groupe-jour.cal-avenir > summary { color: #ef6c00; }
 section.cal-courante { background: #e8f5e9; border-radius: 0.6rem;
                        padding: 0.6rem; }
+
+/* ------------------------------------------------- glisser-déposer produits
+   Dashboard « Mes produits » : chaque ligne est déplaçable (HTML5
+   drag & drop) sur le titre d'une catégorie pour la réaffecter. */
+#bloc-produits tbody tr[draggable="true"] { cursor: grab; }
+#bloc-produits tbody tr.drag-en-cours { opacity: 0.45; }
+#bloc-produits h3.cat-titre { border-radius: 6px; padding: 2px 6px; }
+#bloc-produits h3.cat-titre.drop-sur {
+  outline: 2px dashed #f9a825;
+  outline-offset: 2px;
+  background: rgba(249, 162, 37, 0.08);
+}

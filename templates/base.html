@@ -30,6 +30,7 @@
               <a href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
               <a href="{% url 'portal:order_list' %}">⏳ Commandes</a>
               <a href="{% url 'portal:panier_list' %}">🧺 Paniers</a>
+              {% if user.exploitant %}<a href="{% url 'portal:equipe_manage' %}">👥 Mon équipe</a>{% endif %}
               <a href="{% url 'portal:mes_producteurs' %}">⭐ Mes favoris</a>
             </div>
           </div>

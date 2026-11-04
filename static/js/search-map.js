@@ -183,14 +183,9 @@ var ACTIVITES = {
 var legend = L.control({ position: "bottomright" });
 legend.onAdd = function () {
   var div = L.DomUtil.create("div", "map-legend");
-  for (var key in CAT_STYLES) {
-    var style = CAT_STYLES[key];
-    div.innerHTML +=
-      '<label><input type="checkbox" checked data-cat="' + key + '">' +
-      '<span class="legend-dot" style="background:' + style.color + '"></span>' +
-      style.label + "</label>";
-  }
-  /* Symboles par activité (identiques aux marqueurs et aux vignettes) */
+  /* Symboles par activité (identiques aux marqueurs et aux vignettes) —
+     seuls symboles affichés : le filtre par cases à cocher (modes de
+     production) a été retiré pour alléger la légende. */
   var symboles = document.createElement("div");
   symboles.className = "legend-symbole";
   symboles.innerHTML = Object.keys(ACTIVITES).map(function (cle) {
@@ -203,11 +198,9 @@ legend.onAdd = function () {
 legend.addTo(carte);
 
 var markers = [];
-var present = {};
 var exploitants = JSON.parse(bloc.textContent);
 
 exploitants.forEach(function (e) {
-  present[e.mode_production] = true;
   var style = CAT_STYLES[e.mode_production] || CAT_STYLES.CONV;
   var activite = ACTIVITES[e.activite] || "";
   var symbole = (activite || "🌾 Autre").split(" ")[0];
@@ -234,39 +227,12 @@ exploitants.forEach(function (e) {
   carte.addLayer(marker);
 });
 
-// Ne cocher dans la légende que les modes réellement présents
-document.querySelectorAll(".map-legend input").forEach(function (cb) {
-  if (!present[cb.dataset.cat]) {
-    cb.checked = false;
-    cb.disabled = true;
-    cb.parentElement.style.opacity = 0.4;
-  }
-});
-
 // Cadrer la carte sur les résultats
 if (exploitants.length) {
   var bornes = [];
   exploitants.forEach(function (e) { bornes.push([e.latitude, e.longitude]); });
   carte.fitBounds(bornes, { padding: [30, 30], maxZoom: 12 });
 }
-
-function applyFilters() {
-  var enabled = {};
-  document.querySelectorAll(".map-legend input").forEach(function (cb) {
-    enabled[cb.dataset.cat] = cb.checked;
-  });
-  markers.forEach(function (m) {
-    if (enabled[m._category]) {
-      if (!carte.hasLayer(m)) carte.addLayer(m);
-    } else if (carte.hasLayer(m)) {
-      carte.removeLayer(m);
-    }
-  });
-}
-
-document.addEventListener("change", function (e) {
-  if (e.target.closest && e.target.closest(".map-legend")) applyFilters();
-});
 
 document.getElementById("btn-geoloc").addEventListener("click", function () {
   if (!navigator.geolocation) {
