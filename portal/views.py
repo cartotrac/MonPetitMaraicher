@@ -13,13 +13,13 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import (AnnonceForm, BulletinForm, InscriptionClientForm,
-                    InscriptionExploitantForm, ProduitForm,
+                    InscriptionExploitantForm, MessagerieForm, ProduitForm,
                     ProfilExploitantForm, ProfilPersonnelForm)
 from .meteo import meteo_synthese
 from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
@@ -237,18 +237,21 @@ def dashboard(request):
     exploitant = exploitant_pour(request.user)
     produits = (exploitant.produits.filter(actif=True)
                 .select_related("categorie")
-                .order_by("categorie__position", "categorie__nom", "nom"))
+                .order_by("categorie__position", "categorie__nom",
+                          "position", "nom"))
     groupes, ordre = {}, []
     for p in produits:
-        nom_cat = p.categorie.nom if p.categorie else "Sans catégorie"
-        if nom_cat not in groupes:
-            groupes[nom_cat] = []
-            ordre.append(nom_cat)
-        groupes[nom_cat].append(p)
-    paires = [(nom, groupes[nom]) for nom in ordre]
+        cat = p.categorie
+        if cat not in groupes:
+            groupes[cat] = []
+            ordre.append(cat)
+        groupes[cat].append(p)
+    paires = [(cat, groupes[cat]) for cat in ordre]
     return render(request, "portal/pro/dashboard.html", {
         "exploitant": exploitant,
         "paires": paires,
+        "categories": list(Categorie.objects.filter(exploitant=exploitant)
+                           .order_by("position", "nom")),
         "unite_choices": Produit.Unite.choices,
         "meteo": meteo_synthese(exploitant),
         "semaine": SemaineRecolte.objects.filter(exploitant=exploitant)
@@ -316,10 +319,138 @@ def produit_modifier(request, pk):
 @login_required
 @exploitant_requis
 def produit_edition_rapide(request):
-    """Mode édition du dashboard : libellé, unité et prix de référence
-    modifiés en place, sans passer par la fiche produit."""
+    """Mode édition du dashboard « Mes produits » : libellé, unité et prix
+    modifiés en place, ET ergonomie complète — ajout de produit, ajout
+    de catégorie, reclassement des produits (▲▼, changement de
+    catégorie) et des catégories, sans quitter la page."""
     exploitant = exploitant_pour(request.user)
+
+    def _produits_de_la_categorie(categorie):
+        qs = exploitant.produits.filter(actif=True)
+        if categorie:
+            qs = qs.filter(categorie=categorie)
+        else:
+            qs = qs.filter(categorie__isnull=True)
+        return list(qs.order_by("position", "nom"))
+
+    def _voisin(liste, produit, sens):
+        """Produit à échanger avec `produit` dans l'ordre affiché."""
+        index = next((i for i, p in enumerate(liste) if p.pk == produit.pk),
+                     None)
+        if index is None:
+            return None
+        voisin = index - 1 if sens == "haut" else index + 1
+        if 0 <= voisin < len(liste):
+            return liste[voisin]
+        return None
+
     if request.method == "POST":
+        # ▲▼ : déplacement d'un produit ou d'une catégorie
+        mouvement = request.POST.get("mouvement", "")
+        if mouvement:
+            try:
+                nature, pk, sens = mouvement.split(":")
+                pk = int(pk)
+            except ValueError:
+                messages.error(request, "Requête de reclassement invalide.")
+                return redirect("portal:dashboard")
+            if nature == "categorie":
+                cat = get_object_or_404(Categorie, pk=pk,
+                                        exploitant=exploitant)
+                voisines = list(Categorie.objects.filter(
+                    exploitant=exploitant).order_by("position", "nom"))
+                autre = _voisin(voisines, cat, sens)
+                if autre:
+                    cat.position, autre.position = autre.position, cat.position
+                    autre.save()
+                    cat.save()
+                    messages.success(request, "Catégorie déplacée.")
+            else:
+                produit = get_object_or_404(Produit, pk=pk,
+                                           exploitant=exploitant)
+                voisin = _voisin(_produits_de_la_categorie(produit.categorie),
+                                 produit, sens)
+                if voisin:
+                    (produit.position,
+                     voisin.position) = voisin.position, produit.position
+                    voisin.save()
+                    produit.save()
+                    messages.success(
+                        request, f"« {produit.nom} » déplacé.")
+            return redirect("portal:dashboard")
+
+        # Changement de catégorie d'un produit
+        cible = request.POST.get("appliquer_categorie", "")
+        if cible:
+            produit = get_object_or_404(Produit, pk=cible,
+                                        exploitant=exploitant)
+            cat_pk = request.POST.get(f"categorie_cible_{produit.pk}", "")
+            if not cat_pk:
+                produit.categorie = None
+                produit.position = 0
+                produit.save()
+                messages.info(request, f"« {produit.nom} » placé hors "
+                               "catégorie.")
+            else:
+                cat = get_object_or_404(Categorie, pk=cat_pk,
+                                        exploitant=exploitant)
+                produit.categorie = cat
+                dernier = _produits_de_la_categorie(cat)
+                produit.position = (max((p.position for p in dernier),
+                                        default=0) + 1)
+                produit.save()
+                messages.success(request, f"« {produit.nom} » déplacé dans "
+                                 f"« {cat.nom} ».")
+            return redirect("portal:dashboard")
+
+        # ➕ Ajout d'un produit (avec catégorie nouvelle ou existante)
+        if request.POST.get("action") == "produit_ajouter":
+            nom = request.POST.get("nouveau_nom", "").strip()
+            unite = request.POST.get("nouveau_unite", "").strip()
+            cat_pk = request.POST.get("nouvelle_categorie", "").strip()
+            nouvelle_cat = request.POST.get("nom_nouvelle_categorie",
+                                           "").strip()
+            brut_prix = request.POST.get("nouveau_prix", "").strip()
+            erreurs = []
+            prix = None
+            if not nom:
+                erreurs.append("Nom du produit requis.")
+            if unite not in Produit.Unite.values:
+                erreurs.append("Unité inconnue.")
+            if brut_prix:
+                try:
+                    prix = Decimal(brut_prix)
+                except InvalidOperation:
+                    erreurs.append("Prix invalide.")
+            categorie = None
+            if nouvelle_cat:
+                categorie = (Categorie.objects.filter(
+                    exploitant=exploitant, nom__iexact=nouvelle_cat).first())
+                if not categorie:
+                    position = (Categorie.objects.filter(
+                        exploitant=exploitant)
+                        .aggregate(m=Max("position"))["m"] or 0)
+                    categorie = Categorie.objects.create(
+                        exploitant=exploitant, nom=nouvelle_cat[:80],
+                        position=position + 1)
+            elif cat_pk:
+                categorie = get_object_or_404(Categorie, pk=cat_pk,
+                                              exploitant=exploitant)
+            if erreurs:
+                messages.error(request, " ".join(erreurs))
+            else:
+                position = (max(
+                    (p.position
+                     for p in _produits_de_la_categorie(categorie)),
+                    default=0) + 1)
+                produit = Produit.objects.create(
+                    exploitant=exploitant, nom=nom[:150], categorie=categorie,
+                    unite_vente=unite, prix=prix, position=position)
+                messages.success(request, f"Produit « {produit.nom} » "
+                                 "ajouté.")
+            return redirect("portal:dashboard")
+
+        # Enregistrement en masse : libellé, unité, prix
         erreurs, modifies = [], 0
         for produit in exploitant.produits.filter(actif=True):
             if f"nom_{produit.pk}" not in request.POST:
@@ -1317,17 +1448,60 @@ def _tel_valide(numero):
     return bool(RE_TEL.match((numero or "").strip()))
 
 
+def _offres_commande(exploitant, semaine):
+    """Offre proposée sur la page de commande :
+    - avec une récolte publiée : ses lignes (prix de la récolte) et la
+      disponibilité restante = volume estimé − quantités déjà
+      commandées sur la semaine (commandes en attente ou validées) ;
+    - sans récolte : les produits actifs au prix de référence, la
+      disponibilité n'étant pas publiée (quantités soumises à la
+      validation et aux disponibilités réelles du cultivateur).
+    Retourne (offres, mode) — mode : "recolte" ou "catalogue"."""
+    offres = []
+    if semaine:
+        dimanche = semaine.lundi + datetime.timedelta(days=6)
+        consomme = {}
+        commandes_semaine = LigneCommande.objects.filter(
+            commande__exploitant=exploitant,
+            commande__statut__in=[Commande.Statut.NOUVELLE,
+                                  Commande.Statut.VALIDEE],
+            commande__date_livraison__gte=semaine.lundi,
+            commande__date_livraison__lte=dimanche)
+        for produit_id, quantite in commandes_semaine.values_list(
+                "produit_id", "quantite"):
+            consomme[produit_id] = (consomme.get(produit_id, Decimal("0"))
+                                    + quantite)
+        for ligne in semaine.lignes.select_related("produit__categorie"):
+            reste = (ligne.quantite_estimee
+                     - consomme.get(ligne.produit_id, Decimal("0")))
+            offres.append({"cle": f"qty_{ligne.pk}",
+                           "produit": ligne.produit,
+                           "prix": ligne.prix_unitaire,
+                           "estime": ligne.quantite_estimee,
+                           "reste": reste})
+        return offres, "recolte"
+    for produit in (exploitant.produits.filter(actif=True)
+                    .select_related("categorie")
+                    .order_by("categorie__position", "categorie__nom",
+                              "position", "nom")):
+        if produit.prix is None:
+            continue  # sans prix de référence : non commandable
+        offres.append({"cle": f"qty_{produit.pk}", "produit": produit,
+                       "prix": produit.prix, "estime": None, "reste": None})
+    return offres, "catalogue"
+
+
 def order_create(request, slug):
     """Le client choisit produits/quantités/date et soumet sa commande.
 
-    Les quantités affichées sont des estimations : aucune commande n'est
-    bloquée par une quantité indicative. Un exploitant ne peut pas se
-    commander à lui-même via la vitrine : il doit passer par la saisie
-    directe de son espace pro.
+    Avec une récolte publiée : les quantités affichées sont les
+    disponibilités restantes (estimation − commandes de la semaine).
+    Sans récolte : le catalogue au prix de référence, les quantités
+    restant soumises à validation et disponibilité du cultivateur.
+    Un exploitant ne peut pas se commander à lui-même via la vitrine.
 
-    Sans compte (nouveau client) : la commande est possible en
-    renseignant nom + e-mail OU téléphone — le producteur recontacte le
-    client au moment de la validation.
+    Sans compte (nouveau client) : nom + téléphone obligatoires (l'e-mail
+    est optionnel, réservé newsletter/récoltes hebdo).
     """
     exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
     if (exploitant_pour(request.user) is not None
@@ -1343,16 +1517,12 @@ def order_create(request, slug):
                                              publiee=True,
                                              lundi__lte=lundi)
                .order_by("-lundi").first())
-    if not semaine:
-        messages.info(request,
-                      "Ce producteur n'a pas encore publié de récolte.")
-        return redirect("portal:producer_detail", slug=slug)
-    lignes = semaine.lignes.select_related("produit")
+    offres, mode = _offres_commande(exploitant, semaine)
 
     if request.method == "POST":
         lignes_souhaitees, total = [], Decimal("0")
-        for ligne in lignes:
-            brut = request.POST.get(f"qty_{ligne.pk}", "").strip()
+        for offre in offres:
+            brut = request.POST.get(offre["cle"], "").strip()
             if not brut:
                 continue
             try:
@@ -1361,14 +1531,23 @@ def order_create(request, slug):
                 continue
             if qty <= 0:
                 continue
-            if (ligne.produit.unite_vente in UNITES_ENTIERES
+            produit = offre["produit"]
+            if (produit.unite_vente in UNITES_ENTIERES
                     and qty != qty.to_integral_value()):
                 messages.error(
-                    request, f"« {ligne.produit.nom} » se vend à la pièce : "
+                    request, f"« {produit.nom} » se vend à la pièce : "
                     "merci de commander un nombre entier.")
                 return redirect("portal:order_create", slug=slug)
-            lignes_souhaitees.append((ligne, qty))
-            total += qty * ligne.prix_unitaire
+            # Récolte publiée : ne pas dépasser la disponibilité restante
+            if offre["reste"] is not None and qty > offre["reste"]:
+                messages.error(
+                    request, f"« {produit.nom} » : il ne reste que "
+                    f"~ {offre['reste']} {produit.unite_courte} cette "
+                    "semaine (déjà commandé). Le producteur ajustera "
+                    "avec vous si besoin.")
+                return redirect("portal:order_create", slug=slug)
+            lignes_souhaitees.append((produit, offre["prix"], qty))
+            total += qty * offre["prix"]
         point = exploitant.points_livraison.filter(
             pk=request.POST.get("point_livraison")).first()
         if point is None and exploitant.points_livraison.exists():
@@ -1413,10 +1592,10 @@ def order_create(request, slug):
                 telephone_client=telephone_client,
                 point_livraison=point, date_livraison=date_livraison,
                 note=request.POST.get("note", ""), total=total)
-            for ligne, qty in lignes_souhaitees:
+            for produit, prix, qty in lignes_souhaitees:
                 LigneCommande.objects.create(
-                    commande=commande, produit=ligne.produit,
-                    quantite=qty, prix_unitaire=ligne.prix_unitaire)
+                    commande=commande, produit=produit,
+                    quantite=qty, prix_unitaire=prix)
         if client:
             messages.success(
                 request, "Commande envoyée ! Le producteur va la valider, "
@@ -1438,7 +1617,8 @@ def order_create(request, slug):
     return render(request, "portal/order_create.html", {
         "exploitant": exploitant,
         "semaine": semaine,
-        "lignes": lignes,
+        "offres": offres,
+        "mode": mode,
         "points_livraison": exploitant.points_livraison.all(),
         "dates": dates,
     })
@@ -1671,6 +1851,160 @@ def equipe_manage(request):
 
 @login_required
 @exploitant_requis
+def parametres(request):
+    """Page unique de paramètres : Ma ferme (identité, logo, réseaux,
+    position), Mon profil (compte individuel), Équipe (propriétaire
+    seulement) et Messagerie (propriétaire seulement) — serveur SMTP
+    d'envoi des e-mails et passerelle SMS pour la disponibilité hebdo
+    des produits."""
+    exploitant = exploitant_pour(request.user)
+    vitrine, _cree = ParametresVitrine.objects.get_or_create(
+        exploitant=exploitant)
+    est_proprietaire = (hasattr(request.user, "exploitant")
+                        and request.user.exploitant.pk == exploitant.pk)
+    messagerie = vitrine.messagerie or {}
+
+    if request.method == "POST":
+        section = request.POST.get("section", "")
+
+        if section == "ferme":
+            form_ferme = ProfilExploitantForm(request.POST, request.FILES,
+                                             instance=exploitant)
+            if form_ferme.is_valid():
+                form_ferme.save()
+                reseaux = dict(vitrine.reseaux or {})
+                url = form_ferme.cleaned_data.get("logo_externe", "").strip()
+                if url:
+                    reseaux["logo_url"] = url
+                else:
+                    reseaux.pop("logo_url", None)
+                for cle in ("site_web", "facebook", "instagram"):
+                    valeur = form_ferme.cleaned_data.get(cle, "").strip()
+                    if valeur:
+                        reseaux[cle] = valeur
+                    else:
+                        reseaux.pop(cle, None)
+                vitrine.reseaux = reseaux
+                vitrine.save()
+                if exploitant.siret and not exploitant.siret_valide:
+                    messages.warning(
+                        request, "Fiche enregistrée, mais le numéro SIRET "
+                        "n'est pas valide (14 chiffres attendus) : votre "
+                        "vitrine affichera « Producteur particulier ».")
+                else:
+                    messages.success(request,
+                                     "Votre fiche a été mise à jour.")
+                return redirect("portal:parametres")
+
+        elif section == "profil":
+            resultat = _enregistrer_infos_perso(request,
+                                                 "portal:parametres")
+            if not hasattr(resultat, "is_valid"):
+                return resultat
+
+        elif section == "equipe" and est_proprietaire:
+            action = request.POST.get("action")
+            if action == "ajouter":
+                cle = request.POST.get("membre", "").strip()
+                if not cle:
+                    messages.error(request, "Renseignez l'e-mail ou "
+                                   "l'identifiant du compte à rattacher.")
+                else:
+                    user = (User.objects.filter(email__iexact=cle).first()
+                            or User.objects.filter(
+                                username__iexact=cle).first())
+                    if user is None:
+                        messages.error(
+                            request, f"Aucun compte « {cle} » : la personne "
+                            "doit d'abord créer un compte sur le portail.")
+                    elif hasattr(user, "exploitant"):
+                        messages.error(
+                            request, f"« {cle} » possède déjà sa propre "
+                            "exploitation : impossible de le rattacher.")
+                    elif hasattr(user, "membre_exploitation"):
+                        messages.error(request, f"« {cle} » est déjà membre "
+                                       "d'une exploitation.")
+                    else:
+                        MembreExploitation.objects.create(
+                            user=user, exploitant=exploitant,
+                            telephone=request.POST.get(
+                                "telephone", "").strip())
+                        messages.success(
+                            request, f"{user.get_full_name() or user.username} "
+                            "rattaché(e) à l'exploitation.")
+            elif action == "retirer":
+                membre = exploitant.membres.filter(
+                    pk=request.POST.get("membre_id")).first()
+                if membre:
+                    nom = (membre.user.get_full_name()
+                           or membre.user.username)
+                    membre.delete()
+                    messages.info(request, f"{nom} n'est plus membre de "
+                                   "l'exploitation.")
+            return redirect("portal:parametres")
+
+        elif section == "messagerie" and est_proprietaire:
+            form_messagerie = MessagerieForm(request.POST)
+            if form_messagerie.is_valid():
+                # On ne conserve que les valeurs renseignées (les champs
+                # vides retirent le paramètre correspondant).
+                vitrine.messagerie = {
+                    cle: valeur for cle, valeur in
+                    form_messagerie.cleaned_data.items() if valeur}
+                vitrine.save()
+                messages.success(
+                    request, "Paramètres de messagerie enregistrés."
+                    if vitrine.messagerie.get("email_host")
+                    else "Paramètres de messagerie effacés.")
+                return redirect("portal:parametres")
+
+    # Affichage de la page (ou re-affichage après erreur de formulaire)
+    reseaux = dict(vitrine.reseaux or {})
+    form_ferme = ProfilExploitantForm(
+        instance=exploitant,
+        initial={"logo_externe": reseaux.get("logo_url", ""),
+                 "site_web": reseaux.get("site_web", ""),
+                 "facebook": reseaux.get("facebook", ""),
+                 "instagram": reseaux.get("instagram", "")})
+    profil, _cree = ProfilClient.objects.get_or_create(user=request.user)
+    form_profil = ProfilPersonnelForm(initial={
+        "prenom": request.user.first_name,
+        "nom": request.user.last_name,
+        "email": request.user.email,
+        "telephone": profil.telephone,
+        "photo_externe": profil.photo_url,
+    })
+    form_messagerie = MessagerieForm(initial=messagerie)
+    return render(request, "portal/pro/parametres.html", {
+        "exploitant": exploitant,
+        "form_ferme": form_ferme,
+        "form_profil": form_profil,
+        "form_messagerie": form_messagerie,
+        "membres": exploitant.membres.select_related("user").all(),
+        "est_proprietaire": est_proprietaire,
+    })
+
+
+def _connexion_email(vitrine):
+    """Connexion SMTP propre à l'exploitation (page Paramètres) :
+    retourne None pour utiliser le backend par défaut du serveur
+    (console si EMAIL_HOST n'est pas configuré)."""
+    m = vitrine.messagerie or {}
+    if not m.get("email_host"):
+        return None
+    try:
+        port = int(m.get("email_port") or 25)
+    except (TypeError, ValueError):
+        port = 25
+    return django.core.mail.get_connection(
+        host=m["email_host"], port=port,
+        username=m.get("email_user") or None,
+        password=m.get("email_password") or None,
+        use_tls=bool(m.get("email_tls")), fail_silently=False)
+
+
+@login_required
+@exploitant_requis
 def publications_manage(request):
     """Newsletters (bulletins) et annonces ponctuelles de l'exploitation :
     création, suppression et diffusion aux clients (e-mail des comptes
@@ -1711,17 +2045,22 @@ def publications_manage(request):
                 messages.error(request, "Publication introuvable ou déjà "
                                "diffusée.")
             else:
+                vitrine, _cree = ParametresVitrine.objects.get_or_create(
+                    exploitant=exploitant)
+                connexion = _connexion_email(vitrine)
+                expediteur = ((vitrine.messagerie or {}).get("email_from")
+                              or settings.DEFAULT_FROM_EMAIL)
                 destinataires = list(
                     exploitant.commandes.exclude(email_client="")
                     .values_list("email_client", flat=True).distinct())
                 envoyes, echecs = 0, []
                 for email in destinataires:
                     try:
-                        django.core.mail.send_mail(
+                        message = django.core.mail.EmailMessage(
                             f"[{exploitant.nom_ferme}] {publication.objet}",
-                            publication.corps,
-                            settings.DEFAULT_FROM_EMAIL, [email],
-                            fail_silently=False)
+                            publication.corps, expediteur, [email],
+                            connection=connexion)
+                        message.send()
                         envoyes += 1
                     except Exception:
                         echecs.append(email)

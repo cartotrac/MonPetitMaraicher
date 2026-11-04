@@ -3,7 +3,7 @@
 MonPetitMaraicher est une application Django servie en **WSGI**,
 directement supporté par AlwaysData. Base de données recommandée :
 **PostgreSQL** (natif chez AlwaysData, champs JSONB pour les attributs
-personnalisés des produits).
+personnalisés des produits et les paramètres).
 
 ## 1. Prérequis
 
@@ -36,6 +36,7 @@ Renseigner ensuite les variables d'environnement (voir `.env.example`) :
 DJANGO_SECRET_KEY=<générée>
 DJANGO_DEBUG=0
 DJANGO_ALLOWED_HOSTS=monpetitmaraicher.tondomaine.fr
+CSRF_TRUSTED_ORIGINS=https://monpetitmaraicher.tondomaine.fr
 DB_ENGINE=django.db.backends.postgresql
 DB_NAME=toncompte_mpm
 DB_USER=toncompte_mpm
@@ -44,7 +45,10 @@ DB_HOST=postgresql-toncompte.alwaysdata.net
 DB_PORT=5432
 ```
 
-Puis :
+> ⚠️ `CSRF_TRUSTED_ORIGINS` (avec `https://`) est **indispensable** :
+> sinon tous les formulaires échouent avec « CSRF verification failed ».
+
+Puis (les migrations ne sont pas versionnées : les générer sur le serveur) :
 
 ```bash
 venv/bin/python manage.py makemigrations portal
@@ -70,6 +74,20 @@ venv/bin/python manage.py collectstatic
 Ajouter les variables d'environnement ci-dessus dans « Variables
 d'environnement » du site.
 
+### E-mails
+
+Sans configuration, les e-mails du portail partent dans le **journal**
+(backend console). Pour un envoi réel sur AlwaysData, ajouter :
+
+```
+EMAIL_HOST=localhost
+EMAIL_PORT=25
+```
+
+Les exploitants peuvent de surcroît renseigner **leur propre SMTP** dans la
+page **Paramètres** de leur espace pro — il est alors utilisé pour la
+diffusion de leurs publications (newsletters, annonces).
+
 ### Fichiers statiques et médias
 
 Toujours dans **Web > Sites**, ajouter deux « Collections » (routes) :
@@ -81,17 +99,33 @@ Toujours dans **Web > Sites**, ajouter deux « Collections » (routes) :
 
 > ⚠️ Les fichiers media (logos, photos) ne survivent pas à un redéploiement
 > git : prévoir à terme un stockage objet (S3-compatible) ou des sauvegardes.
+> Les images par **URL externe** (photo de profil, logo) ne posent pas ce
+> problème : rien n'est hébergé par le portail.
 
 ## 5. Mise à jour
 
 ```bash
 cd ~/monpetitmaraicher && git pull
 venv/bin/pip install -r requirements.txt
+venv/bin/python manage.py makemigrations portal
 venv/bin/python manage.py migrate
 venv/bin/python manage.py collectstatic --noinput
 ```
 
-Redémarrer l'application WSGI depuis le panneau si nécessaire.
+Puis **redémarrer l'application WSGI** depuis le panneau (toujours, même
+sans modification : le code Python est chargé en mémoire).
+
+### Commandes de maintenance
+
+```bash
+# Rattache un point aux commandes/paniers sans point puis renumérote
+# les paniers : 1..X par (exploitation, jour, point de livraison)
+venv/bin/python manage.py renumeroter_paniers --sech
+
+# Met à jour nom/e-mail/téléphone des commandes et paniers rattachés
+# à un compte, d'après les profils clients actuels
+venv/bin/python manage.py resynchroniser_clients --sech
+```
 
 ## 6. Portabilité des données (bien commun)
 
@@ -106,3 +140,5 @@ Redémarrer l'application WSGI depuis le panneau si nécessaire.
 - Automatiser le déploiement (script `deploy.sh` ou GitHub Actions + SSH)
 - Mutualisation par département : soit instances séparées, soit passage en
   multi-tenant (schémas PostgreSQL) quand le projet sera mûr
+- Envoi effectif des SMS de disponibilité hebdo via la passerelle
+  paramétrée (page Paramètres)

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Paramètres — MonPetitMaraicher{% endblock %}
+{% block extra_style %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
+{% block content %}
+<h1>⚙️ Paramètres</h1>
+<p class="muted">Tout ce qui concerne votre compte et votre exploitation,
+   sur une seule page : votre profil, votre ferme{% if est_proprietaire %},
+   votre équipe et la messagerie (e-mails, SMS){% else %} et votre ferme{% endif %}.</p>
+
+<section class="harvest-bloc">
+  <h2>👤 Mon profil</h2>
+  <p class="muted">Votre identité de compte individuel : prénom, nom,
+     e-mail, téléphone et photo (lien externe). Modifier votre nom met à
+     jour toutes vos commandes et paniers passés.</p>
+  <form method="post" class="form card">
+    {% csrf_token %}
+    <input type="hidden" name="section" value="profil">
+    {{ form_profil.as_p }}
+    <button class="btn" type="submit">💾 Enregistrer mon profil</button>
+  </form>
+</section>
+
+<section class="harvest-bloc">
+  <h2>🚜 Ma ferme</h2>
+  <p class="muted">Ces informations sont affichées sur votre vitrine publique
+     (SIRET, logo, réseaux, position). Le département est déduit du code
+     postal si vide.</p>
+  <form method="post" enctype="multipart/form-data" class="form card">
+    {% csrf_token %}
+    <input type="hidden" name="section" value="ferme">
+    <p class="muted">Cliquez sur la carte pour positionner la ferme :
+       latitude/longitude sont renseignées automatiquement.</p>
+    <div id="carte-ferme" data-pick-map data-lat-input="id_latitude"
+         data-lon-input="id_longitude" style="height: 300px; border-radius: 8px; margin-bottom: 1rem;"></div>
+    {{ form_ferme.as_p }}
+    <button class="btn" type="submit">💾 Enregistrer ma fiche</button>
+  </form>
+</section>
+
+{% if est_proprietaire %}
+<section class="harvest-bloc">
+  <h2>👨‍🌾 Mon équipe</h2>
+  <p class="muted">Plusieurs comptes peuvent gérer la même ferme
+     (même SIRET). Rattachez un compte existant par e-mail ou
+     identifiant.</p>
+  <div class="card">
+    <p><strong>Gérant :</strong> {{ request.user.get_full_name|default:request.user.username }}</p>
+    <ul>
+      {% for membre in membres %}
+        <li>{{ membre.user.get_full_name|default:membre.user.username }}
+            {% if membre.telephone %}<span class="muted">({{ membre.telephone }})</span>{% endif %}
+          <form method="post" class="inline">{% csrf_token %}
+            <input type="hidden" name="section" value="equipe">
+            <input type="hidden" name="action" value="retirer">
+            <input type="hidden" name="membre_id" value="{{ membre.pk }}">
+            <button class="btn btn-sm btn-danger" type="submit">Retirer</button>
+          </form></li>
+      {% empty %}
+        <li class="muted">Aucun associé rattaché pour l'instant.</li>
+      {% endfor %}
+    </ul>
+    <form method="post" class="form-inline">
+      {% csrf_token %}
+      <input type="hidden" name="section" value="equipe">
+      <input type="hidden" name="action" value="ajouter">
+      <label>Compte à rattacher (e-mail ou identifiant)
+        <input type="text" name="membre" placeholder="email@exemple.fr"></label>
+      <label>Téléphone (facultatif)
+        <input type="text" name="telephone" size="12"></label>
+      <button class="btn" type="submit">➕ Rattacher</button>
+    </form>
+  </div>
+</section>
+
+<section class="harvest-bloc">
+  <h2>✉️ Messagerie (e-mails & SMS)</h2>
+  <p class="muted">Serveur SMTP d'envoi de vos publications (newsletters,
+     annonces) : renseignez-le ici pour que vos e-mails partent au nom de
+     votre ferme, sans dépendre de la configuration du serveur. La
+     passerelle SMS servira à envoyer la disponibilité hebdo de vos
+     produits. Champs vides = paramètre retiré.</p>
+  <form method="post" class="form card">
+    {% csrf_token %}
+    <input type="hidden" name="section" value="messagerie">
+    {{ form_messagerie.as_p }}
+    <button class="btn" type="submit">💾 Enregistrer la messagerie</button>
+  </form>
+</section>
+{% endif %}
+
+<p><a class="btn btn-outline btn-sm" href="{% url 'portal:dashboard' %}">⬅ Retour au dashboard</a></p>
+{% endblock %}
+{% block extrajs %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/pick-map.js' %}" defer></script>
+<script src="{% static 'js/image-picker.js' %}" defer></script>
+{% endblock %}

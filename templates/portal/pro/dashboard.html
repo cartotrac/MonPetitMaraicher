@@ -47,8 +47,6 @@
   <a class="btn" href="{% url 'portal:order_direct' %}">📝 Saisir une commande</a>
   {% if est_proprietaire %}
     <a class="btn btn-outline" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
-    <a class="btn btn-outline" href="{% url 'portal:product_create' %}">➕ Ajouter un produit</a>
-    <a class="btn btn-outline" href="{% url 'portal:categories_manage' %}">🗂 Gérer mes catégories</a>
   {% endif %}
   <a class="btn btn-outline" href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
   <a class="btn btn-outline" href="{% url 'portal:points_manage' %}">📍 Points & créneaux</a>
@@ -75,19 +73,27 @@
 
 <section>
   <h2>🥕 Mes produits
-    {% if paires %}
       <button type="button" class="btn btn-outline btn-sm btn-bascule-edition"
               onclick="document.getElementById('bloc-produits').classList.toggle('edition');">✏️ Mode édition</button>
-    {% endif %}
   </h2>
-  {% if paires %}
-    <form method="post" action="{% url 'portal:product_quick_edit' %}" id="form-produits">
+  {% if not paires %}
+    <p class="muted view">Aucun produit pour l'instant — passez en mode
+       édition pour en ajouter (ou <a href="{% url 'portal:catalogue_standard' %}">importez le catalogue de produits types</a>).</p>
+  {% endif %}
+  <form method="post" action="{% url 'portal:product_quick_edit' %}" id="form-produits">
       {% csrf_token %}
       <div id="bloc-produits">
         {% for cat, liste in paires %}
-          <h3>{{ cat }}</h3>
+          <h3>{{ cat.nom|default:"Sans catégorie" }}
+            {% if cat.pk %}
+              <span class="edit">
+                <button type="submit" name="mouvement" value="categorie:{{ cat.pk }}:haut" class="btn btn-sm" title="Catégorie vers le haut">▲</button>
+                <button type="submit" name="mouvement" value="categorie:{{ cat.pk }}:bas" class="btn btn-sm" title="Catégorie vers le bas">▼</button>
+              </span>
+            {% endif %}
+          </h3>
           <table class="table table-produits">
-            <thead><tr><th>Produit</th><th>Unité</th><th>Prix (€)</th></tr></thead>
+            <thead><tr><th>Produit</th><th>Unité</th><th>Prix (€)</th><th class="edit">Catégorie</th><th class="edit">Ordre</th></tr></thead>
             <tbody>
               {% for produit in liste %}
                 <tr>
@@ -107,23 +113,60 @@
                     <span class="view">{% if produit.prix %}{{ produit.prix }} €{% else %}<span class="muted">non renseigné</span>{% endif %}</span>
                     <input class="edit" type="text" name="prix_{{ produit.pk }}" value="{% if produit.prix %}{{ produit.prix }}{% endif %}" size="7" inputmode="decimal">
                   </td>
+                  <td class="edit">
+                    <select name="categorie_cible_{{ produit.pk }}">
+                      <option value="" {% if produit.categorie is None %}selected{% endif %}>— sans catégorie —</option>
+                      {% for c in categories %}
+                        <option value="{{ c.pk }}" {% if produit.categorie_id == c.pk %}selected{% endif %}>{{ c.nom }}</option>
+                      {% endfor %}
+                    </select>
+                    <button type="submit" name="appliquer_categorie" value="{{ produit.pk }}" class="btn btn-sm" title="Déplacer dans la catégorie choisie">⇄</button>
+                  </td>
+                  <td class="edit">
+                    <button type="submit" name="mouvement" value="produit:{{ produit.pk }}:haut" class="btn btn-sm" title="Vers le haut">▲</button>
+                    <button type="submit" name="mouvement" value="produit:{{ produit.pk }}:bas" class="btn btn-sm" title="Vers le bas">▼</button>
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         {% endfor %}
+        <div class="edit card">
+          <h3>➕ Ajouter un produit</h3>
+          <div class="form-row">
+            <label>Nom <input type="text" name="nouveau_nom" placeholder="Ex : Radis rose"></label>
+            <label>Unité
+              <select name="nouveau_unite">
+                {% for code, libelle in unite_choices %}
+                  <option value="{{ code }}">{{ libelle }}</option>
+                {% endfor %}
+              </select></label>
+            <label>Prix (€) <input type="text" name="nouveau_prix" size="7" inputmode="decimal" placeholder="ex : 2,50"></label>
+          </div>
+          <div class="form-row">
+            <label>Catégorie
+              <select name="nouvelle_categorie">
+                <option value="">— sans catégorie —</option>
+                {% for c in categories %}
+                  <option value="{{ c.pk }}">{{ c.nom }}</option>
+                {% endfor %}
+              </select></label>
+            <label>… ou nouvelle catégorie <input type="text" name="nom_nouvelle_categorie" placeholder="Ex : Fruits"></label>
+            <button type="submit" name="action" value="produit_ajouter" class="btn">➕ Créer</button>
+          </div>
+        </div>
         <p class="save-bar">
           <button class="btn btn-enregistrer" type="submit">💾 Enregistrer les modifications</button>
-          <span class="muted aide-edition">Modifiez libellé, unité ou prix, puis enregistrez. Prix vide = prix effacé.</span>
+          <span class="muted aide-edition">Modifiez libellé, unité ou prix, reclassez avec ▲▼/⇄, ajoutez des produits et catégories, puis enregistrez. Prix vide = prix effacé.</span>
         </p>
       </div>
     </form>
     {% if est_proprietaire %}
-      <p class="muted">Le bouton « ✏️ Mode édition » révèle les champs ; la fiche complète reste accessible via <a href="{% url 'portal:product_create' %}">Ajouter un produit</a>.</p>
+      <p class="muted">Le bouton « ✏️ Mode édition » révèle la saisie en
+         place : libellés, prix, ordre, catégories et ajouts se font
+         directement ici ; le catalogue de produits types reste
+         <a href="{% url 'portal:catalogue_standard' %}">importable en un clic</a>.</p>
     {% endif %}
-  {% else %}
-    <p class="muted">Aucun produit. {% if est_proprietaire %}Commencez par <a href="{% url 'portal:catalogue_standard' %}">importer des produits types</a> !{% else %}Demandez au gestionnaire principal d'importer le catalogue.{% endif %}</p>
-  {% endif %}
 </section>
 
 <section>

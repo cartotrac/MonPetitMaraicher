@@ -176,3 +176,37 @@ class AnnonceForm(forms.ModelForm):
         model = Annonce
         fields = ["objet", "corps"]
         labels = {"objet": "Objet de l'annonce", "corps": "Annonce"}
+
+
+class MessagerieForm(forms.Form):
+    """Serveur d'envoi d'e-mails et passerelle SMS de l'exploitation
+    (page Paramètres, propriétaire). Le SMTP propre à l'exploitation
+    est utilisé pour la diffusion des publications ; la passerelle SMS
+    servira aux envois de disponibilité hebdo des produits. Tout champ
+    laissé vide retire le paramètre correspondant."""
+
+    email_host = forms.CharField(
+        label="Serveur SMTP (ex : smtp.alwaysdata.com)", required=False)
+    email_port = forms.IntegerField(
+        label="Port SMTP (25 par défaut)", required=False,
+        min_value=1, max_value=65535)
+    email_user = forms.CharField(label="Utilisateur SMTP", required=False)
+    email_password = forms.CharField(
+        label="Mot de passe SMTP", required=False,
+        widget=forms.PasswordInput(render_value=True))
+    email_tls = forms.BooleanField(
+        label="Connexion chiffrée (STARTTLS)", required=False)
+    email_from = forms.EmailField(
+        label="Adresse d'expédition (« From »)", required=False)
+    sms_url = forms.URLField(
+        label="Passerelle SMS — URL de l'API (ex : https://api…/messages)",
+        required=False)
+    sms_cle = forms.CharField(
+        label="Passerelle SMS — clé / jeton d'API", required=False,
+        widget=forms.PasswordInput(render_value=True))
+    sms_expediteur = forms.CharField(
+        label="Passerelle SMS — nom d'expéditeur (11 caractères max)",
+        required=False, max_length=11)
+    sms_dispo_hebdo = forms.BooleanField(
+        label="Envoyer chaque semaine la disponibilité des produits par SMS",
+        required=False)

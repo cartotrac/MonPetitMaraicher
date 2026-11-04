@@ -205,11 +205,15 @@ class Produit(models.Model):
     prix = models.DecimalField("Prix de référence (€)", max_digits=6,
                                decimal_places=2, null=True, blank=True)
     actif = models.BooleanField("Actif", default=True)
+    # Ordre d'affichage au sein de la catégorie (mode édition du
+    # dashboard : boutons ▲▼ pour reclasser les produits).
+    position = models.PositiveSmallIntegerField("Position", default=0)
 
     class Meta:
         verbose_name = "Produit"
         unique_together = ("exploitant", "slug")
-        ordering = ["nom"]
+        ordering = ["categorie__position", "categorie__nom",
+                    "position", "nom"]
 
     def __str__(self):
         return f"{self.nom} ({self.exploitant.nom_ferme})"
@@ -645,6 +649,11 @@ class ParametresVitrine(models.Model):
     afficher_creneaux = models.BooleanField("Afficher les créneaux", default=True)
     reseaux = models.JSONField("Réseaux sociaux", default=dict, blank=True,
                                help_text='Ex : {"facebook": "https://…"}')
+    # Paramètres de messagerie du propriétaire (page Paramètres) :
+    # serveur SMTP d'envoi des e-mails (newsletters, annonces,
+    # confirmations) et passerelle SMS pour la disponibilité hebdo.
+    messagerie = models.JSONField("Messagerie", default=dict, blank=True,
+                                  help_text='Ex : {"email_host": "smtp…"}')
 
     class Meta:
         verbose_name = "Paramètres de vitrine"

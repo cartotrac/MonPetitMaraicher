@@ -2,22 +2,37 @@
 {% block title %}Commander chez {{ exploitant.nom_ferme }} — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>🛒 Commander chez {{ exploitant.nom_ferme }}</h1>
-<p>Récolte de la semaine du {{ semaine.lundi|date:"d/m/Y" }}.
-   Les quantités affichées sont des estimations ; indiquez ce que vous souhaitez,
-   le producteur ajustera au moment de la préparation et validera votre commande.</p>
+
+{% if mode == 'recolte' %}
+  <p>Récolte de la semaine du {{ semaine.lundi|date:"d/m/Y" }}.
+     La « dispo restante » est l'estimation du cultivateur moins ce qui est
+     déjà commandé cette semaine. Le producteur confirme au moment de la
+     préparation.</p>
+{% else %}
+  <div class="flash warning">⚠️ Le cultivateur n'a pas publié de récolte
+    cette semaine : voici la liste de ses produits aux prix de référence.
+    <strong>Les quantités commandées restent soumises à sa validation et
+    aux disponibilités réelles</strong> — il vous recontacte pour ajuster
+    si besoin.</div>
+{% endif %}
 
 <form method="post" class="form">
   {% csrf_token %}
   <table class="table">
-    <thead><tr><th>Produit</th><th>Estimation</th><th>Prix</th><th>Quantité voulue</th></tr></thead>
+    <thead><tr><th>Produit</th>{% if mode == 'recolte' %}<th>Récoltée</th><th>Reste (estimé)</th>{% endif %}<th>Prix</th><th>Quantité voulue</th></tr></thead>
     <tbody>
-    {% for ligne in lignes %}
+    {% for offre in offres %}
       <tr>
-        <td>{{ ligne.produit.nom }}</td>
-        <td>~ {{ ligne.quantite_estimee }} {{ ligne.produit.unite_courte }}</td>
-        <td>{{ ligne.prix_unitaire }} €</td>
-        <td><input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="qty_{{ ligne.pk }}" placeholder="0"></td>
+        <td>{{ offre.produit.nom }}</td>
+        {% if mode == 'recolte' %}
+          <td class="muted">~ {{ offre.estime }} {{ offre.produit.unite_courte }}</td>
+          <td>{% if offre.reste > 0 %}<strong>~ {{ offre.reste|floatformat:"-2" }} {{ offre.produit.unite_courte }}</strong>{% else %}<span class="muted">complet</span>{% endif %}</td>
+        {% endif %}
+        <td>{{ offre.prix }} €</td>
+        <td><input type="number" step="{% if offre.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="{{ offre.cle }}" placeholder="0" {% if offre.reste is not None and offre.reste <= 0 %}disabled title="Complet : déjà commandé cette semaine"{% endif %}></td>
       </tr>
+    {% empty %}
+      <tr><td colspan="5" class="muted">Aucun produit disponible à la commande pour l'instant.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -25,7 +40,7 @@
   {% if not user.is_authenticated %}
     <div class="card param-card">
       <h3>Vous n'avez pas de compte ? Pas de souci 🌱</h3>
-      <p class="muted">Laissez votre numéro : le producteur vous appelle
+      <p class="muted">Laissez votre numéro : le cultivateur vous appelle
          pour valider votre commande. L'e-mail est optionnel — il permet
          de recevoir la liste des récoltes de la semaine par newsletter.</p>
       <div class="form-row">
