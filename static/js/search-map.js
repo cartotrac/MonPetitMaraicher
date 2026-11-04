@@ -25,12 +25,12 @@ var bloc = document.getElementById("donnees-carte");
 var carte = L.map("carte-recherche").setView([46.6, 2.4], 6);
 
 /* ------------------------------------------------------------------ fonds */
-/* Fond « Plan » : OpenFreeMap (liberté, tuiles raster PNG sans clé —
-   CARTO exige désormais une clé et les tuiles OSM directes renvoient 403). */
+/* Fond « Plan » : tuiles OpenStreetMap officielles (mêmes tuiles que dans
+   QGIS : https://tile.openstreetmap.org/{z}/{x}/{y}.png, sans clé). */
 var fondPlan = L.tileLayer(
-  "https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png", {
+  "https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://openfreemap.org/">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   });
 
 var fondOrtho = L.tileLayer(

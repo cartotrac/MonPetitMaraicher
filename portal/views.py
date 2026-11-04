@@ -559,6 +559,17 @@ def order_list(request, statut=None):
     commandes = exploitant.commandes.order_by("-creee_le")
     if statut:
         commandes = commandes.filter(statut=statut)
+    # Menu déroulant des jours de livraison (du plus récent au plus ancien)
+    date_filter = request.GET.get("date", "").strip()
+    try:
+        date_filter = datetime.date.fromisoformat(date_filter).isoformat()
+    except ValueError:
+        date_filter = ""
+    if date_filter:
+        commandes = commandes.filter(date_livraison=date_filter)
+    dates = sorted(
+        set(exploitant.commandes.values_list("date_livraison", flat=True)),
+        reverse=True)
     canaux = {p.client_id: p.get_canal_display()
               for p in PreferenceContact.objects.filter(exploitant=exploitant)}
     commandes = list(commandes.prefetch_related("lignes__produit"))
@@ -566,6 +577,7 @@ def order_list(request, statut=None):
         c.canal_pref = canaux.get(c.client_id) if c.client_id else None
     return render(request, "portal/pro/orders.html",
                   {"commandes": commandes, "filtre_statut": statut,
+                   "dates": dates, "date_filter": date_filter,
                    "points": exploitant.points_livraison.all()})
 
 
@@ -821,8 +833,12 @@ def panier_list(request):
             date_filter = ""
         else:
             paniers = paniers.filter(date_livraison=date_filter)
+    dates = sorted(
+        set(exploitant.paniers.values_list("date_livraison", flat=True)),
+        reverse=True)
     return render(request, "portal/pro/paniers.html",
-                  {"paniers": paniers, "date_filter": date_filter})
+                  {"paniers": paniers, "date_filter": date_filter,
+                   "dates": dates})
 
 
 @login_required
@@ -1432,6 +1448,17 @@ def my_orders(request):
     livré côte à côte du souhaité, avec le commentaire du producteur."""
     commandes = (request.user.commandes.select_related("exploitant")
                  .prefetch_related("lignes__produit").order_by("-creee_le"))
+    # Menu déroulant des jours de livraison (du plus récent au plus ancien)
+    date_filter = request.GET.get("date", "").strip()
+    try:
+        date_filter = datetime.date.fromisoformat(date_filter).isoformat()
+    except ValueError:
+        date_filter = ""
+    if date_filter:
+        commandes = commandes.filter(date_livraison=date_filter)
+    dates = sorted(
+        set(request.user.commandes.values_list("date_livraison", flat=True)),
+        reverse=True)
     resultats = []
     for commande in commandes:
         panier = (Panier.objects.filter(commande=commande)
@@ -1450,7 +1477,8 @@ def my_orders(request):
         resultats.append({"commande": commande, "panier": panier,
                           "lignes_panier": lignes_panier})
     return render(request, "portal/my_orders.html",
-                  {"resultats": resultats})
+                  {"resultats": resultats, "dates": dates,
+                   "date_filter": date_filter})
 
 
 @login_required
@@ -1480,8 +1508,18 @@ def _enregistrer_infos_perso(request, redirect_vers):
         profil.telephone = form.cleaned_data["telephone"]
         profil.photo_url = form.cleaned_data.get("photo_externe", "")
         profil.save()
+        # Propager l'identité aux commandes et paniers déjà enregistrés
+        # (y compris validés) : les snapshots nom/e-mail/téléphone suivent
+        # le profil, pour l'affichage comme pour les contacts producteur.
+        nom_complet = (user.get_full_name() or user.username)[:150]
+        maj = {"nom_client": nom_complet, "email_client": user.email}
+        telephone = (form.cleaned_data.get("telephone") or "")[:20]
+        if telephone:
+            maj["telephone_client"] = telephone
+        Commande.objects.filter(client=user).update(**maj)
+        Panier.objects.filter(client=user).update(**maj)
         messages.success(request, "Vos informations personnelles ont été "
-                         "mises à jour.")
+                         "mises à jour (commandes et paniers inclus).")
         return redirect(redirect_vers)
     return form
 

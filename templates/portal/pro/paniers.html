@@ -11,14 +11,21 @@
 
 <form method="get" class="inline-form">
   <label for="date">Jour de livraison :</label>
-  <input type="date" id="date" name="date" value="{{ date_filter }}">
-  <button class="btn btn-sm" type="submit">Filtrer</button>
-  <a class="btn btn-outline btn-sm" href="{% url 'portal:panier_list' %}">Tout voir</a>
+  <select id="date" name="date" onchange="this.form.submit()">
+    <option value="">Tous les jours</option>
+    {% for d in dates %}
+      <option value="{{ d|date:'Y-m-d' }}" {% if d|date:'Y-m-d' == date_filter %}selected{% endif %}>{{ d|date:"l d F Y" }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="btn btn-sm" type="submit">Filtrer</button></noscript>
 </form>
 
 {% for panier in paniers %}
   <div class="card order-card">
     <div class="order-head">
+      {% if panier.client.profil_client.photo_url %}
+        <img class="avatar avatar-small" src="{{ panier.client.profil_client.photo_url }}" alt="Photo de {{ panier.nom_client }}">
+      {% endif %}
       <strong>Panier n°{{ panier.numero }} — {{ panier.nom_client }}</strong>
       <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
     </div>

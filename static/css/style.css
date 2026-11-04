@@ -51,6 +51,7 @@ a { color: var(--accent-dark); }
 .hero { text-align: center; padding: 1.5rem 0; }
 .hero h1 { color: var(--accent-dark); font-size: 2.1rem; }
 .hero-lead { m
+
 ax-width: 760px; margin: 0.6rem auto 0; }
 .features { margin-top: 1.5rem; text-align: left; }
 .feature { background: var(--card); border: 1px solid var(--border);
@@ -84,6 +85,7 @@ ax-width: 760px; margin: 0.6rem auto 0; }
 .btn-outline:hover { background: var(--accent-light); color: var(--accent-dark); }
 .btn-lg { padding: 0.7rem 1.6rem; font-size: 1.05rem; }
 .btn-sm { padding: 0.2rem 0.7rem; font-size: 0.85rem; }
+
 .
 btn-danger { background: var(--terre); border-color: var(--terre);
               box-shadow: 0 2px 6px rgba(181, 83, 60, 0.25); }
@@ -120,7 +122,8 @@ btn-danger { background: var(--terre); border-color: var(--terre);
          font-weight: 600; }
 .badge-ab { background: var(--accent-dark); color: #fff; }
 .badge-perma { background: #6a1b9a; color: #fff; }
-.badge-paysan { background: var(
+.badge-paysan { background: va
+r(
 --ocre); color: #4e342e; }
 .badge-raisonne { background: #0277bd; color: #fff; }
 .badge-ok { background: #d4edda; color: #155724; }
@@ -158,7 +161,8 @@ btn-danger { background: var(--terre); border-color: var(--terre);
 
 .flash { padding: 0.75rem 1.1rem; border-radius: 10px; margin: 0.8rem 0;
          box-shadow: var(--shadow); }
-.flash.success { background: #d4edda; c
+.flash.success { background: #d4edda
+; c
 olor: #155724; border: 1px solid #b7dfc1; }
 .flash.info { background: #d1ecf1; color: #0c5460; border: 1px solid #b8dfe8; }
 .flash.error, .flash.warning { background: #fff3cd; color: #8a6d00;
@@ -197,7 +201,8 @@ olor: #155724; border: 1px solid #b7dfc1; }
 .harvest-cat h3 { display: flex; align-items: center; gap: 0.5rem;
                   border-bottom: 2px solid var(--accent-light); padding-bottom: 0.3rem; }
 .harvest-cat .badge { margin-left: auto; font-weight: 600; }
-table tr.reprise td
+table tr.repris
+e td
  { background: #f6f9f4; }
 .save-bar { position: sticky; bottom: 0.6rem; background: var(--bg);
             padding: 0.7rem 0; border-radius: 12px; text-align: center;
@@ -237,7 +242,8 @@ table tr.reprise td
                   grid-template-columns: minmax(0, 1fr) 340px;
                   gap: 1.6rem; align-items: start; }
 .dash-side { position: sticky; top: 4.2rem; }
-.dash-side h2 
+.dash-sid
+e h2 
 { margin-top: 0.4rem; }
 .apercu-vitrine { width: 100%; height: 540px; border: 1px solid var(--border);
                   border-radius: var(--radius); background: #fff;
@@ -277,7 +283,8 @@ table tr.reprise td
 .reseaux-bloc { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.8rem 0 1.4rem; }
 
 /* ---- Étiquettes des couches administratives (carte recherche) ---- */
-.label-admin { background: transparent; border: none; box-shadow: none;
+.label-admin { background: transparent; 
+border: none; box-shadow: none;
                font-weight: 600; color: #333; pointer-events: none;
                text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; }
 .label-admin::before { display: none; }
@@ -286,3 +293,21 @@ table tr.reprise td
    la carte reçoit .labels-dep-on / .labels-com-on via majLabels() */
 #carte-recherche:not(.labels-dep-on) .label-dep { display: none; }
 #carte-recherche:not(.labels-com-on) .label-com { display: none; }
+/* ---- Sélecteur d'image externe avec aperçu (profils, logo) ---- */
+.image-picker { margin: 0.4rem 0 1rem; }
+.image-picker-cadre { position: relative; width: 104px; height: 104px;
+                      border: 2px dashed var(--border); border-radius: 10px;
+                      display: flex; align-items: center; justify-content: center;
+                      overflow: hidden; background: var(--accent-light); }
+.image-picker-img { display: none; width: 100%; height: 100%;
+                    object-fit: cover; }
+.image-picker-placeholder { font-size: 1.4rem; color: var(--muted, #777); }
+.image-picker-erreur { display: none; position: absolute; inset: 0;
+                       align-items: center; text-align: center; padding: 0.5rem;
+                       font-size: 0.75rem; color: #b71c1c;
+                       background: rgba(255, 235, 238, 0.95); }
+.image-picker-actif .image-picker-img { display: block; }
+.image-picker-actif .image-picker-placeholder { display: none; }
+.image-picker-en-erreur .image-picker-cadre { border-color: #b71c1c; }
+.image-picker-en-erreur .image-picker-erreur { display: flex; }
+.image-picker-aide { font-size: 0.8rem; max-width: 46ch; }

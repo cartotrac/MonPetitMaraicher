@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Mes infos personnelles — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>👤 Mes infos personnelles</h1>
 <p class="muted">Votre identité de compte individuel — utile même à
    plusieurs sur la même exploitation : chaque membre de l'équipe garde
-   son prénom, son e-mail et son téléphone propres.</p>
+   son prénom, son e-mail et son téléphone propres. La photo (lien
+   externe) apparaît sur les commandes/paniers côté maraîcher et sur
+   la vitrine si vous êtes gérant ou associé.</p>
 <p><a class="btn btn-outline btn-sm" href="{% url 'portal:profil_exploitant' %}">🚜 Voir la fiche de l'exploitation</a></p>
 <form method="post" class="form">
   {% csrf_token %}
@@ -13,3 +16,4 @@
   <a class="btn btn-outline" href="{% url 'portal:dashboard' %}">Annuler</a>
 </form>
 {% endblock %}
+{% block extrajs %}<script src="{% static 'js/image-picker.js' %}" defer></script>{% endblock %}

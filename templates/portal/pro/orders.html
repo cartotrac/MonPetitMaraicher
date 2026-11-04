@@ -9,6 +9,19 @@
   <a class="btn {% if filtre_statut == 'VALIDEE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'VALIDEE' %}">Validées</a>
 </div>
 
+{% if dates %}
+<form method="get" class="inline-form">
+  <label for="date">Jour de livraison :</label>
+  <select id="date" name="date" onchange="this.form.submit()">
+    <option value="">Tous les jours</option>
+    {% for d in dates %}
+      <option value="{{ d|date:'Y-m-d' }}" {% if d|date:'Y-m-d' == date_filter %}selected{% endif %}>{{ d|date:"l d F Y" }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="btn btn-sm" type="submit">Filtrer</button></noscript>
+</form>
+{% endif %}
+
 {% for commande in commandes %}
   <div class="card order-card">
     <div class="order-head">

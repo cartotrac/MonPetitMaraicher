@@ -2,11 +2,23 @@
 {% block title %}Mes commandes — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>🧾 Mes commandes</h1>
+{% if dates %}
+<form method="get" class="inline-form">
+  <label for="date">Jour de livraison :</label>
+  <select id="date" name="date" onchange="this.form.submit()">
+    <option value="">Toutes les dates</option>
+    {% for d in dates %}
+      <option value="{{ d|date:'Y-m-d' }}" {% if d|date:'Y-m-d' == date_filter %}selected{% endif %}>{{ d|date:"l d F Y" }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="btn btn-sm" type="submit">Filtrer</button></noscript>
+</form>
+{% endif %}
 {% for resultat in resultats %}
   {% with commande=resultat.commande panier=resultat.panier %}
   <div class="card order-card">
     <div class="order-head">
-      <strong>{{ commande.exploitant.nom_ferme }}</strong>
+      <strong>Commandé à {{ commande.exploitant.nom_ferme }}</strong>
       <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
     </div>
     <p>📅 {{ commande.date_livraison|date:"d/m/Y" }} — 💰 {{ commande.total }} €</p>
