@@ -41,6 +41,11 @@ class Exploitant(models.Model):
         APICULTEUR = "APICULTEUR", "Apiculteur·rice"
         AUTRE = "AUTRE", "Autre production locale"
 
+    # Visuel de chaque activité (vignettes, badges, popups de carte)
+    ACTIVITE_EMOJIS = {"MARAICHER": "🥬", "ARBORICULTEUR": "🍎",
+                       "ELEVEUR": "🐄", "FROMAGER": "🧀",
+                       "APICULTEUR": "🍯", "AUTRE": "🌾"}
+
     user = models.OneToOneField(User, on_delete=models.CASCADE,
                                 related_name="exploitant")
     nom_ferme = models.CharField("Nom de l'exploitation", max_length=150)
@@ -79,6 +84,10 @@ class Exploitant(models.Model):
 
     def __str__(self):
         return self.nom_ferme
+
+    @property
+    def emoji_activite(self):
+        return self.ACTIVITE_EMOJIS.get(self.activite, "🌾")
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -170,8 +179,16 @@ class ProduitStandard(models.Model):
         BOTTE = "BO", "la botte"
         BARQUETTE = "BQ", "la barquette"
 
-    nom = models.CharField("Nom", max_length=150, unique=True)
+    nom = models.CharField("Nom", max_length=150)
     categorie = models.CharField("Catégorie standard", max_length=80)
+    # Catalogue rattaché à une activité : le catalogue « maraîcher »
+    # historique reste la base des producteurs maraîchers ; chaque
+    # activité (arboriculture, élevage, fromagerie, ruche…) dispose de
+    # sa propre liste, tous catalogues restant accessibles.
+    activite = models.CharField(
+        "Activité", max_length=15,
+        choices=Exploitant.Activite.choices,
+        default=Exploitant.Activite.MARAICHER)
     unite_vente = models.CharField("Unité de vente", max_length=2,
                                    choices=Unite.choices, default=Unite.KG)
     saisons = models.JSONField("Saisons", default=list, blank=True,
@@ -723,6 +740,27 @@ class MembreExploitation(models.Model):
     def __str__(self):
         return (f"{self.user.get_full_name() or self.user.username}"
                 f" — {self.exploitant.nom_ferme}")
+
+
+class Favori(models.Model):
+    """Producteur favori d'un client (compte) : accès rapide depuis
+    « Mes producteurs », aux côtés des fermes déjà commandées."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             related_name="favoris")
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="clients_favoris")
+    ajoute_le = models.DateTimeField("Ajouté le", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Producteur favori"
+        verbose_name_plural = "Producteurs favoris"
+        unique_together = ("user", "exploitant")
+        ordering = ["-ajoute_le"]
+
+    def __str__(self):
+        return (f"⭐ {self.exploitant.nom_ferme}"
+                f" ({self.user.username})")
 
 
 def exploitant_pour(user):

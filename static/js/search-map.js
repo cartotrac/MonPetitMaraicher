@@ -188,12 +188,12 @@ var markers = [];
 var present = {};
 var exploitants = JSON.parse(bloc.textContent);
 var ACTIVITES = {
-  "MARAICHER": "Maraîcher·ère",
-  "ARBORICULTEUR": "Arboriculteur·rice",
-  "ELEVEUR": "Éleveur·euse",
-  "FROMAGER": "Fromager·ère",
-  "APICULTEUR": "Apiculteur·rice",
-  "AUTRE": "Autre production locale"
+  "MARAICHER": "🥬 Maraîcher·ère",
+  "ARBORICULTEUR": "🍎 Arboriculteur·rice",
+  "ELEVEUR": "🐄 Éleveur·euse",
+  "FROMAGER": "🧀 Fromager·ère",
+  "APICULTEUR": "🍯 Apiculteur·rice",
+  "AUTRE": "🌾 Autre production locale"
 };
 
 exploitants.forEach(function (e) {

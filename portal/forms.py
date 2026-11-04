@@ -7,30 +7,19 @@ from .models import (Annonce, Bulletin, Categorie, Exploitant, Produit,
 
 
 class InscriptionExploitantForm(UserCreationForm):
-    """Inscription exploitant : compte utilisateur + profil exploitation."""
+    """Inscription exploitant simplifiée : compte + ferme minimale.
+    Nom de la ferme, activité et localisation à la création ; tout le
+    reste (SIRET, mode de production, logo, description, téléphone,
+    réseaux…) se complète ensuite dans la page ⚙️ Paramètres."""
 
-    nom_ferme = forms.CharField(label="Nom de l'exploitation", max_length=150)
-    siret = forms.CharField(label="SIRET", max_length=14, required=False)
-    mode_production = forms.ChoiceField(label="Mode de production", choices=[
-        ("AB", "Agriculture Biologique (AB)"),
-        ("PERMA", "Permaculture"),
-        ("PAYSAN", "Agriculture paysanne"),
-        ("RAISONNE", "Agriculture raisonnée"),
-        ("CONV", "Conventionnelle"),
-    ])
+    nom_ferme = forms.CharField(label="Nom de l'exploitation",
+                                max_length=150)
     activite = forms.ChoiceField(
         label="Activité", choices=Exploitant.Activite.choices,
         initial=Exploitant.Activite.MARAICHER)
-    logo = forms.ImageField(label="Logo miniature", required=False)
-    description = forms.CharField(label="Présentation", widget=forms.Textarea,
-                                  required=False)
-    adresse = forms.CharField(label="Adresse", max_length=255, required=False)
     ville = forms.CharField(label="Ville", max_length=100, required=False)
     code_postal = forms.CharField(label="Code postal", max_length=10,
                                   required=False)
-    departement = forms.CharField(label="Département (ex : 44)", max_length=3,
-                                  required=False)
-    telephone = forms.CharField(label="Téléphone", max_length=20, required=False)
     latitude = forms.FloatField(label="Latitude (optionnel, pour la carte)",
                                 required=False)
     longitude = forms.FloatField(label="Longitude (optionnel, pour la carte)",
@@ -45,20 +34,15 @@ class InscriptionExploitantForm(UserCreationForm):
         user.email = self.cleaned_data["email"]
         if commit:
             user.save()
+            code_postal = self.cleaned_data.get("code_postal", "") or ""
             Exploitant.objects.create(
                 user=user,
                 nom_ferme=self.cleaned_data["nom_ferme"],
-                siret=self.cleaned_data.get("siret", ""),
-                mode_production=self.cleaned_data["mode_production"],
                 activite=self.cleaned_data.get(
                     "activite", Exploitant.Activite.MARAICHER),
-                logo=self.cleaned_data.get("logo"),
-                description=self.cleaned_data.get("description", ""),
-                adresse=self.cleaned_data.get("adresse", ""),
                 ville=self.cleaned_data.get("ville", ""),
-                code_postal=self.cleaned_data.get("code_postal", ""),
-                departement=self.cleaned_data.get("departement", ""),
-                telephone=self.cleaned_data.get("telephone", ""),
+                code_postal=code_postal,
+                departement=code_postal[:2] if len(code_postal) >= 2 else "",
                 latitude=self.cleaned_data.get("latitude"),
                 longitude=self.cleaned_data.get("longitude"))
         return user

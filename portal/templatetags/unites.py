@@ -1,8 +1,14 @@
-"""Filtres de template pour l'accord des unités avec la quantité :
-« 1 botte », « 3 bottes », « 2,50 kg ». Usage :
+"""Filtres de template : accord des unités avec la quantité et
+affichage propre des quantités.
+
+Usage :
     {% load unites %}
     {{ ligne.quantite }} {{ ligne.quantite|unite:ligne.produit }}
+    {{ ligne.quantite|qte }}            -> « 5 » au lieu de « 5,00 »
+    {{ valeurs|get_item:offre.cle }}    -> accès dictionnaire à clé dynamique
 """
+from decimal import Decimal, InvalidOperation
+
 from django import template
 
 register = template.Library()
@@ -18,3 +24,28 @@ def unite(quantite, produit):
         return produit.unite_pour(quantite)
     except AttributeError:
         return getattr(produit, "unite_courte", "")
+
+
+@register.filter
+def qte(valeur):
+    """Quantité affichée sans zéros parasites : Decimal('5.00') -> « 5 »,
+    Decimal('2.50') -> « 2,5 ». Les produits vendus à la pièce, à la
+    botte ou à la barquette sont saisis en entiers ; seule l'unité kg
+    garde des décimales."""
+    try:
+        nombre = Decimal(str(valeur)).normalize()
+    except (InvalidOperation, TypeError, ValueError):
+        return valeur
+    texte = format(nombre, "f")
+    if "." in texte:
+        texte = texte.rstrip("0").rstrip(".")
+    return texte.replace(".", ",")
+
+
+@register.filter
+def get_item(dico, cle):
+    """Accès à une clé dynamique de dictionnaire dans un template."""
+    try:
+        return dico.get(cle, "")
+    except AttributeError:
+        return ""

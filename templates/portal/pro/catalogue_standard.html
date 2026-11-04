@@ -1,13 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Produits types — MonPetitProducteurLocal{% endblock %}
+{% load unites %}
+{% block title %}Produits types {{ activite_courante|title }} — MonPetitProducteurLocal{% endblock %}
 {% block content %}
-<h1>📚 Produits types</h1>
-<p class="muted">Catalogue de départ : cochez les produits que vous vendez,
-   indiquez un prix si vous le connaissez, puis copiez-les dans votre
-   catalogue. Les catégories correspondantes sont créées automatiquement —
-   vous pourrez les renommer et reclasser ensuite. Tout reste modifiable.</p>
+<h1>📚 Produits types par activité</h1>
+<p class="muted">Catalogue de départ proposé selon votre activité — tous les
+   autres catalogues restent accessibles ci-dessous. Cochez les produits que
+   vous vendez, indiquez un prix si vous le connaissez, puis copiez-les dans
+   votre catalogue : les catégories correspondantes sont créées
+   automatiquement. Tout reste modifiable ensuite.</p>
+
+<nav class="quick-actions" aria-label="Catalogues par activité">
+  {% for code, libelle in activites %}
+    <a class="btn {% if code == activite_courante %}{% else %}btn-outline{% endif %} btn-sm"
+       href="{% url 'portal:catalogue_standard' %}?activite={{ code }}">
+      {{ emoji_activite|get_item:code }} {{ libelle }}</a>
+  {% endfor %}
+</nav>
+
 <form method="post" action="{% url 'portal:catalogue_copier' %}">
   {% csrf_token %}
+  <input type="hidden" name="activite" value="{{ activite_courante }}">
   {% for categorie, items in paires %}
     <h2>{{ categorie }}</h2>
     <ul>
@@ -28,8 +40,14 @@
         </li>
       {% endfor %}
     </ul>
+  {% empty %}
+    <p class="muted">Aucun produit type pour cette activité pour
+       l'instant : créez vos produits directement depuis le mode édition
+       du dashboard « Mes produits ».</p>
   {% endfor %}
-  <button class="btn" type="submit">📥 Copier la sélection</button>
+  {% if paires %}
+    <button class="btn" type="submit">📥 Copier la sélection</button>
+  {% endif %}
 </form>
 <p><a href="{% url 'portal:dashboard' %}">← Retour à l'espace pro</a></p>
 {% endblock %}

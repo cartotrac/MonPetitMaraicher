@@ -16,6 +16,7 @@ from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from .forms import (AnnonceForm, BulletinForm, InscriptionClientForm,
@@ -23,10 +24,10 @@ from .forms import (AnnonceForm, BulletinForm, InscriptionClientForm,
                     ProfilExploitantForm, ProfilPersonnelForm)
 from .meteo import meteo_synthese
 from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
-                    Exploitant, LigneCommande, LignePanier, LigneRecolte,
-                    MembreExploitation, Panier, ParametresVitrine,
-                    PointLivraison, PreferenceContact, Produit,
-                    ProduitStandard, ProfilClient, SemaineRecolte,
+                    Exploitant, Favori, LigneCommande, LignePanier,
+                    LigneRecolte, MembreExploitation, Panier,
+                    ParametresVitrine, PointLivraison, PreferenceContact,
+                    Produit, ProduitStandard, ProfilClient, SemaineRecolte,
                     exploitant_pour)
 from .notifications import notifier_client
 
@@ -149,6 +150,15 @@ def producer_detail(request, slug):
     equipe = [_membre(exploitant.user, "Gérant")]
     equipe += [_membre(m.user, "Associé·e")
                 for m in exploitant.membres.select_related("user")]
+    # Dispo restante par produit (colonne de saisie directe sur la
+    # vitrine : les quantités partent pré-remplies vers la commande).
+    restes = {}
+    if semaine:
+        offres_recolte, _mode = _offres_commande(exploitant, semaine)
+        restes = {o["produit"].pk: o["reste"] for o in offres_recolte}
+    est_favori = (request.user.is_authenticated
+                  and Favori.objects.filter(user=request.user,
+                                            exploitant=exploitant).exists())
     return render(request, "portal/producer_detail.html", {
         "exploitant": exploitant,
         "vitrine": vitrine,
@@ -158,6 +168,8 @@ def producer_detail(request, slug):
         "lignes": lignes,
         "groupes_categories": groupes,
         "semaines_avenir": semaines_avenir,
+        "restes": restes,
+        "est_favori": est_favori,
         "meteo": meteo_synthese(exploitant),
         "points_livraison": exploitant.points_livraison.all(),
         "creneaux": exploitant.creneaux.select_related("point_livraison"),
@@ -165,6 +177,40 @@ def producer_detail(request, slug):
 
 
 # ---------------------------------------------------------------- registres
+
+
+@login_required
+def favoris_toggle(request, slug):
+    """Ajoute/retire un producteur des favoris du client (étoile sur la
+    vitrine). Redirige vers la page du producteur."""
+    exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
+    favori = Favori.objects.filter(user=request.user,
+                                   exploitant=exploitant).first()
+    if favori:
+        favori.delete()
+        messages.info(request, f"{exploitant.nom_ferme} retiré de vos "
+                       "producteurs favoris.")
+    else:
+        Favori.objects.create(user=request.user, exploitant=exploitant)
+        messages.success(request, f"{exploitant.nom_ferme} ajouté à vos "
+                          "producteurs favoris ⭐")
+    return redirect("portal:producer_detail", slug=slug)
+
+
+@login_required
+def mes_producteurs(request):
+    """Les producteurs du client : favoris d'abord, puis les fermes chez
+    lesquelles il a déjà commandé — accès rapide sans recherche."""
+    favoris = (Favori.objects.filter(user=request.user)
+               .select_related("exploitant"))
+    deja_commandes = (Exploitant.objects.filter(
+        visible=True, commandes__client=request.user)
+        .exclude(pk__in=[f.exploitant_id for f in favoris])
+        .distinct().order_by("nom_ferme"))
+    return render(request, "portal/mes_producteurs.html", {
+        "favoris": [f.exploitant for f in favoris],
+        "deja_commandes": deja_commandes,
+    })
 
 
 def _enregistrer_image_externe(produit, url):
@@ -185,8 +231,10 @@ def register_exploitant(request):
             user = form.save()
             login(request, user)
             messages.success(
-                request, "Bienvenue ! Votre espace exploitant est prêt : "
-                "commencez par ajouter vos produits.")
+                request, "Bienvenue ! Votre espace producteur est prêt. "
+                "Complétez votre fiche (SIRET, logo, description, points de "
+                "livraison) depuis la page ⚙️ Paramètres, puis importez vos "
+                "produits depuis le catalogue de votre activité.")
             return redirect("portal:dashboard")
     else:
         form = InscriptionExploitantForm()
@@ -1320,10 +1368,16 @@ def points_manage(request):
 @exploitant_requis
 @proprietaire_requis
 def catalogue_standard(request):
-    """Catalogue embarqué de produits types (issue #1) : base de départ
-    copiable en un clic, avec traçabilité origine_standard."""
+    """Catalogues embarqués de produits types (issue #1), un par
+    activité : par défaut celui de l'activité de l'exploitant, tous les
+    autres restant accessibles (onglets)."""
     exploitant = exploitant_pour(request.user)
-    standards = ProduitStandard.objects.order_by("categorie", "nom")
+    activite_courante = (request.GET.get("activite", "")
+                         or exploitant.activite)
+    if activite_courante not in Exploitant.Activite.values:
+        activite_courante = Exploitant.Activite.MARAICHER
+    standards = (ProduitStandard.objects.filter(activite=activite_courante)
+                 .order_by("categorie", "nom"))
     deja_copies = set(Produit.objects.filter(
         exploitant=exploitant,
         origine_standard__isnull=False
@@ -1339,7 +1393,10 @@ def catalogue_standard(request):
         })
     paires = [(cat, groupes[cat]) for cat in ordre]
     return render(request, "portal/pro/catalogue_standard.html",
-                  {"paires": paires})
+                  {"paires": paires,
+                   "activite_courante": activite_courante,
+                   "activites": Exploitant.Activite.choices,
+                   "emoji_activite": Exploitant.ACTIVITE_EMOJIS})
 
 
 @login_required
@@ -1380,6 +1437,10 @@ def catalogue_copier(request):
                              "votre catalogue — complétez les prix si besoin.")
         else:
             messages.info(request, "Aucun nouveau produit copié.")
+        activite = request.POST.get("activite", "") or ""
+        if activite in Exploitant.Activite.values:
+            return redirect(f"{reverse('portal:catalogue_standard')}"
+                            f"?activite={activite}")
     return redirect("portal:catalogue_standard")
 
 
@@ -1485,6 +1546,14 @@ def _offres_commande(exploitant, semaine):
                            "prix": ligne.prix_unitaire,
                            "estime": ligne.quantite_estimee,
                            "reste": reste})
+        # Regroupement par catégorie à l'affichage : tri identique au
+        # catalogue (position et nom de catégorie, puis nom du produit).
+        offres.sort(key=lambda o: (
+            (o["produit"].categorie.position
+             if o["produit"].categorie else 9999) or 9999,
+            o["produit"].categorie.nom
+            if o["produit"].categorie else "zz",
+            o["produit"].nom))
         return offres, "recolte"
     for produit in (exploitant.produits.filter(actif=True)
                     .select_related("categorie")
@@ -1497,17 +1566,66 @@ def _offres_commande(exploitant, semaine):
     return offres, "catalogue"
 
 
+def _groupes_offres(offres):
+    """Offres regroupées par catégorie (les produits sans catégorie
+    forment le groupe « Autres produits » en fin de liste)."""
+    groupes = []
+    for offre in offres:
+        cat = offre["produit"].categorie
+        if not groupes or groupes[-1][0] != cat:
+            groupes.append((cat, []))
+        groupes[-1][1].append(offre)
+    sans = [g for g in groupes if g[0] is None]
+    groupes = [g for g in groupes if g[0] is not None] + sans
+    return groupes
+
+
+def _valeurs_prefill(request, offres, exploitant):
+    """Quantités pré-remplies : saisies sur la vitrine du producteur
+    (q_<produit>) ou reprise d'une commande (annulée, ou nouvelle) du
+    client connecté — sans repartir de zéro."""
+    valeurs = {}
+    par_produit = {}
+    for offre in offres:
+        par_produit[offre["produit"].pk] = offre["cle"]
+    for key, brut in request.GET.items():
+        if not key.startswith("q_"):
+            continue
+        try:
+            pk = int(key[2:])
+        except ValueError:
+            continue
+        brut = (brut or "").strip()
+        if brut and pk in par_produit:
+            valeurs[par_produit[pk]] = brut
+    reprise = request.GET.get("reprise", "")
+    if reprise and request.user.is_authenticated:
+        commande = (Commande.objects.filter(
+            pk=reprise, client=request.user,
+            exploitant=exploitant)
+            .prefetch_related("lignes__produit").first())
+        if commande is not None:
+            for ligne in commande.lignes.all():
+                cle = par_produit.get(ligne.produit_id)
+                if cle:
+                    valeurs[cle] = str(ligne.quantite)
+            valeurs["__date"] = commande.date_livraison.isoformat()
+            valeurs["__point"] = str(commande.point_livraison_id or "")
+    return valeurs
+
+
 def order_create(request, slug):
     """Le client choisit produits/quantités/date et soumet sa commande.
 
-    Avec une récolte publiée : les quantités affichées sont les
-    disponibilités restantes (estimation − commandes de la semaine).
-    Sans récolte : le catalogue au prix de référence, les quantités
-    restant soumises à validation et disponibilité du cultivateur.
+    Produits regroupés par catégorie. Avec une récolte publiée : les
+    quantités affichées sont les disponibilités restantes (estimation
+    − commandes de la semaine). Sans récolte : le catalogue au prix de
+    référence, quantités soumises à validation et disponibilité.
     Un exploitant ne peut pas se commander à lui-même via la vitrine.
 
-    Sans compte (nouveau client) : nom + téléphone obligatoires (l'e-mail
-    est optionnel, réservé newsletter/récoltes hebdo).
+    En cas d'erreur, le formulaire est ré-affiché avec les valeurs
+    saisies (rien n'est perdu). La reprise d'une commande annulée
+    pré-remplit quantités, date et point de livraison.
     """
     exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
     if (exploitant_pour(request.user) is not None
@@ -1524,6 +1642,27 @@ def order_create(request, slug):
                                              lundi__lte=lundi)
                .order_by("-lundi").first())
     offres, mode = _offres_commande(exploitant, semaine)
+    dates = _dates_livraison(exploitant, today)
+
+    def _afficher(soumis=None):
+        valeurs = dict(_valeurs_prefill(request, offres, exploitant))
+        date_pre = valeurs.pop("__date", "")
+        point_pre = valeurs.pop("__point", "")
+        contexte = {"exploitant": exploitant, "semaine": semaine,
+                    "offres": offres, "groupes": _groupes_offres(offres),
+                    "mode": mode,
+                    "points_livraison": exploitant.points_livraison.all(),
+                    "dates": dates}
+        contexte["valeurs"] = (soumis or {}).get("valeurs", valeurs)
+        contexte["date_choisie"] = ((soumis or {}).get("date_livraison", "")
+                                    or date_pre)
+        contexte["point_choisi"] = ((soumis or {}).get("point", "")
+                                    or point_pre)
+        contexte["invit"] = (soumis or {}).get("invit", "")
+        for cle in ("nom_client", "email_client", "telephone_client",
+                    "note"):
+            contexte[cle] = (soumis or {}).get(cle, "")
+        return render(request, "portal/order_create.html", contexte)
 
     if request.method == "POST":
         lignes_souhaitees, total = [], Decimal("0")
@@ -1543,15 +1682,15 @@ def order_create(request, slug):
                 messages.error(
                     request, f"« {produit.nom} » se vend à la pièce : "
                     "merci de commander un nombre entier.")
-                return redirect("portal:order_create", slug=slug)
+                return _afficher(_soumis(request, offres))
             # Récolte publiée : ne pas dépasser la disponibilité restante
             if offre["reste"] is not None and qty > offre["reste"]:
                 messages.error(
                     request, f"« {produit.nom} » : il ne reste que "
-                    f"~ {offre['reste']} {produit.unite_courte} cette "
+                    f"~ {offre['reste']} {produit.unite_pour(qty)} cette "
                     "semaine (déjà commandé). Le producteur ajustera "
                     "avec vous si besoin.")
-                return redirect("portal:order_create", slug=slug)
+                return _afficher(_soumis(request, offres))
             lignes_souhaitees.append((produit, offre["prix"], qty))
             total += qty * offre["prix"]
         point = exploitant.points_livraison.filter(
@@ -1559,7 +1698,7 @@ def order_create(request, slug):
         if point is None and exploitant.points_livraison.exists():
             messages.error(request, "Merci de choisir un point de "
                            "livraison pour votre commande.")
-            return redirect("portal:order_create", slug=slug)
+            return _afficher(_soumis(request, offres))
         try:
             date_livraison = datetime.date.fromisoformat(
                 request.POST["date_livraison"])
@@ -1569,7 +1708,7 @@ def order_create(request, slug):
                 or date_livraison < today):
             messages.error(request,
                            "Commande invalide : vérifiez les quantités et la date.")
-            return redirect("portal:order_create", slug=slug)
+            return _afficher(_soumis(request, offres))
         if request.user.is_authenticated:
             client, nom_client = request.user, (
                 request.user.get_full_name() or request.user.username)
@@ -1584,13 +1723,13 @@ def order_create(request, slug):
             # producteur : obligatoire et au format français (fixe/mobile).
             if not nom_client:
                 messages.error(request, "Merci d'indiquer votre nom.")
-                return redirect("portal:order_create", slug=slug)
+                return _afficher(_soumis(request, offres))
             if not _tel_valide(telephone_client):
                 messages.error(
                     request, "Merci d'indiquer un numéro de téléphone "
                     "valide (ex : 06 12 34 56 78) : c'est le moyen de "
                     "contact du producteur pour valider votre commande.")
-                return redirect("portal:order_create", slug=slug)
+                return _afficher(_soumis(request, offres))
         with transaction.atomic():
             commande = Commande.objects.create(
                 exploitant=exploitant, client=client,
@@ -1613,21 +1752,38 @@ def order_create(request, slug):
             f"via {contact} pour valider votre commande.")
         return redirect("portal:producer_detail", slug=slug)
 
-    # Dates futures correspondant aux jours de créneaux (28 jours)
+    return _afficher()
+
+
+def _soumis(request, offres):
+    """Capture des valeurs saisies (POST) pour ré-afficher le
+    formulaire sans rien perdre en cas d'erreur."""
+    valeurs = {}
+    for offre in offres:
+        brut = (request.POST.get(offre["cle"], "") or "").strip()
+        if brut:
+            valeurs[offre["cle"]] = brut
+    return {
+        "valeurs": valeurs,
+        "date_livraison": request.POST.get("date_livraison", ""),
+        "point": request.POST.get("point_livraison", ""),
+        "nom_client": request.POST.get("nom_client", ""),
+        "email_client": request.POST.get("email_client", ""),
+        "telephone_client": request.POST.get("telephone_client", ""),
+        "note": request.POST.get("note", ""),
+        "invit": "",
+    }
+
+
+def _dates_livraison(exploitant, today):
+    """Dates futures correspondant aux jours de créneaux (28 jours)."""
     jours = {c.jour for c in exploitant.creneaux.all()}
     dates = []
     for i in range(0, 29):
         d = today + datetime.timedelta(days=i)
         if d.isoweekday() in jours or not jours:
             dates.append(d)
-    return render(request, "portal/order_create.html", {
-        "exploitant": exploitant,
-        "semaine": semaine,
-        "offres": offres,
-        "mode": mode,
-        "points_livraison": exploitant.points_livraison.all(),
-        "dates": dates,
-    })
+    return dates
 
 
 @login_required

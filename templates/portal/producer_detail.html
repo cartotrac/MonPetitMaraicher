@@ -7,7 +7,7 @@
   {% if exploitant.logo %}<img class="producer-logo" src="{{ exploitant.logo.url }}" alt="Logo">{% elif vitrine.reseaux.logo_url %}<img class="producer-logo" src="{{ vitrine.reseaux.logo_url }}" alt="Logo">{% else %}<div class="producer-logo placeholder">🌱</div>{% endif %}
   <div>
     <h1>{{ exploitant.nom_ferme }}</h1>
-    <span class="badge badge-activite">{{ exploitant.get_activite_display }}</span>
+    <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
     {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Certifié AB</span>
     {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
     {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Agriculture paysanne</span>
@@ -15,6 +15,15 @@
     {% if exploitant.siret_valide %}<span class="badge badge-ok">✔ Compte pro vérifié (SIRET)</span>
     {% else %}<span class="badge badge-off">Producteur particulier</span>{% endif %}
     <p class="muted">{{ exploitant.adresse }} — {{ exploitant.code_postal }} {{ exploitant.ville }}</p>
+    <div class="producer-cta">
+      <a class="btn btn-lg" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander chez ce producteur</a>
+      {% if user.is_authenticated %}
+        <form method="post" class="inline" action="{% url 'portal:favoris_toggle' exploitant.slug %}">
+          {% csrf_token %}
+          <button class="btn btn-outline" type="submit">{% if est_favori %}⭐ Mes favoris{% else %}☆ Ajouter à mes producteurs{% endif %}</button>
+        </form>
+      {% endif %}
+    </div>
   </div>
 </div>
 
@@ -90,23 +99,28 @@
   {% if semaine and semaine.note %}<p class="flash info">{{ semaine.note }}</p>{% endif %}
   {% if lignes %}
     <p class="muted">Les quantités sont des estimations : elles vous informent des
-       disponibilités attendues. Le producteur ajuste au moment de la préparation.</p>
+       disponibilités attendues. Le producteur ajuste au moment de la préparation.
+       Saisissez directement vos quantités ci-dessous : elles seront reprises
+       sur la page de commande.</p>
+    <form method="get" action="{% url 'portal:order_create' exploitant.slug %}">
     {% for nom_cat, lignes_cat in groupes_categories %}
       <h3>{{ nom_cat }} <span class="muted">({{ lignes_cat|length }})</span></h3>
       <table class="table">
-        <thead><tr><th>Produit</th><th>Disponibilité estimée</th><th>Prix</th></tr></thead>
+        <thead><tr><th>Produit</th><th>Disponibilité estimée</th><th>Prix</th><th>Ma quantité</th></tr></thead>
         <tbody>
         {% for ligne in lignes_cat %}
           <tr>
             <td>{% if ligne.produit.origine_standard and ligne.produit.origine_standard.emoji %}{{ ligne.produit.origine_standard.emoji }} {% endif %}{{ ligne.produit.nom }}</td>
-            <td>~ {{ ligne.quantite_estimee }} {{ ligne.quantite_estimee|unite:ligne.produit }}</td>
+            <td>~ {{ ligne.quantite_estimee|qte }} {{ ligne.quantite_estimee|unite:ligne.produit }}</td>
             <td>{{ ligne.prix_unitaire }} €</td>
+            <td>{% with reste=restes|get_item:ligne.produit_id %}{% if reste != '' and reste <= 0 %}<span class="muted">complet</span>{% else %}<input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="q_{{ ligne.produit.pk }}" placeholder="0" size="5">{% endif %}{% endwith %}</td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
     {% endfor %}
-    <a class="btn" href="{% url 'portal:order_create' exploitant.slug %}">Commander</a>
+    <button class="btn" type="submit">🛒 Commander ces quantités</button>
+    </form>
     {% if not user.is_authenticated %}
       <span class="muted">— sans compte : indiquez simplement un e-mail ou
         un téléphone, le producteur vous recontactera.</span>

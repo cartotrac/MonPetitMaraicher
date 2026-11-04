@@ -47,7 +47,7 @@
         <img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">
       {% endif %}
       <h2>{{ exploitant.nom_ferme }}</h2>
-      <span class="badge badge-activite">{{ exploitant.get_activite_display }}</span>
+      <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
       {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
       {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
       {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>

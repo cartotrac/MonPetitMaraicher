@@ -1,12 +1,31 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Inscription producteur — MonPetitProducteurLocal{% endblock %}
+{% block extra_style %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
 {% block content %}
 <h1>Créer mon espace producteur</h1>
-<p>Renseignez les informations de votre exploitation : elles seront visibles
-   sur votre page publique. Vous pourrez tout modifier ensuite.</p>
-<form method="post" enctype="multipart/form-data" class="form">
+<p class="muted">Trois informations suffisent pour créer votre espace :
+   le nom de votre exploitation, votre activité et votre localisation.
+   Tout le reste (SIRET, mode de production, logo, description,
+   téléphone, points de livraison…) se complète en deux minutes
+   ensuite depuis la page ⚙️ Paramètres.</p>
+<form method="post" class="form">
   {% csrf_token %}
   {{ form.as_p }}
+
+  <div id="carte-inscription" data-pick-map data-lat-input="id_latitude"
+       data-lon-input="id_longitude" style="height: 300px; border-radius: 8px; margin: 1rem 0;"></div>
+  <p class="muted">👆 Cliquez sur la carte pour positionner votre exploitation —
+     ou localisez votre ville automatiquement :</p>
+  <button type="button" class="btn btn-outline btn-sm"
+          data-geocoder data-cp="id_code_postal" data-ville="id_ville"
+          data-carte="carte-inscription"
+          data-libelle="📍 Localiser ma commune">📍 Localiser ma commune</button>
+
   <button class="btn btn-lg" type="submit">Créer mon espace pro</button>
 </form>
+{% endblock %}
+{% block extrajs %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/pick-map.js' %}" defer></script>
 {% endblock %}

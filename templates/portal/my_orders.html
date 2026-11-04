@@ -16,12 +16,16 @@
     <div class="card order-card">
       <div class="order-head">
         <strong>Commandé à {{ commande.exploitant.nom_ferme }}</strong>
-        <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
+        {% if commande.statut == 'NOUVELLE' %}
+          <span class="badge badge-encours">En cours de traitement</span>
+        {% else %}
+          <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
+        {% endif %}
       </div>
     <p>📅 {{ commande.date_livraison|date:"d/m/Y" }} — 💰 {{ commande.total }} €</p>
     <ul>
       {% for ligne in commande.lignes.all %}
-        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.quantite|unite:ligne.produit }}</li>
+        <li>{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}</li>
       {% endfor %}
     </ul>
     {% if panier %}
@@ -31,7 +35,7 @@
       <p class="muted">Contenu livré :</p>
       <ul>
         {% for row in resultat.lignes_panier %}
-          <li>{{ row.ligne.produit.nom }} × {{ row.ligne.quantite }} {{ row.ligne.quantite|unite:row.ligne.produit }}
+          <li>{{ row.ligne.produit.nom }} × {{ row.ligne.quantite|qte }} {{ row.ligne.quantite|unite:row.ligne.produit }}
               {% if row.ajuste %} <em>(souhaité : {{ row.souhaite }})</em> ⚠️ ajusté{% elif row.souhaite is None %} <em>(ajout du producteur)</em>{% endif %}</li>
         {% endfor %}
       </ul>
@@ -42,6 +46,9 @@
         {% csrf_token %}
         <button class="btn btn-outline" type="submit">Annuler</button>
       </form>
+    {% endif %}
+    {% if commande.statut == 'ANNULEE' %}
+      <a class="btn" href="{% url 'portal:order_create' commande.exploitant.slug %}?reprise={{ commande.pk }}">🔁 Recommander (quantités, date et point repris)</a>
     {% endif %}
     {% if panier and panier.statut != 'PREPARATION' and panier.point_livraison %}
       <p class="muted">📍 Retrait / livraison : <strong>{{ panier.point_livraison.nom }}</strong>

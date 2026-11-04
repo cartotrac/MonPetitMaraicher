@@ -23,3 +23,10 @@
 /* ---- Badge activité sur les vignettes producteurs ---- */
 .badge-activite { background: var(--accent-light); color: var(--accent-dark);
                  font-weight: 600; margin-right: 0.3rem; }
+
+/* ---- Statut client « en cours de traitement » (jaune) ---- */
+.badge-encours { background: #f5c518; color: #6b4e00; font-weight: 600; }
+
+/* ---- Bouton d'appel à la commande sur la vitrine ---- */
+.producer-cta { margin-top: 0.8rem; display: flex; gap: 0.6rem;
+                flex-wrap: wrap; align-items: center; }

@@ -6,11 +6,11 @@
 
 {% if mode == 'recolte' %}
   <p>Récolte de la semaine du {{ semaine.lundi|date:"d/m/Y" }}.
-     La « dispo restante » est l'estimation du cultivateur moins ce qui est
+     La « dispo restante » est l'estimation du producteur moins ce qui est
      déjà commandé cette semaine. Le producteur confirme au moment de la
      préparation.</p>
 {% else %}
-  <div class="flash warning">⚠️ Le cultivateur n'a pas publié de récolte
+  <div class="flash warning">⚠️ Le producteur n'a pas publié de récolte
     cette semaine : voici la liste de ses produits aux prix de référence.
     <strong>Les quantités commandées restent soumises à sa validation et
     aux disponibilités réelles</strong> — il vous recontacte pour ajuster
@@ -19,42 +19,47 @@
 
 <form method="post" class="form">
   {% csrf_token %}
-  <table class="table">
-    <thead><tr><th>Produit</th>{% if mode == 'recolte' %}<th>Récoltée</th><th>Reste (estimé)</th>{% endif %}<th>Prix</th><th>Quantité voulue</th></tr></thead>
-    <tbody>
-    {% for offre in offres %}
-      <tr>
-        <td>{{ offre.produit.nom }}</td>
-        {% if mode == 'recolte' %}
-          <td class="muted">~ {{ offre.estime }} {{ offre.estime|unite:offre.produit }}</td>
-          <td>{% if offre.reste > 0 %}<strong>~ {{ offre.reste|floatformat:"-2" }} {{ offre.reste|unite:offre.produit }}</strong>{% else %}<span class="muted">complet</span>{% endif %}</td>
-        {% endif %}
-        <td>{{ offre.prix }} €</td>
-        <td><input type="number" step="{% if offre.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="{{ offre.cle }}" placeholder="0" {% if offre.reste is not None and offre.reste <= 0 %}disabled title="Complet : déjà commandé cette semaine"{% endif %}></td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="5" class="muted">Aucun produit disponible à la commande pour l'instant.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  {% for cat, offres_groupe in groupes %}
+    <section class="harvest-cat">
+      <h3>{{ cat.nom|default:"Autres produits" }}</h3>
+      <table class="table">
+        <thead><tr><th>Produit</th>{% if mode == 'recolte' %}<th>Récoltée</th><th>Reste (estimé)</th>{% endif %}<th>Prix</th><th>Quantité voulue</th></tr></thead>
+        <tbody>
+        {% for offre in offres_groupe %}
+          <tr>
+            <td>{{ offre.produit.nom }}</td>
+            {% if mode == 'recolte' %}
+              <td class="muted">~ {{ offre.estime }} {{ offre.estime|unite:offre.produit }}</td>
+              <td>{% if offre.reste > 0 %}<strong>~ {{ offre.reste|qte }} {{ offre.reste|unite:offre.produit }}</strong>{% else %}<span class="muted">complet</span>{% endif %}</td>
+            {% endif %}
+            <td>{{ offre.prix }} €</td>
+            <td><input type="number" step="{% if offre.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="{{ offre.cle }}" placeholder="0" value="{{ valeurs|get_item:offre.cle|default:'' }}" {% if offre.reste is not None and offre.reste <= 0 %}disabled title="Complet : déjà commandé cette semaine"{% endif %}></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% empty %}
+    <p class="muted">Aucun produit disponible à la commande pour l'instant.</p>
+  {% endfor %}
 
   {% if not user.is_authenticated %}
     <div class="card param-card">
       <h3>Vous n'avez pas de compte ? Pas de souci 🌱</h3>
-      <p class="muted">Laissez votre numéro : le cultivateur vous appelle
+      <p class="muted">Laissez votre numéro : le producteur vous appelle
          pour valider votre commande. L'e-mail est optionnel — il permet
          de recevoir la liste des récoltes de la semaine par newsletter.</p>
       <div class="form-row">
         <label>Votre nom *
-          <input type="text" name="nom_client" required
+          <input type="text" name="nom_client" required value="{{ nom_client }}"
                  placeholder="Prénom et nom"></label>
         <label>Votre téléphone *
-          <input type="tel" name="telephone_client" required
+          <input type="tel" name="telephone_client" required value="{{ telephone_client }}"
                  pattern="(?:\+33|0033|0)[\s.-]*[1-9](?:[\s.-]*\d{2}){4}"
                  title="Numéro français : 06 12 34 56 78, 05 65 43 21 09…"
                  placeholder="06 12 34 56 78"></label>
         <label>Votre e-mail (optionnel, newsletter récoltes)
-          <input type="email" name="email_client"
+          <input type="email" name="email_client" value="{{ email_client }}"
                  placeholder="email (pour la newsletter)"></label>
       </div>
     </div>
@@ -64,7 +69,7 @@
     <label>Point de livraison / retrait (requis)
       <select name="point_livraison" required>
         {% for point in points_livraison %}
-          <option value="{{ point.pk }}">{{ point.nom }} — {{ point.ville }}</option>
+          <option value="{{ point.pk }}" {% if point.pk|stringformat:"s" == point_choisi %}selected{% endif %}>{{ point.nom }} — {{ point.ville }}</option>
         {% endfor %}
       </select></label>
   {% endif %}
@@ -72,12 +77,12 @@
   <label>Date souhaitée (selon les créneaux du producteur)
     <select name="date_livraison">
       {% for date in dates %}
-        <option value="{{ date|date:'Y-m-d' }}">{{ date|date:"l d F Y" }}</option>
+        <option value="{{ date|date:'Y-m-d' }}" {% if date|date:'Y-m-d' == date_choisie %}selected{% endif %}>{{ date|date:"l d F Y" }}</option>
       {% endfor %}
     </select></label>
 
   <label>Message pour le producteur (facultatif)
-    <textarea name="note" rows="3"></textarea></label>
+    <textarea name="note" rows="3">{{ note }}</textarea></label>
 
   <button class="btn btn-lg" type="submit">Envoyer ma commande</button>
   <a class="btn btn-outline" href="{% url 'portal:producer_detail' exploitant.slug %}">Retour</a>

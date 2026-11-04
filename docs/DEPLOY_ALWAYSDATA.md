@@ -125,6 +125,10 @@ venv/bin/python manage.py renumeroter_paniers --sech
 # Met à jour nom/e-mail/téléphone des commandes et paniers rattachés
 # à un compte, d'après les profils clients actuels
 venv/bin/python manage.py resynchroniser_clients --sech
+
+# Charge les catalogues de produits types par activité (maraîcher,
+# arboriculteur, éleveur, fromager, apiculteur) — idempotent
+venv/bin/python manage.py charger_catalogues_activites
 ```
 
 ## 6. Portabilité des données (bien commun)

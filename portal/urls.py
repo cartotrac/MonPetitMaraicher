@@ -57,6 +57,10 @@ urlpatterns = [
 
     # Espace client
     path("profil/", views.profil_client, name="profil_client"),
+    path("mes-producteurs/", views.mes_producteurs,
+         name="mes_producteurs"),
+    path("favoris/<slug:slug>/", views.favoris_toggle,
+         name="favoris_toggle"),
     path("commander/<slug:slug>/", views.order_create, name="order_create"),
     path("mes-commandes/", views.my_orders, name="my_orders"),
     path("mes-commandes/<int:commande_id>/annuler/", views.order_cancel,
