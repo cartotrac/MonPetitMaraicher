@@ -106,13 +106,14 @@ class ProfilExploitantForm(forms.ModelForm):
     field_order = ["nom_ferme", "activite", "siret", "mode_production",
                    "logo", "logo_externe", "description", "adresse", "ville",
                    "code_postal", "departement", "telephone", "latitude",
-                   "longitude"]
+                   "longitude", "est_demo"]
 
     class Meta:
         model = Exploitant
         fields = ["nom_ferme", "activite", "siret", "mode_production",
                   "logo", "description", "adresse", "ville", "code_postal",
-                  "departement", "telephone", "latitude", "longitude"]
+                  "departement", "telephone", "latitude", "longitude",
+                  "est_demo"]
         labels = {"nom_ferme": "Nom de l'exploitation",
                   "activite": "Activité",
                   "siret": "SIRET (14 chiffres)",
@@ -121,7 +122,12 @@ class ProfilExploitantForm(forms.ModelForm):
                   "description": "Présentation",
                   "departement": "Département (auto si vide : 2 premiers chiffres du code postal)",
                   "latitude": "Latitude (optionnel, pour la carte)",
-                  "longitude": "Longitude (optionnel, pour la carte)"}
+                  "longitude": "Longitude (optionnel, pour la carte)",
+                  "est_demo": "Exploitation de démonstration"}
+        help_texts = {"est_demo": (
+            "Cochez pour marquer cette exploitation comme fictive "
+            "(test, formation, démo) : un badge 🧪 DÉMO la distingue "
+            "sur le portail.")}
 
 
 class ProfilPersonnelForm(forms.Form):
