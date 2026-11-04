@@ -1,14 +1,17 @@
 """Peuple l'instance avec des fermes et clients de DÉMONSTRATION.
 
-Crée trois exploitations fictives du Tarn (maraîcher, arboriculture et
-fromagerie) avec des catalogues MIXTES multi-catégories (issus des
-produits types), points de livraison et créneaux, récoltes de la
-semaine, clients de démo et un historique de commandes/paniers couvrant
-tous les statuts — de quoi montrer le portail de bout en bout en
-quelques clics.
+Crée des exploitations fictives — le Tarn, ses départements
+limitrophes (Aveyron, Aude, Hérault, Haute-Garonne, Tarn-et-Garonne),
+la Bretagne, la Loire, la Corse, La Réunion et la Martinique — avec
+des catalogues MIXTES multi-catégories (issus des produits types),
+points de livraison, créneaux, récoltes de la semaine, clients de démo
+et un historique de commandes/paniers couvrant tous les statuts : de
+quoi montrer le portail de bout en bout, y compris la recherche
+géographique, en quelques clics.
 
 Les fermes de démo sont identifiables partout (vignettes de recherche,
-carte, fiche producteur) par un badge 🧪 DÉMO.
+carte, fiche producteur) par un badge 🧪 DÉMO et le champ
+« Exploitation de démonstration » (page Paramètres).
 
 ⚠️ Toutes les données sont FICTIVES : noms, SIRET (valides au format
 Luhn mais inventés), adresses et coordonnées ne référencent aucune
@@ -18,15 +21,26 @@ Usage :
     python manage.py peupler_demo            # crée si absent (idempotent)
     python manage.py peupler_demo --purge   # supprime les comptes de démo
 
+La purge efface TOUS les comptes de démo : ceux du jeu actuel, tout
+compte en « demo.* » et toute exploitation marquée « démo » dans la
+base (même issue d'un jeu plus ancien) — le jeu peut donc être purgé
+et repeuplé à volonté.
+
 Comptes créés (mot de passe : demo1234!) :
-    demo.maraicher (producteur maraîcher)   — Les Jardins du Sor
-    demo.vergers   (producteur arboriculteur) — Les Vergers de l'Agout
-    demo.fromager  (producteur fromager)    — Ferme des Cabanes
-    demo.cliente   (cliente avec compte)
-    demo.client    (client avec compte)
+    Tarn        : demo.maraicher, demo.vergers, demo.fromager
+    Limitrophes : demo.aveyron.eleveur, demo.aveyron.maraicher,
+                  demo.aude.apiculteur, demo.herault.arboriculteur,
+                  demo.toulouse.fromager, demo.montauban.maraicher
+    Bretagne    : demo.brest.maraicher, demo.rennes.eleveur
+    Loire       : demo.loire.maraicher, demo.loire.apiculteur
+    Corse       : demo.corse.eleveur, demo.corse.fromager
+    Réunion     : demo.reunion.maraicher, demo.reunion.arboriculteur
+    Martinique  : demo.martinique.maraicher, demo.martinique.eleveur
+    Clients     : demo.cliente, demo.client
 """
 import datetime
 from decimal import Decimal
+from itertools import count
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
@@ -43,33 +57,51 @@ MOT_DE_PASSE_DEMO = "demo1234!"
 def _siret_valide(prefixe13):
     """Complète 13 chiffres par la clé de Luhn (règle du modèle Produit
     — indices pairs doublés depuis la gauche sur 14 chiffres)."""
-    chiffres = prefixe13
-    for cle in range(10):
-        candidat = chiffres + str(cle)
-        total = 0
-        for i, c in enumerate(candidat):
-            d = int(c)
-            if i % 2 == 0:
-                d *= 2
-                if d > 9:
-                    d -= 9
-            total += d
-        if total % 10 == 0:
-            return candidat
-    return chiffres + "0"
+    total = 0
+    for i, chiffre in enumerate(prefixe13):
+        valeur = int(chiffre)
+        if i % 2 == 0:
+            valeur *= 2
+            if valeur > 9:
+                valeur -= 9
+        total += valeur
+    cle = (10 - total % 10) % 10
+    return prefixe13 + str(cle)
 
+
+_SIRET_SEQ = count(1)
+
+
+def _ferme_spec(utilisateur, ferme, activite, mode, cp, adresse, ville,
+                lat, lon, tel, description, prix_base, mix, points,
+                creneaux, note_semaine, bulletin_objet, bulletin_corps):
+    """Construit la spécification d'une ferme de démo (appel compact).
+    Le préfixe SIRET (13 chiffres, clé de Luhn ajoutée ensuite) est
+    dérivé du code postal + un compteur global unique."""
+    return {
+        "utilisateur": utilisateur, "ferme": ferme, "activite": activite,
+        "mode": mode,
+        "siret_prefixe": cp + "123400" + str(next(_SIRET_SEQ)).zfill(2),
+        "adresse": adresse, "ville": ville, "cp": cp,
+        "lat": lat, "lon": lon, "tel": tel,
+        "description": description, "prix_base": prix_base, "mix": mix,
+        "points": points, "creneaux": creneaux, "note_semaine": note_semaine,
+        "bulletin": (bulletin_objet, bulletin_corps),
+    }
+
+
+A = Exploitant.Activite
+M = Exploitant.ModeProduction
 
 FERMES = [
+    # ── Tarn ──────────────────────────────────────────────────────
     {
         "utilisateur": "demo.maraicher",
         "ferme": "Les Jardins du Sor",
-        "activite": Exploitant.Activite.MARAICHER,
-        "mode": Exploitant.ModeProduction.PERMA,
+        "activite": A.MARAICHER, "mode": M.PERMA,
         "siret_prefixe": "8150012300003",
-        "adresse": "Chemin de Gandalou",
-        "ville": "Lavaur",
-        "cp": "81500",
-        "lat": 43.699, "lon": 1.915,
+        "adresse": "Chemin de Gandalou", "ville": "Lavaur",
+        "cp": "81500", "lat": 43.699, "lon": 1.915,
         "tel": "05 63 00 00 03",
         "description": ("Jardin maraîcher en permaculture dans la vallée "
                         "du Sor : légumes de saison, herbes aromatiques, "
@@ -77,12 +109,11 @@ FERMES = [
                         "distribution directe."),
         "prix_base": Decimal("2.20"),
         "mix": [
-            {"activite": Exploitant.Activite.MARAICHER, "limite": 24},
-            {"activite": Exploitant.Activite.ARBORICULTEUR,
-             "categorie": "Fruits", "limite": 6},
-            {"activite": Exploitant.Activite.ELEVEUR,
-             "categorie": "Œufs", "limite": 2},
-            {"activite": Exploitant.Activite.APICULTEUR, "limite": 3},
+            {"activite": A.MARAICHER, "limite": 24},
+            {"activite": A.ARBORICULTEUR, "categorie": "Fruits",
+             "limite": 6},
+            {"activite": A.ELEVEUR, "categorie": "Œufs", "limite": 2},
+            {"activite": A.APICULTEUR, "limite": 3},
         ],
         "points": [
             ("Marché de Lavaur", "Place de la Halle",
@@ -100,12 +131,10 @@ FERMES = [
     {
         "utilisateur": "demo.vergers",
         "ferme": "Les Vergers de l'Agout",
-        "activite": Exploitant.Activite.ARBORICULTEUR,
-        "mode": Exploitant.ModeProduction.AB,
+        "activite": A.ARBORICULTEUR, "mode": M.AB,
         "siret_prefixe": "8137012340001",
         "adresse": "Chemin des Hauts, lieu-dit Las Rives",
-        "ville": "Saint-Sulpice-la-Pointe",
-        "cp": "81370",
+        "ville": "Saint-Sulpice-la-Pointe", "cp": "81370",
         "lat": 43.656, "lon": 2.138,
         "tel": "05 63 00 00 01",
         "description": ("Vergers familiaux conduits en agriculture "
@@ -114,10 +143,9 @@ FERMES = [
                         "maturité et vendus en circuit court."),
         "prix_base": Decimal("1.90"),
         "mix": [
-            {"activite": Exploitant.Activite.ARBORICULTEUR, "limite": 20},
-            {"activite": Exploitant.Activite.APICULTEUR, "limite": 4},
-            {"activite": Exploitant.Activite.ELEVEUR,
-             "categorie": "Œufs", "limite": 3},
+            {"activite": A.ARBORICULTEUR, "limite": 20},
+            {"activite": A.APICULTEUR, "limite": 4},
+            {"activite": A.ELEVEUR, "categorie": "Œufs", "limite": 3},
         ],
         "points": [
             ("Marché de Saint-Sulpice", "Place de la Halle",
@@ -135,12 +163,10 @@ FERMES = [
     {
         "utilisateur": "demo.fromager",
         "ferme": "Ferme des Cabanes",
-        "activite": Exploitant.Activite.FROMAGER,
-        "mode": Exploitant.ModeProduction.PAYSAN,
+        "activite": A.FROMAGER, "mode": M.PAYSAN,
         "siret_prefixe": "8128076540002",
         "adresse": "Route de Montredon, lieu-dit Les Cabanes",
-        "ville": "Réalmont",
-        "cp": "81280",
+        "ville": "Réalmont", "cp": "81280",
         "lat": 43.778, "lon": 2.531,
         "tel": "05 63 00 00 02",
         "description": ("Ferme fromagère familiale en agriculture paysanne "
@@ -149,10 +175,9 @@ FERMES = [
                         "en bidons de cuivre."),
         "prix_base": Decimal("4.50"),
         "mix": [
-            {"activite": Exploitant.Activite.FROMAGER, "limite": 20},
-            {"activite": Exploitant.Activite.APICULTEUR, "limite": 2},
-            {"activite": Exploitant.Activite.ELEVEUR,
-             "categorie": "Œufs", "limite": 2},
+            {"activite": A.FROMAGER, "limite": 20},
+            {"activite": A.APICULTEUR, "limite": 2},
+            {"activite": A.ELEVEUR, "categorie": "Œufs", "limite": 2},
         ],
         "points": [
             ("Halte de Réalmont", "Place de la République",
@@ -167,6 +192,298 @@ FERMES = [
                      "Fromage frais du vendredi et caillé à emporter "
                      "directement au marché."),
     },
+    # ── Aveyron (2) ──────────────────────────────────────────────
+    _ferme_spec(
+        "demo.aveyron.eleveur", "Ferme de l'Aubrac", A.ELEVEUR, M.PAYSAN,
+        "12200", "Route de Laguiole, lieu-dit Coubjacou",
+        "Villefranche-de-Rouergue", 44.349, 2.032, "05 65 00 00 04",
+        "Élevage d'Aubrac en agriculture paysanne sur les causse : "
+        "viande de bœuf et d'agneau, vente directe à la ferme et au "
+        "marché de Villefranche.",
+        Decimal("6.00"),
+        [{"activite": A.ELEVEUR, "limite": 20},
+         {"activite": A.APICULTEUR, "limite": 3}],
+        [("Marché de Villefranche", "Place de la Halle",
+          "Villefranche-de-Rouergue", "12200", 44.350, 2.030)],
+        [(6, "08:00", "12:00", 0)],
+        "Agneaux de pâturage prêts pour les fêtes de fin d'année.",
+        "Viande de la semaine à la Ferme de l'Aubrac",
+        "Colis de bœuf et agneau disponibles à la ferme ; le miel de "
+        "causse part vite, réservez-le avec votre colis."),
+    _ferme_spec(
+        "demo.aveyron.maraicher", "Les Jardins de l'Ondes", A.MARAICHER,
+        M.AB, "12000", "Chemin des Berges, Vallon des Ondes",
+        "Rodez", 44.561, 2.575, "05 65 00 00 05",
+        "Maraîchage biologique sur les hauteurs de Rodez : légumes de "
+        "saison, salades et herbes, paniers hebdomadaires.",
+        Decimal("2.40"),
+        [{"activite": A.MARAICHER, "limite": 20},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché couvert de Rodez", "Place du Foirail",
+          "Rodez", "12000", 44.352, 2.573)],
+        [(6, "08:00", "12:30", 0), (4, "16:30", "19:00", 0)],
+        "Retour des épinards d'hiver et des mâches.",
+        "Paniers de la semaine aux Jardins de l'Ondes",
+        "Légumes racines, choux et salades d'hiver du Rouergue. "
+        "Paniers de 5 ou 8 € à retirer au Foirail."),
+    # ── Aude (1) ──────────────────────────────────────────────────
+    _ferme_spec(
+        "demo.aude.apiculteur", "Ruchers de la Clamoux", A.APICULTEUR,
+        M.AB, "11170", "Vallée de la Clamoux, lieu-dit La Prade",
+        "Caunes-Minervois", 43.336, 2.531, "04 68 00 00 06",
+        "Ruchers d'altitude sur les contreforts de la Montagne Noire : "
+        "miels de garrigue, châtaignier et fleurs de printemps, cires "
+        "et pollens, en bio.",
+        Decimal("4.00"),
+        [{"activite": A.APICULTEUR, "limite": 20},
+         {"activite": A.ARBORICULTEUR, "categorie": "Fruits", "limite": 4}],
+        [("Marché de Caunes", "Place de la Halle",
+          "Caunes-Minervois", "11170", 43.335, 2.530)],
+        [(3, "16:00", "19:00", 0)],
+        "Récolte de miel de châtaignier — berlingots disponibles.",
+        "Miel de la semaine aux Ruchers de la Clamoux",
+        "Miels de garrigue et de châtaignier du Minervois, cire "
+        "d'abeille et pollen frais. Vente au marché le mercredi."),
+    # ── Hérault (1) ───────────────────────────────────────────────
+    _ferme_spec(
+        "demo.herault.arboriculteur", "Les Oliviers du Vic", A.ARBORICULTEUR,
+        M.RAISONNE, "34500", "Chemin du Vic, lieu-dit Le Puech",
+        "Béziers", 43.343, 3.221, "04 67 00 00 07",
+        "Oliviers et vergers du Biterrois : huile d'olive de la "
+        "première pression, olives de table, pêches et abricots "
+        "de pleine saison, en agriculture raisonnée.",
+        Decimal("2.10"),
+        [{"activite": A.ARBORICULTEUR, "limite": 20},
+         {"activite": A.APICULTEUR, "limite": 3},
+         {"activite": A.ELEVEUR, "categorie": "Œufs", "limite": 3}],
+        [("Les Halles de Béziers", "Place Pierre-Pascal",
+          "Béziers", "34500", 43.341, 3.218)],
+        [(5, "08:00", "12:00", 0)],
+        "Nouvelle huile d'olive AOC — tombée début novembre.",
+        "Récolte de la semaine aux Oliviers du Vic",
+        "Huile d'olive nouvelle, olives cassées et pêches de vigne. "
+        "Œufs du jour et miel de garrigue en complément."),
+    # ── Haute-Garonne (1) ─────────────────────────────────────────
+    _ferme_spec(
+        "demo.toulouse.fromager", "Ferme du Lauragais", A.FROMAGER,
+        M.PAYSAN, "31250", "Route de Sorèze, lieu-dit Lacombe",
+        "Revel", 43.460, 2.004, "05 61 00 00 08",
+        "Ferme du Lauragais au bord du lac de Saint-Ferréol : tomme de "
+        "vache, fromages frais et yaourts au lait cru, fabrication "
+        "à la ferme deux fois par jour.",
+        Decimal("5.00"),
+        [{"activite": A.FROMAGER, "limite": 18},
+         {"activite": A.APICULTEUR, "limite": 2},
+         {"activite": A.ELEVEUR, "categorie": "Œufs", "limite": 2}],
+        [("Halle de Revel", "Place de la Halle",
+          "Revel", "31250", 43.455, 2.007)],
+        [(6, "09:00", "12:00", 0), (2, "17:00", "19:00", 0)],
+        "Yaourts au lait cru à la vanille — fabrication du samedi.",
+        "Fromages de la semaine à la Ferme du Lauragais",
+        "Tomme de vache du Lauragais, fromage frais et yaourts. "
+        "La traite du soir, c'est à 17 h : venez y goûter !"),
+    # ── Tarn-et-Garonne (1) ───────────────────────────────────────
+    _ferme_spec(
+        "demo.montauban.maraicher", "Jardins du Tarn-et-Garonne",
+        A.MARAICHER, M.PERMA, "82000", "Chemin de Sapiac",
+        "Montauban", 44.017, 1.355, "05 63 00 00 09",
+        "Maraîchage en permaculture dans la plaine du Tarn : légumes "
+        "de saison, aromatiques et petits fruits, paniers et marché "
+        "de Montauban.",
+        Decimal("2.30"),
+        [{"activite": A.MARAICHER, "limite": 18},
+         {"activite": A.ARBORICULTEUR, "categorie": "Fruits", "limite": 5},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché de Sapiac", "Marché couvert de Sapiac",
+          "Montauban", "82000", 44.012, 1.348)],
+        [(6, "08:00", "12:00", 0), (3, "16:30", "19:00", 0)],
+        "Choux-fleurs et brocolis — pleine saison.",
+        "Paniers de la semaine aux Jardins du Tarn-et-Garonne",
+        "Légumes d'automne de la plaine : choux, poireaux, salades. "
+        "Pommes et poires du verger en supplément du panier."),
+    # ── Bretagne (2) ──────────────────────────────────────────────
+    _ferme_spec(
+        "demo.brest.maraicher", "Jardins de l'Élorn", A.MARAICHER, M.AB,
+        "29000", "Route de Landerneau, lieu-dit Kerivad",
+        "Quimper", 47.996, -4.108, "02 98 00 00 10",
+        "Maraîchage bio en bord d'Élorn : choux-fleurs, artichauts, "
+        "poireaux et pommes de terre de primeur, le goût du "
+        "littoral breton.",
+        Decimal("2.60"),
+        [{"activite": A.MARAICHER, "limite": 20},
+         {"activite": A.ELEVEUR, "categorie": "Œufs", "limite": 3},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché de Quimper", "Place du Jubilé",
+          "Quimper", "29000", 47.997, -4.100)],
+        [(5, "08:00", "12:30", 0)],
+        "Artichauts bretons primeurs — arrive en quantité cette semaine.",
+        "Paniers de la semaine aux Jardins de l'Élorn",
+        "Choux-fleurs, artichauts et poireaux du Finistère. Œufs "
+        "de pleines mer du vendredi, beurre demi-sel de la ferme."),
+    _ferme_spec(
+        "demo.rennes.eleveur", "Ferme de la Vilaine", A.ELEVEUR, M.RAISONNE,
+        "35600", "Les Rives de la Vilaine, lieu-dit Tréhan",
+        "Redon", 47.652, -2.083, "02 99 00 00 11",
+        "Élevage bovin en agriculture raisonnée dans la vallée de la "
+        "Vilaine : veaux, bœufs et porc de la ferme, colis et "
+        "vente directe.",
+        Decimal("5.80"),
+        [{"activite": A.ELEVEUR, "limite": 18},
+         {"activite": A.FROMAGER, "limite": 5}],
+        [("Marché de Redon", "Place de la République",
+          "Redon", "35600", 47.650, -2.080)],
+        [(6, "08:30", "12:30", 0)],
+        "Colis de bœuf : commandes avant le vendredi midi.",
+        "Viande de la semaine à la Ferme de la Vilaine",
+        "Colis de bœuf et de veau de la vallée de la Vilaine ; "
+        "tomme fermière et fromage frais en complément du colis."),
+    # ── Loire (2) ─────────────────────────────────────────────────
+    _ferme_spec(
+        "demo.loire.maraicher", "Jardins du Gier", A.MARAICHER, M.PERMA,
+        "42400", "Rue du Gier, lieu-dit Montferré",
+        "Saint-Chamond", 45.473, 4.522, "04 77 00 00 12",
+        "Maraîchage en permaculture dans la vallée du Gier : légumes "
+        "de saison et aromatiques, paniers hebdomadaires à "
+        "Saint-Chamond et Saint-Étienne.",
+        Decimal("2.50"),
+        [{"activite": A.MARAICHER, "limite": 18},
+         {"activite": A.ARBORICULTEUR, "categorie": "Fruits", "limite": 5},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché de Saint-Chamond", "Place de la Halle",
+          "Saint-Chamond", "42400", 45.470, 4.530),
+         ("Marché de Saint-Étienne", "Grand Marché de Carnot",
+          "Saint-Étienne", "42000", 45.439, 4.387)],
+        [(6, "08:00", "12:00", 0), (5, "08:00", "12:00", 1)],
+        "Cardons et blettes du Gier, spécialités foréziennes.",
+        "Paniers de la semaine aux Jardins du Gier",
+        "Légumes de la vallée du Gier : cardons, blettes, poireaux. "
+        "Pommes du Pilat et miel de sapin en supplément."),
+    _ferme_spec(
+        "demo.loire.apiculteur", "Ruchers du Pilat", A.APICULTEUR, M.AB,
+        "42220", "Route du Pilat, lieu-dit Les Sellières",
+        "Bourg-Argental", 45.322, 4.292, "04 77 00 00 13",
+        "Ruchers d'altitude dans le parc naturel du Pilat : miels de "
+        "sapin, d'acacia et de montagne, gelée royale et propolis, "
+        "en agriculture biologique.",
+        Decimal("5.20"),
+        [{"activite": A.APICULTEUR, "limite": 20},
+         {"activite": A.ARBORICULTEUR, "categorie": "Fruits", "limite": 4}],
+        [("Marché de Bourg-Argental", "Place de la Halle",
+          "Bourg-Argental", "42220", 45.320, 4.290)],
+        [(3, "16:00", "19:00", 0)],
+        "Miel de sapin du Pilat — récolte d'altitude exceptionnelle.",
+        "Miel de la semaine aux Ruchers du Pilat",
+        "Miels de sapin et d'acacia du massif du Pilat, pollen et "
+        "propolis. Pommes des vergers voisins en supplément."),
+    # ── Corse (2) ─────────────────────────────────────────────────
+    _ferme_spec(
+        "demo.corse.eleveur", "Bergerie de Restonica", A.ELEVEUR, M.PAYSAN,
+        "20250", "Route de la Restonica, lieu-dit Talcu",
+        "Corte", 42.309, 9.148, "04 95 00 00 14",
+        "Bergerie transhumante de la vallée de la Restonica : agneaux "
+        "de lait, brocciu et charcuterie de montagne, les saveurs "
+        "de la Corse de l'intérieur.",
+        Decimal("7.00"),
+        [{"activite": A.ELEVEUR, "limite": 18},
+         {"activite": A.FROMAGER, "limite": 6},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché de Corte", "Place Paoli",
+          "Corte", "20250", 42.306, 9.150)],
+        [(5, "08:00", "12:00", 0)],
+        "Brocciu frais de la traite du matin — du mardi au vendredi.",
+        "Produits de la semaine à la Bergerie de Restonica",
+        "Brocciu AOP, agneau de lait et figatellu de la vallée. "
+        "Miel de maquis de nos ruchers d'altitude en supplément."),
+    _ferme_spec(
+        "demo.corse.fromager", "Fromagerie de Balagne", A.FROMAGER, M.AB,
+        "20260", "Route de Calenzana, lieu-dit Spano",
+        "Calvi", 42.569, 8.762, "04 95 00 00 15",
+        "Fromagerie de brebis en Balagne, entre mer et montagne : "
+        "tomme corse, brin d'amour et fromages frais, en "
+        "agriculture biologique.",
+        Decimal("6.50"),
+        [{"activite": A.FROMAGER, "limite": 18},
+         {"activite": A.ELEVEUR, "categorie": "Œufs", "limite": 2}],
+        [("Port de Calvi", "Quai des Pêcheurs (étal été)",
+          "Calvi", "20260", 42.570, 8.760)],
+        [(6, "09:00", "12:30", 0)],
+        "Brin d'amour affiné 2 mois — lot limité.",
+        "Fromages de la semaine à la Fromagerie de Balagne",
+        "Tomme corse et brin d'amour de la Balagne, fromage frais "
+        "du vendredi. Œufs de la ferme voisine en supplément."),
+    # ── La Réunion (2) ────────────────────────────────────────────
+    _ferme_spec(
+        "demo.reunion.maraicher", "Légumes des Hauts", A.MARAICHER, M.AB,
+        "97410", "Chemin des Manguiers, Les Savannahs",
+        "Saint-Pierre", -21.339, 55.478, "06 92 00 00 16",
+        "Maraîchage bio sur les hauts de Saint-Pierre : chouchous, "
+        "brèdes, piments et légumes créoles, paniers du terroir "
+        "réunionnais.",
+        Decimal("3.00"),
+        [{"activite": A.MARAICHER, "limite": 20},
+         {"activite": A.ARBORICULTEUR, "categorie": "Fruits", "limite": 5}],
+        [("Marché forain de Saint-Pierre", "Terrain de l'Est",
+          "Saint-Pierre", "97410", -21.340, 55.480)],
+        [(6, "07:00", "11:00", 0), (3, "16:00", "18:00", 0)],
+        "Chouchous des hauts — pleine récolte cette semaine.",
+        "Paniers de la semaine aux Légumes des Hauts",
+        "Brèdes songes, chouchous, piments et légumes créoles de "
+        "La Réunion. Mangues et ananas Victoria du jardin en "
+        "supplément du panier."),
+    _ferme_spec(
+        "demo.reunion.arboriculteur", "Vanilleraie de Sainte-Suzanne",
+        A.ARBORICULTEUR, M.RAISONNE, "97441", "Chemin de la Vanilleraie",
+        "Sainte-Suzanne", -20.906, 55.612, "06 92 00 00 17",
+        "Vanilleraie et verger tropical au pied de la Rivière du "
+        "Mât : gousses de vanille Bourbon, ananas Victoria et "
+        "fruits de la passion, préparés à la ferme.",
+        Decimal("3.50"),
+        [{"activite": A.ARBORICULTEUR, "limite": 15},
+         {"activite": A.APICULTEUR, "limite": 3}],
+        [("Marché de Saint-André", "Champ Bazar",
+         "Saint-André", "97490", -20.960, 55.650)],
+        [(5, "07:30", "11:30", 0)],
+        "Ananas Victoria mûres — récolte du jeudi.",
+        "Récolte de la semaine à la Vanilleraie de Sainte-Suzanne",
+        "Gousses de vanille Bourbon préparées à la ferme, ananas "
+        "Victoria et fruits de la passion. Miel de fleurs tropicales "
+        "des ruches du jardin."),
+    # ── Martinique (2) ────────────────────────────────────────────
+    _ferme_spec(
+        "demo.martinique.maraicher", "Jardins Créoles du Lamentin",
+        A.MARAICHER, M.AB, "97232", "Route de Duclos, lieu-dit La Jetée",
+        "Le Lamentin", 14.610, -60.941, "06 96 00 00 18",
+        "Maraîchage bio en plein cœur de la Martinique : ignames, "
+        "dachines, christophines et légumes créoles, paniers "
+        "ékotè et marché du Lamentin.",
+        Decimal("3.20"),
+        [{"activite": A.MARAICHER, "limite": 18},
+         {"activite": A.APICULTEUR, "limite": 3}],
+        [("Marché du Lamentin", "Place du Marché Couvert",
+          "Le Lamentin", "97232", 14.608, -60.939)],
+        [(6, "07:00", "11:00", 0), (4, "15:30", "18:00", 0)],
+        "Ignames pays — récolte fraîche du jour.",
+        "Paniers de la semaine aux Jardins Créoles",
+        "Ignames, dachines, christophines et légumes créoles du "
+        "Lamentin. Miel de fleurs de canne des ruches de la "
+        "habitation voisine."),
+    _ferme_spec(
+        "demo.martinique.eleveur", "Élevage des Trois-Îlets",
+        A.ELEVEUR, M.PAYSAN, "97229", "Route d'Anse à l'Âne",
+        "Les Trois-Îlets", 14.541, -61.031, "06 96 00 00 19",
+        "Élevage paysan face à la baie de Fort-de-France : porc "
+        "créole, volailles de plein air et produits de la ferme "
+        "transformés sur place.",
+        Decimal("5.50"),
+        [{"activite": A.ELEVEUR, "limite": 16},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché des Trois-Îlets", "Place des Artisans",
+          "Les Trois-Îlets", "97229", 14.540, -61.035)],
+        [(5, "08:00", "12:00", 0)],
+        "Poulets de plein air — commande avant le jeudi.",
+        "Produits de la semaine à l'Élevage des Trois-Îlets",
+        "Porc créole, volailles de plein air et boudin de la "
+        "ferme. Miel de forêt tropicale en supplément du colis."),
 ]
 
 CLIENTS = [
@@ -180,8 +497,11 @@ CLIENTS = [
 
 
 class Command(BaseCommand):
-    help = ("Crée des données de démonstration fictives (fermes du Tarn, "
-            "clients, commandes et paniers). Idempotent ; --purge efface.")
+    help = ("Crée des données de démonstration fictives (Tarn et "
+            "départements limitrophes, Bretagne, Loire, Corse, Réunion, "
+            "Martinique ; clients, commandes et paniers). Idempotent ; "
+            "--purge efface tout compte de démo, même d'un jeu plus "
+            "ancien.")
 
     def add_arguments(self, parser):
         parser.add_argument("--purge", action="store_true",
@@ -195,8 +515,14 @@ class Command(BaseCommand):
         """Exploitation de démo : compte, fiche, catalogue, points,
         créneaux, récolte de la semaine, bulletin."""
         if User.objects.filter(username=spec["utilisateur"]).exists():
+            # Compte déjà présent : on s'assure au minimum qu'il porte
+            # le badge démo, puis on passe (idempotence).
+            Exploitant.objects.filter(
+                user__username=spec["utilisateur"]
+            ).update(est_demo=True)
             self.stdout.write(self.style.NOTICE(
-                f"Compte {spec['utilisateur']} déjà présent : ferme ignorée."))
+                f"Compte {spec['utilisateur']} déjà présent : ferme "
+                "ignorée (badge démo réappliqué)."))
             return None
         user = User.objects.create_user(
             username=spec["utilisateur"], password=MOT_DE_PASSE_DEMO,
@@ -275,11 +601,11 @@ class Command(BaseCommand):
             exploitant=exploitant, objet=spec["bulletin"][0],
             corps=spec["bulletin"][1])
         self.stdout.write(self.style.SUCCESS(
-            f"🌾 {exploitant.nom_ferme} créée (compte "
+            f"🌾 {exploitant.nom_ferme} créée ({spec['ville']}, compte "
             f"{spec['utilisateur']}, mot de passe {MOT_DE_PASSE_DEMO}) : "
             f"{len(produits)} produits en "
             f"{exploitant.categories.count()} catégories, "
-            f"{len(points)} points."))
+            f"{len(points)} point(s)."))
         return exploitant, produits, points
 
     def _clients(self):
@@ -354,15 +680,34 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options["purge"]:
-            n = 0
-            for spec in FERMES:
-                n += User.objects.filter(
-                    username=spec["utilisateur"]).delete()[0]
-            for spec in CLIENTS:
-                n += User.objects.filter(
-                    username=spec["utilisateur"]).delete()[0]
-            self.stdout.write(self.style.SUCCESS(
-                f"Données de démo supprimées ({n} objet(s))."))
+            # Purge LARGE : tout compte « demo.* », toute exploitation
+            # marquée « démo » (même créée par un jeu plus ancien
+            # aujourd'hui disparu de la liste) et les fermes du jeu
+            # courant (au cas où un compte aurait été renommé).
+            connus = ([s["utilisateur"] for s in FERMES]
+                      + [s["utilisateur"] for s in CLIENTS])
+            users = (User.objects.filter(username__startswith="demo.")
+                     | User.objects.filter(exploitant__est_demo=True)
+                     | User.objects.filter(
+                         exploitant__nom_ferme__in=[
+                             s["ferme"] for s in FERMES])
+                     ).distinct()
+            n, purges = 0, []
+            for user in users:
+                try:
+                    n += user.delete()[0]
+                    purges.append(user.username)
+                except Exception as erreur:  # PROTECT éventuel
+                    self.stdout.write(self.style.ERROR(
+                        f"Impossible de supprimer {user.username} "
+                        f"({erreur})."))
+            if connus and not purges:
+                self.stdout.write(self.style.NOTICE(
+                    "Aucun compte de démo trouvé à purger."))
+            elif purges:
+                self.stdout.write(self.style.SUCCESS(
+                    f"Comptes de démo supprimés : "
+                    f"{', '.join(sorted(purges))} ({n} objet(s))."))
             return
 
         clients = self._clients()
@@ -388,20 +733,21 @@ class Command(BaseCommand):
                            trois, Commande.Statut.VALIDEE, jours=6,
                            panier_statut=Panier.Statut.PREPARATION)
             # 3. Panier prêt (commande sans compte, au marché)
-            self._commande(exploitant, produits, points[1], None,
+            self._commande(exploitant, produits, points[-1], None,
                            deux, Commande.Statut.VALIDEE, jours=5,
                            panier_statut=Panier.Statut.PRET)
             # 4. Panier livré (lecture seule) avec un ajustement
             ajuste = {pick(1).pk: Decimal("2")}  # 3 kg souhaités → 2 livrés
-            self._commande(exploitant, produits, points[1], clients[0],
+            self._commande(exploitant, produits, points[-1], clients[0],
                            trois, Commande.Statut.VALIDEE, jours=-2,
                            panier_statut=Panier.Statut.LIVRE,
                            quantite_livree=ajuste)
         self.stdout.write(self.style.SUCCESS(
-            "Démonstration prête : 3 fermes fictives du Tarn (maraîcher, "
-            "arboriculture, fromagerie) avec catalogues multi-catégories, "
-            "2 clients, commandes à valider, paniers en préparation, "
-            "prêts et livrés (lecture seule)."))
+            f"Démonstration prête : {len(FERMES)} fermes fictives "
+            "(Tarn et départements limitrophes, Bretagne, Loire, Corse, "
+            "Réunion, Martinique) avec catalogues multi-catégories, "
+            f"{len(CLIENTS)} clients, commandes à valider, paniers en "
+            "préparation, prêts et livrés (lecture seule)."))
         self.stdout.write("Connexion producteur : demo.maraicher, "
-                          "demo.vergers ou demo.fromager — mot de passe "
-                          + MOT_DE_PASSE_DEMO)
+                          "demo.vergers, demo.fromager, etc. — mot de "
+                          "passe " + MOT_DE_PASSE_DEMO)
