@@ -5,19 +5,20 @@
 <h1>🛒 Commander chez {{ exploitant.nom_ferme }}</h1>
 
 {% if mode == 'recolte' %}
-  <p>Récolte de la semaine du {{ semaine.lundi|date:"d/m/Y" }}.
+  <p>{{ exploitant.vocab.recolte|capfirst }} de la semaine du {{ semaine.lundi|date:"d/m/Y" }}.
      La « dispo restante » est l'estimation du producteur moins ce qui est
      déjà commandé cette semaine. Le producteur confirme au moment de la
-     préparation.</p>
+     préparation. <strong>La ligne passe en orange si vous demandez plus
+     que la dispo restante</strong> : le producteur ajustera avec vous.</p>
 {% else %}
-  <div class="flash warning">⚠️ Le producteur n'a pas publié de récolte
+  <div class="flash warning">⚠️ Le producteur n'a pas publié de {{ exploitant.vocab.recolte }}
     cette semaine : voici la liste de ses produits aux prix de référence.
     <strong>Les quantités commandées restent soumises à sa validation et
     aux disponibilités réelles</strong> — il vous recontacte pour ajuster
     si besoin.</div>
 {% endif %}
 
-<form method="post" class="form">
+<form method="post" class="form" id="form-commande">
   {% csrf_token %}
   {% for cat, offres_groupe in groupes %}
     <section class="harvest-cat">
@@ -33,7 +34,7 @@
               <td>{% if offre.reste > 0 %}<strong>~ {{ offre.reste|qte }} {{ offre.reste|unite:offre.produit }}</strong>{% else %}<span class="muted">complet</span>{% endif %}</td>
             {% endif %}
             <td>{{ offre.prix }} €</td>
-            <td><input type="number" step="{% if offre.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="{{ offre.cle }}" placeholder="0" value="{{ valeurs|get_item:offre.cle|default:'' }}" {% if offre.reste is not None and offre.reste <= 0 %}disabled title="Complet : déjà commandé cette semaine"{% endif %}></td>
+            <td><input type="number" step="{% if offre.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="{{ offre.cle }}" placeholder="0" value="{{ valeurs|get_item:offre.cle|default:'' }}" data-nom="{{ offre.produit.nom }}" data-prix="{{ offre.prix }}" data-unite="{{ offre.produit.unite_courte }}" {% if offre.reste is not None %}data-reste="{{ offre.reste }}"{% endif %} {% if offre.reste is not None and offre.reste <= 0 %}disabled title="Complet : déjà commandé cette semaine"{% endif %}></td>
           </tr>
         {% endfor %}
         </tbody>
@@ -66,18 +67,18 @@
   {% endif %}
 
   {% if points_livraison %}
-    <label>Point de livraison / retrait (requis)
+    <label>{{ exploitant.vocab.point_livraison }} (requis)
       <select name="point_livraison" required>
         {% for point in points_livraison %}
-          <option value="{{ point.pk }}" {% if point.pk|stringformat:"s" == point_choisi %}selected{% endif %}>{{ point.nom }} — {{ point.ville }}</option>
+          <option value="{{ point.pk }}" data-jours="{{ points_jours|get_item:point.pk }}" {% if point.pk|stringformat:"s" == point_choisi %}selected{% endif %}>{{ point.nom }} — {{ point.ville }}</option>
         {% endfor %}
       </select></label>
   {% endif %}
 
-  <label>Date souhaitée (selon les créneaux du producteur)
+  <label>Date souhaitée (selon les créneaux du producteur pour ce point)
     <select name="date_livraison">
-      {% for date in dates %}
-        <option value="{{ date|date:'Y-m-d' }}" {% if date|date:'Y-m-d' == date_choisie %}selected{% endif %}>{{ date|date:"l d F Y" }}</option>
+      {% for d, j in dates %}
+        <option value="{{ d|date:'Y-m-d' }}" data-jour="{{ j }}" {% if d|date:'Y-m-d' == date_choisie %}selected{% endif %}>{{ d|date:"l d F Y" }}</option>
       {% endfor %}
     </select></label>
 
@@ -87,4 +88,135 @@
   <button class="btn btn-lg" type="submit">Envoyer ma commande</button>
   <a class="btn btn-outline" href="{% url 'portal:producer_detail' exploitant.slug %}">Retour</a>
 </form>
+
+<!-- Récapitulatif avant envoi : fenêtre de confirmation -->
+<div class="modal-recap" id="modal-recap" hidden>
+  <div class="modal-recap-fond"></div>
+  <div class="card modal-recap-boite">
+    <h3>🧾 Récapitulatif de votre commande</h3>
+    <p class="muted">Vérifiez avant d'envoyer — le producteur confirme au
+       moment de la préparation.</p>
+    <ul id="recap-lignes"></ul>
+    <p><strong>Total estimé : <span id="recap-total"></span> €</strong></p>
+    <p class="muted" id="recap-livraison"></p>
+    <p class="muted" id="recap-contact"></p>
+    <div class="recap-actions">
+      <button type="button" class="btn" id="recap-confirmer">✅ Confirmer l'envoi</button>
+      <button type="button" class="btn btn-outline" id="recap-annuler">↩️ Modifier ma commande</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extrajs %}
+<script>
+/* Lignes en excès : quantité saisie supérieure à la disponibilité
+   restante estimée → la ligne passe en orange (alerte visuelle ; la
+   commande reste soumise à l'ajustement du producteur). */
+(function () {
+  document.querySelectorAll("input[data-reste]").forEach(function (champ) {
+    champ.addEventListener("input", function () {
+      var ligne = champ.closest("tr");
+      if (!ligne) { return; }
+      var reste = parseFloat(champ.dataset.reste);
+      var valeur = parseFloat(champ.value);
+      ligne.classList.toggle("ligne-exces",
+        !isNaN(reste) && !isNaN(valeur) && valeur > reste);
+    });
+  });
+})();
+
+/* Récapitulatif avant envoi : intercepte la soumission, montre un
+   récap des lignes saisies (produit, quantité, prix, total) puis
+   laisse le formulaire partir au second clic de confirmation. */
+(function () {
+  var formulaire = document.getElementById("form-commande");
+  var modal = document.getElementById("modal-recap");
+  if (!formulaire || !modal) { return; }
+  var lignes = document.getElementById("recap-lignes");
+  var total = document.getElementById("recap-total");
+  var livraison = document.getElementById("recap-livraison");
+  var contact = document.getElementById("recap-contact");
+  var confirme = false;
+
+  function texteOption(sel) {
+    return sel && sel.options[sel.selectedIndex]
+      ? sel.options[sel.selectedIndex].text : "";
+  }
+
+  formulaire.addEventListener("submit", function (evenement) {
+    if (confirme) { return; }
+    evenement.preventDefault();
+    var lignesChoisies = [];
+    var totalNum = 0;
+    formulaire.querySelectorAll("input[data-nom]").forEach(
+      function (champ) {
+        var qte = parseFloat(champ.value);
+        if (!qte || qte <= 0) { return; }
+        var prix = parseFloat(champ.dataset.prix) || 0;
+        totalNum += qte * prix;
+        lignesChoisies.push(
+          "• " + champ.dataset.nom + " × " + qte + " "
+          + champ.dataset.unite + " (" + prix.toFixed(2).replace(".", ",")
+          + " €/" + champ.dataset.unite + ")");
+      });
+    if (!lignesChoisies.length) {
+      alert("Sélectionnez au moins un produit (quantité > 0) "
+            + "avant d'envoyer votre commande.");
+      return;
+    }
+    lignes.innerHTML = "";
+    lignesChoisies.forEach(function (texte) {
+      var li = document.createElement("li");
+      li.textContent = texte;
+      lignes.appendChild(li);
+    });
+    total.textContent = totalNum.toFixed(2).replace(".", ",");
+    var point = formulaire.querySelector("select[name='point_livraison']");
+    var date = formulaire.querySelector("select[name='date_livraison']");
+    livraison.textContent = "📍 " + (point ? texteOption(point) + " — " : "")
+      + (date ? texteOption(date) : "");
+    var nom = formulaire.querySelector("input[name='nom_client']");
+    var tel = formulaire.querySelector("input[name='telephone_client']");
+    contact.textContent = (nom ? "👤 " + nom.value + " " : "")
+      + (tel ? "· 📞 " + tel.value : "");
+    modal.hidden = false;
+  });
+
+  document.getElementById("recap-confirmer").addEventListener(
+    "click", function () {
+      confirme = true;
+      modal.hidden = true;
+      formulaire.submit();
+    });
+  document.getElementById("recap-annuler").addEventListener(
+    "click", function () { modal.hidden = true; });
+  modal.querySelector(".modal-recap-fond").addEventListener(
+    "click", function () { modal.hidden = true; });
+})();
+
+/* Dates proposées : filtrées selon le point de livraison choisi (les
+   créneaux de ce point cadrent les jours possibles). */
+(function () {
+  var point = document.querySelector("select[name='point_livraison']");
+  var date = document.querySelector("select[name='date_livraison']");
+  if (!point || !date) { return; }
+  function majDates() {
+    var opt = point.options[point.selectedIndex];
+    var jours = (opt && opt.dataset.jours)
+      ? opt.dataset.jours.split(",").map(Number) : null;
+    Array.prototype.forEach.call(date.options, function (o) {
+      var autorise = !jours
+        || jours.indexOf(Number(o.dataset.jour)) !== -1;
+      o.hidden = !autorise;
+    });
+    var choix = date.selectedOptions[0];
+    if (choix && choix.hidden) {
+      var premiere = date.querySelector("option:not([hidden])");
+      if (premiere) { date.value = premiere.value; }
+    }
+  }
+  point.addEventListener("change", majDates);
+  majDates();
+})();
+</script>
 {% endblock %}

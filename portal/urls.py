@@ -24,6 +24,7 @@ urlpatterns = [
     # Espace pro
     path("espace-pro/", views.dashboard, name="dashboard"),
     path("parametres/", views.parametres, name="parametres"),
+    path("espace-produits/", views.product_list, name="product_list"),
     path("espace-produits/ajouter/", views.produit_creer,
          name="product_create"),
     path("espace-produits/edition-rapide/", views.produit_edition_rapide,

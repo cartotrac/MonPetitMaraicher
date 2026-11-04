@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load unites %}
 {% block title %}Saisir une commande — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>📝 Saisir une commande</h1>
@@ -64,23 +65,40 @@
   </div>
 
   <h2>Produits commandés</h2>
-  <table class="table">
-    <thead><tr><th>Produit</th><th>Quantité</th><th>Prix de référence</th></tr></thead>
-    <tbody>
-    {% for produit in produits %}
-      <tr>
-        <td>{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }} <span class="muted">({{ produit.unite_courte }})</span>
-          {% if produit.prix is None %}<span class="badge badge-off">prix à définir</span>{% endif %}</td>
-        <td><input type="number" name="qty_{{ produit.pk }}" min="0"
-                   step="{% if produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}"
-                   placeholder="0"></td>
-        <td>{% if produit.prix %}{{ produit.prix }} €{% else %}—{% endif %}</td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="3" class="muted">Votre catalogue est vide.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  {% if mode == 'recolte' and semaine %}
+    <p class="muted">Quantités estimées de la {{ exploitant.vocab.recolte }}
+       de la semaine du {{ semaine.lundi|date:"d/m/Y" }} : la colonne
+       « Reste » est l'estimation moins ce qui est déjà commandé. Vous
+       pouvez saisir plus : le panier reste ajustable à la préparation.</p>
+  {% endif %}
+  {% for cat, liste in paires %}
+    <section class="harvest-cat">
+      <h3>{{ cat.nom|default:"Autres produits" }}</h3>
+      <table class="table">
+        <thead><tr><th>Produit</th><th>Quantité</th>{% if mode == 'recolte' %}<th>Estimé</th><th>Reste (estimé)</th>{% endif %}<th>Prix de référence</th></tr></thead>
+        <tbody>
+        {% for produit in liste %}
+          <tr>
+            <td>{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }} <span class="muted">({{ produit.unite_courte }})</span>
+              {% if produit.prix is None %}<span class="badge badge-off">prix à définir</span>{% endif %}</td>
+            <td><input type="number" name="qty_{{ produit.pk }}" min="0"
+                       step="{% if produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}"
+                       placeholder="0"></td>
+            {% if mode == 'recolte' %}
+              {% with dispo=restes|get_item:produit.pk %}
+              <td class="muted">{% if dispo %}~ {{ dispo.0|qte }} {{ dispo.0|unite:produit }}{% else %}—{% endif %}</td>
+              <td>{% if dispo and dispo.1 > 0 %}<strong>~ {{ dispo.1|qte }} {{ dispo.1|unite:produit }}</strong>{% elif dispo %}<span class="muted">complet</span>{% else %}—{% endif %}</td>
+              {% endwith %}
+            {% endif %}
+            <td>{% if produit.prix %}{{ produit.prix }} €{% else %}—{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% empty %}
+    <p class="muted">Votre catalogue est vide.</p>
+  {% endfor %}
 
   <div class="save-bar">
     <button class="btn btn-lg" type="submit">💾 Enregistrer la commande</button>

@@ -161,3 +161,7 @@ details.bloc-replie > summary .aide-replier { font-size: 0.7em;
 
 
 
+/* ---- Commande client : ligne en excès (quantité > dispo restante
+       estimée) : alerte visuelle orange, la commande reste possible ---- */
+.table tr.ligne-exces td { background: #ffe9d6; }
+.table tr.ligne-exces td input { border-color: #e0862d; background: #fff4e5; }

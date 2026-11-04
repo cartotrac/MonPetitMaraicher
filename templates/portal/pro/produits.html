@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Produits — {{ exploitant.nom_ferme }}{% endblock %}
+{% block content %}
+<h1>🥕 Produits</h1>
+<p class="muted">Édition complète du catalogue : libellé, unité, prix,
+   ordre, catégories, ajout et retrait — en place ou en lot. Le
+   <a href="{% url 'portal:dashboard' %}#produits">dashboard</a> ne garde
+   que les catégories et le déplacement des produits.</p>
+<p class="retour-edition">
+    <a class="btn btn-outline btn-sm" href="{% url 'portal:product_create' %}">➕ Produit détaillé (photo)</a>
+    <a class="btn btn-outline btn-sm" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
+</p>
+
+{% if not paires %}
+  <p class="muted">Aucun produit pour l'instant — ajoutez-en ci-dessous
+     (ou <a href="{% url 'portal:catalogue_standard' %}">importez le catalogue
+     de produits types</a>).</p>
+{% endif %}
+
+<form method="post" action="{% url 'portal:product_quick_edit' %}" id="form-produits">
+    {% csrf_token %}
+    <input type="hidden" name="retour" value="produits">
+    <div id="bloc-produits" class="edition">
+      {% for cat, liste in paires %}
+        <h3><span class="view">{{ cat.nom|default:"Sans catégorie" }}</span>
+          {% if cat.pk %}
+            <span class="edit">
+              <input type="text" name="nom_cat_{{ cat.pk }}" value="{{ cat.nom }}" maxlength="80" size="16">
+              <button type="submit" name="action" value="categorie_renommer:{{ cat.pk }}" class="btn btn-sm" title="Renommer la catégorie">✏️</button>
+              <button type="submit" name="mouvement" value="categorie:{{ cat.pk }}:haut" class="btn btn-sm" title="Catégorie vers le haut">▲</button>
+              <button type="submit" name="mouvement" value="categorie:{{ cat.pk }}:bas" class="btn btn-sm" title="Catégorie vers le bas">▼</button>
+              <button type="submit" name="action" value="categorie_supprimer:{{ cat.pk }}"
+                      onclick="if(!confirm('Supprimer la catégorie « {{ cat.nom }} » ? Les produits deviennent « sans catégorie » (aucun produit supprimé).'))event.preventDefault();"
+                      class="btn btn-sm btn-danger" title="Supprimer la catégorie (les produits sont conservés)">🗑</button>
+            </span>
+          {% endif %}
+        </h3>
+        <table class="table table-produits">
+          <thead><tr><th>Produit</th><th>Unité</th><th>Prix (€)</th><th>Catégorie</th><th>Ordre</th><th>Retirer</th></tr></thead>
+          <tbody>
+            {% for produit in liste %}
+              <tr>
+                <td>
+                  <span class="view">{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }}</span>
+                  <input class="edit" type="text" name="nom_{{ produit.pk }}" value="{{ produit.nom }}" maxlength="150">
+                </td>
+                <td>
+                  <span class="view">{{ produit.unite_courte }}</span>
+                  <select class="edit" name="unite_{{ produit.pk }}">
+                    {% for code, libelle in unite_choices %}
+                      <option value="{{ code }}" {% if code == produit.unite_vente %}selected{% endif %}>{{ libelle }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <span class="view">{% if produit.prix %}{{ produit.prix }} €{% else %}<span class="muted">non renseigné</span>{% endif %}</span>
+                  <input class="edit" type="text" name="prix_{{ produit.pk }}" value="{% if produit.prix %}{{ produit.prix }}{% endif %}" size="7" inputmode="decimal">
+                </td>
+                <td>
+                  <select name="categorie_cible_{{ produit.pk }}">
+                    <option value="" {% if produit.categorie is None %}selected{% endif %}>— sans catégorie —</option>
+                    {% for c in categories %}
+                      <option value="{{ c.pk }}" {% if produit.categorie_id == c.pk %}selected{% endif %}>{{ c.nom }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" name="appliquer_categorie" value="{{ produit.pk }}" class="btn btn-sm" title="Déplacer dans la catégorie choisie">⇄</button>
+                </td>
+                <td>
+                  <button type="submit" name="mouvement" value="produit:{{ produit.pk }}:haut" class="btn btn-sm" title="Vers le haut">▲</button>
+                  <button type="submit" name="mouvement" value="produit:{{ produit.pk }}:bas" class="btn btn-sm" title="Vers le bas">▼</button>
+                </td>
+                <td>
+                  <input type="checkbox" name="supprimer" value="{{ produit.pk }}" title="Cocher pour retirer du catalogue">
+                  <button type="submit" name="action" value="produit_retirer:{{ produit.pk }}"
+                          onclick="if(!confirm('Retirer « {{ produit.nom }} » du catalogue ? Les commandes passées sont conservées.'))event.preventDefault();"
+                          class="btn btn-sm btn-danger" title="Retirer ce produit du catalogue">🗑</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endfor %}
+      <div class="card">
+        <h3>➕ Ajouter un produit</h3>
+        <div class="form-row">
+          <label>Nom <input type="text" name="nouveau_nom" placeholder="Ex : Radis rose"></label>
+          <label>Unité
+            <select name="nouveau_unite">
+              {% for code, libelle in unite_choices %}
+                <option value="{{ code }}">{{ libelle }}</option>
+              {% endfor %}
+            </select></label>
+          <label>Prix (€) <input type="text" name="nouveau_prix" size="7" inputmode="decimal" placeholder="ex : 2,50"></label>
+        </div>
+        <div class="form-row">
+          <label>Catégorie
+            <select name="nouvelle_categorie">
+              <option value="">— sans catégorie —</option>
+              {% for c in categories %}
+                <option value="{{ c.pk }}">{{ c.nom }}</option>
+              {% endfor %}
+            </select></label>
+          <label>… ou nouvelle catégorie <input type="text" name="nom_nouvelle_categorie" placeholder="Ex : Fruits"></label>
+          <button type="submit" name="action" value="produit_ajouter" class="btn">➕ Créer</button>
+        </div>
+      </div>
+      <p class="save-bar">
+        <button class="btn btn-enregistrer" type="submit">💾 Enregistrer les modifications</button>
+        <button type="submit" name="action" value="produits_retirer"
+                onclick="if(!confirm('Retirer du catalogue les produits cochés ? Les commandes passées sont conservées.'))event.preventDefault();"
+                class="btn btn-outline btn-sm">🗑 Retirer les produits cochés</button>
+        <span class="muted">Modifiez libellé, unité ou prix, reclassez avec ▲▼/⇄, renommez ou supprimez les catégories (✏️/🗑), cochez les produits à retirer, puis enregistrez. Prix vide = prix effacé.</span>
+      </p>
+    </div>
+  </form>
+{% endblock %}

@@ -338,6 +338,7 @@ def dashboard(request):
     paires = [(cat, groupes[cat]) for cat in ordre]
     return render(request, "portal/pro/dashboard.html", {
         "exploitant": exploitant,
+        "est_proprietaire": hasattr(request.user, "exploitant"),
         "paires": paires,
         "categories": list(Categorie.objects.filter(exploitant=exploitant)
                            .order_by("position", "nom")),
@@ -363,6 +364,37 @@ def dashboard(request):
 @login_required
 @exploitant_requis
 @proprietaire_requis
+def product_list(request):
+    """Page « Produits » dédiée (bandeau pro → Gestion → Produits) :
+    édition complète du catalogue — libellé, unité, prix, ordre,
+    catégories, ajout/retrait en lot — pendant que le dashboard ne
+    garde que la gestion des catégories et le déplacement des
+    produits entre catégories."""
+    exploitant = exploitant_pour(request.user)
+    produits = (exploitant.produits.filter(actif=True)
+                .select_related("categorie", "origine_standard")
+                .order_by("categorie__position", "categorie__nom",
+                          "position", "nom"))
+    groupes, ordre = {}, []
+    for p in produits:
+        cat = p.categorie
+        if cat not in groupes:
+            groupes[cat] = []
+            ordre.append(cat)
+        groupes[cat].append(p)
+    paires = [(cat, groupes[cat]) for cat in ordre]
+    return render(request, "portal/pro/produits.html", {
+        "exploitant": exploitant,
+        "paires": paires,
+        "categories": list(Categorie.objects.filter(exploitant=exploitant)
+                           .order_by("position", "nom")),
+        "unite_choices": Produit.Unite.choices,
+    })
+
+
+@login_required
+@exploitant_requis
+@proprietaire_requis
 def produit_creer(request):
     exploitant = exploitant_pour(request.user)
     if request.method == "POST":
@@ -374,7 +406,7 @@ def produit_creer(request):
                                         request.POST.get("image_externe", ""))
             produit.save()
             messages.success(request, f"Produit « {produit.nom} » ajouté.")
-            return redirect("portal:dashboard")
+            return redirect("portal:product_list")
     else:
         form = ProduitForm(exploitant=exploitant)
     return render(request, "portal/pro/product_form.html",
@@ -397,7 +429,7 @@ def produit_modifier(request, pk):
                                         request.POST.get("image_externe", ""))
             produit.save()
             messages.success(request, "Produit mis à jour.")
-            return redirect("portal:dashboard")
+            return redirect("portal:product_list")
     else:
         form = ProduitForm(instance=produit,
                            exploitant=exploitant_pour(request.user))
@@ -422,6 +454,12 @@ def produit_edition_rapide(request):
         else:
             qs = qs.filter(categorie__isnull=True)
         return list(qs.order_by("position", "nom"))
+
+    # Page de retour après l'action : la page « Produits » dédiée
+    # (retour=produits) ou le dashboard (défaut).
+    destination = ("portal:product_list"
+                   if request.POST.get("retour", "") == "produits"
+                   else "portal:dashboard")
 
     def _voisin(liste, produit, sens):
         """Produit à échanger avec `produit` dans l'ordre affiché."""
@@ -453,7 +491,7 @@ def produit_edition_rapide(request):
             cat = _cible_categorie()
             if cat is None:
                 messages.error(request, "Catégorie introuvable.")
-                return redirect("portal:dashboard")
+                return redirect(destination)
             nom = request.POST.get(f"nom_cat_{cat.pk}", "").strip()
             if nom:
                 cat.nom = nom[:80]
@@ -461,12 +499,12 @@ def produit_edition_rapide(request):
                 messages.success(request, f"Catégorie renommée « {cat.nom} ».")
             else:
                 messages.error(request, "Nom de catégorie vide.")
-            return redirect("portal:dashboard")
+            return redirect(destination)
         if nature_action == "categorie_supprimer":
             cat = _cible_categorie()
             if cat is None:
                 messages.error(request, "Catégorie introuvable.")
-                return redirect("portal:dashboard")
+                return redirect(destination)
             nb = cat.produits.count()
             Produit.objects.filter(categorie=cat).update(categorie=None,
                                                          position=0)
@@ -476,7 +514,24 @@ def produit_edition_rapide(request):
                 message += (f" — {nb} produit(s) désormais sans catégorie "
                             "(reclassez-les dans la colonne Catégorie).")
             messages.info(request, message + ".")
-            return redirect("portal:dashboard")
+            return redirect(destination)
+        if nature_action == "categorie_ajouter":
+            nom = request.POST.get("nouvelle_categorie", "").strip()
+            if not nom:
+                messages.error(request, "Nom de catégorie vide.")
+                return redirect(destination)
+            categorie = (Categorie.objects.filter(
+                exploitant=exploitant, nom__iexact=nom).first())
+            if categorie:
+                messages.info(request, f"La catégorie « {categorie.nom} » "
+                              "existe déjà.")
+                return redirect(destination)
+            position = (Categorie.objects.filter(exploitant=exploitant)
+                        .aggregate(m=Max("position"))["m"] or 0)
+            categorie = Categorie.objects.create(
+                exploitant=exploitant, nom=nom[:80], position=position + 1)
+            messages.success(request, f"Catégorie « {categorie.nom} » créée.")
+            return redirect(destination)
         if nature_action == "produit_retirer":
             try:
                 pk = int(cible_pk)
@@ -493,7 +548,7 @@ def produit_edition_rapide(request):
                 messages.info(request, f"« {produit.nom} » retiré du "
                               "catalogue (l'historique des commandes "
                               "passées est conservé).")
-            return redirect("portal:dashboard")
+            return redirect(destination)
         if nature_action == "produits_retirer":
             pks = request.POST.getlist("supprimer")
             concernes = Produit.objects.filter(pk__in=pks,
@@ -506,7 +561,7 @@ def produit_edition_rapide(request):
             else:
                 messages.error(request, "Cochez d'abord les produits à "
                                "retirer.")
-            return redirect("portal:dashboard")
+            return redirect(destination)
 
         # ▲▼ : déplacement d'un produit ou d'une catégorie
         mouvement = request.POST.get("mouvement", "")
@@ -516,7 +571,7 @@ def produit_edition_rapide(request):
                 pk = int(pk)
             except ValueError:
                 messages.error(request, "Requête de reclassement invalide.")
-                return redirect("portal:dashboard")
+                return redirect(destination)
             if nature == "categorie":
                 cat = get_object_or_404(Categorie, pk=pk,
                                         exploitant=exploitant)
@@ -540,7 +595,7 @@ def produit_edition_rapide(request):
                     produit.save()
                     messages.success(
                         request, f"« {produit.nom} » déplacé.")
-            return redirect("portal:dashboard")
+            return redirect(destination)
 
         # Changement de catégorie d'un produit
         cible = request.POST.get("appliquer_categorie", "")
@@ -564,7 +619,7 @@ def produit_edition_rapide(request):
                 produit.save()
                 messages.success(request, f"« {produit.nom} » déplacé dans "
                                  f"« {cat.nom} ».")
-            return redirect("portal:dashboard")
+            return redirect(destination)
 
         # ➕ Ajout d'un produit (avec catégorie nouvelle ou existante)
         if request.POST.get("action") == "produit_ajouter":
@@ -611,7 +666,7 @@ def produit_edition_rapide(request):
                     unite_vente=unite, prix=prix, position=position)
                 messages.success(request, f"Produit « {produit.nom} » "
                                  "ajouté.")
-            return redirect("portal:dashboard")
+            return redirect(destination)
 
         # Enregistrement en masse : libellé, unité, prix
         erreurs, modifies = [], 0
@@ -647,7 +702,7 @@ def produit_edition_rapide(request):
             messages.success(request, f"{modifies} produit(s) mis à jour.")
         elif not erreurs:
             messages.info(request, "Aucune modification à enregistrer.")
-    return redirect("portal:dashboard")
+    return redirect(destination)
 
 
 @login_required
@@ -897,6 +952,31 @@ def order_direct_create(request):
     points = exploitant.points_livraison.all()
     creneaux = exploitant.creneaux.select_related("point_livraison")
 
+    # Estimations de la récolte publiée la plus récente (mêmes règles
+    # que la vitrine) : guide la saisie, l'exploitant reste libre de
+    # enregistrer plus (il ajustera à la préparation).
+    jour = timezone.localdate()
+    lundi_courant = jour - datetime.timedelta(days=jour.weekday())
+    semaine = (SemaineRecolte.objects.filter(exploitant=exploitant,
+                                             publiee=True,
+                                             lundi__lte=lundi_courant)
+               .order_by("-lundi").first())
+    restes, mode = {}, "catalogue"
+    if semaine:
+        offres_semaine, mode = _offres_commande(exploitant, semaine)
+        restes = {o["produit"].pk: (o["estime"], o["reste"])
+                  for o in offres_semaine}
+    # Produits regroupés par catégorie (même présentation que la
+    # vitrine et la page de commande client).
+    groupes_produits, ordre_cats = {}, []
+    for p in produits:
+        cat = p.categorie
+        if cat not in groupes_produits:
+            groupes_produits[cat] = []
+            ordre_cats.append(cat)
+        groupes_produits[cat].append(p)
+    paires = [(cat, groupes_produits[cat]) for cat in ordre_cats]
+
     if request.method == "POST":
         nom_client = request.POST.get("nom_client", "").strip()
         email_client = request.POST.get("email_client", "").strip()
@@ -1004,6 +1084,10 @@ def order_direct_create(request):
 
     return render(request, "portal/pro/order_direct.html", {
         "produits": produits,
+        "paires": paires,
+        "restes": restes,
+        "mode": mode,
+        "semaine": semaine,
         "points": points,
         "creneaux": creneaux,
         "date_defaut": timezone.localdate().isoformat(),
@@ -1781,7 +1865,7 @@ def order_create(request, slug):
     # Jour (lundi=1…dimanche=7) de chaque date proposée + jours de
     # créneau de chaque point : le formulaire client filtre les dates
     # selon le point de livraison choisi.
-    dates_aff = [{"date": d, "jour": d.isoweekday()} for d in dates]
+    dates_aff = [(d, d.isoweekday()) for d in dates]
     points_jours = {
         p.pk: ",".join(str(c.jour)
                        for c in p.creneaux.all())
@@ -1827,14 +1911,10 @@ def order_create(request, slug):
                     request, f"« {produit.nom} » se vend à la pièce : "
                     "merci de commander un nombre entier.")
                 return _afficher(_soumis(request, offres))
-            # Récolte publiée : ne pas dépasser la disponibilité restante
-            if offre["reste"] is not None and qty > offre["reste"]:
-                messages.error(
-                    request, f"« {produit.nom} » : il ne reste que "
-                    f"~ {offre['reste']} {produit.unite_pour(qty)} cette "
-                    "semaine (déjà commandé). Le producteur ajustera "
-                    "avec vous si besoin.")
-                return _afficher(_soumis(request, offres))
+            # Récolte publiée : au-delà de la dispo restante, la ligne
+            # passe en orange côté client ; la commande reste possible
+            # (estimation indicative), le producteur ajustera en
+            # validant.
             lignes_souhaitees.append((produit, offre["prix"], qty))
             total += qty * offre["prix"]
         point = exploitant.points_livraison.filter(

@@ -47,6 +47,7 @@
   {% if est_proprietaire %}
     <a class="btn btn-outline" href="{% url 'portal:catalogue_standard' %}">📚 Importer des produits types</a>
   {% endif %}
+  <a class="btn btn-outline" href="{% url 'portal:product_list' %}">🥕 Produits</a>
   <a class="btn btn-outline" href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
   <a class="btn btn-outline" href="{% url 'portal:points_manage' %}">📍 Points & créneaux</a>
 </div>
@@ -78,18 +79,19 @@
 <details id="produits" class="bloc-replie">
   <summary><h2>🥕 Mes produits <span class="muted aide-replier">(cliquez pour déplier la liste)</span></h2></summary>
   <p class="retour-edition">
-      <button type="button" class="btn btn-outline btn-sm btn-bascule-edition"
-              onclick="event.preventDefault();document.getElementById('bloc-produits').classList.toggle('edition');">✏️ Mode édition</button>
+      <a class="btn btn-outline btn-sm" href="{% url 'portal:product_list' %}">✏️ Éditer les produits (libellé, prix, ajout…)</a>
   </p>
   {% if not paires %}
-    <p class="muted view">Aucun produit pour l'instant — passez en mode
-       édition pour en ajouter (ou <a href="{% url 'portal:catalogue_standard' %}">importez le catalogue de produits types</a>).</p>
+    <p class="muted">Aucun produit pour l'instant — créez vos catégories
+       ci-dessous puis <a href="{% url 'portal:product_list' %}">ajoutez vos
+       produits</a> (ou <a href="{% url 'portal:catalogue_standard' %}">importez
+       le catalogue de produits types</a>).</p>
   {% endif %}
   <form method="post" action="{% url 'portal:product_quick_edit' %}" id="form-produits">
       {% csrf_token %}
-      <div id="bloc-produits">
+      <div id="bloc-produits" class="edition">
         {% for cat, liste in paires %}
-          <h3><span class="view">{{ cat.nom|default:"Sans catégorie" }}</span>
+          <h3>{{ cat.nom|default:"Sans catégorie" }}
             {% if cat.pk %}
               <span class="edit">
                 <input type="text" name="nom_cat_{{ cat.pk }}" value="{{ cat.nom }}" maxlength="80" size="16">
@@ -103,27 +105,12 @@
             {% endif %}
           </h3>
           <table class="table table-produits">
-            <thead><tr><th>Produit</th><th>Unité</th><th>Prix (€)</th><th class="edit">Catégorie</th><th class="edit">Ordre</th><th class="edit">Retirer</th></tr></thead>
+            <thead><tr><th>Produit</th><th>Catégorie</th></tr></thead>
             <tbody>
               {% for produit in liste %}
                 <tr>
+                  <td>{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }}</td>
                   <td>
-                    <span class="view">{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }}</span>
-                    <input class="edit" type="text" name="nom_{{ produit.pk }}" value="{{ produit.nom }}" maxlength="150">
-                  </td>
-                  <td>
-                    <span class="view">{{ produit.unite_courte }}</span>
-                    <select class="edit" name="unite_{{ produit.pk }}">
-                      {% for code, libelle in unite_choices %}
-                        <option value="{{ code }}" {% if code == produit.unite_vente %}selected{% endif %}>{{ libelle }}</option>
-                      {% endfor %}
-                    </select>
-                  </td>
-                  <td>
-                    <span class="view">{% if produit.prix %}{{ produit.prix }} €{% else %}<span class="muted">non renseigné</span>{% endif %}</span>
-                    <input class="edit" type="text" name="prix_{{ produit.pk }}" value="{% if produit.prix %}{{ produit.prix }}{% endif %}" size="7" inputmode="decimal">
-                  </td>
-                  <td class="edit">
                     <select name="categorie_cible_{{ produit.pk }}">
                       <option value="" {% if produit.categorie is None %}selected{% endif %}>— sans catégorie —</option>
                       {% for c in categories %}
@@ -132,61 +119,28 @@
                     </select>
                     <button type="submit" name="appliquer_categorie" value="{{ produit.pk }}" class="btn btn-sm" title="Déplacer dans la catégorie choisie">⇄</button>
                   </td>
-                  <td class="edit">
-                    <button type="submit" name="mouvement" value="produit:{{ produit.pk }}:haut" class="btn btn-sm" title="Vers le haut">▲</button>
-                    <button type="submit" name="mouvement" value="produit:{{ produit.pk }}:bas" class="btn btn-sm" title="Vers le bas">▼</button>
-                  </td>
-                  <td class="edit">
-                    <input type="checkbox" name="supprimer" value="{{ produit.pk }}" title="Cocher pour retirer du catalogue">
-                    <button type="submit" name="action" value="produit_retirer:{{ produit.pk }}"
-                            onclick="if(!confirm('Retirer « {{ produit.nom }} » du catalogue ? Les commandes passées sont conservées.'))event.preventDefault();"
-                            class="btn btn-sm btn-danger" title="Retirer ce produit du catalogue">🗑</button>
-                  </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         {% endfor %}
         <div class="edit card">
-          <h3>➕ Ajouter un produit</h3>
+          <h3>➕ Ajouter une catégorie</h3>
           <div class="form-row">
-            <label>Nom <input type="text" name="nouveau_nom" placeholder="Ex : Radis rose"></label>
-            <label>Unité
-              <select name="nouveau_unite">
-                {% for code, libelle in unite_choices %}
-                  <option value="{{ code }}">{{ libelle }}</option>
-                {% endfor %}
-              </select></label>
-            <label>Prix (€) <input type="text" name="nouveau_prix" size="7" inputmode="decimal" placeholder="ex : 2,50"></label>
-          </div>
-          <div class="form-row">
-            <label>Catégorie
-              <select name="nouvelle_categorie">
-                <option value="">— sans catégorie —</option>
-                {% for c in categories %}
-                  <option value="{{ c.pk }}">{{ c.nom }}</option>
-                {% endfor %}
-              </select></label>
-            <label>… ou nouvelle catégorie <input type="text" name="nom_nouvelle_categorie" placeholder="Ex : Fruits"></label>
-            <button type="submit" name="action" value="produit_ajouter" class="btn">➕ Créer</button>
+            <label>Nom <input type="text" name="nouvelle_categorie" placeholder="Ex : Fruits" maxlength="80"></label>
+            <button type="submit" name="action" value="categorie_ajouter" class="btn">➕ Créer</button>
           </div>
         </div>
-        <p class="save-bar">
-          <button class="btn btn-enregistrer" type="submit">💾 Enregistrer les modifications</button>
-          <button type="submit" name="action" value="produits_retirer"
-                  onclick="if(!confirm('Retirer du catalogue les produits cochés ? Les commandes passées sont conservées.'))event.preventDefault();"
-                  class="btn btn-outline btn-sm">🗑 Retirer les produits cochés</button>
-          <span class="muted aide-edition">Modifiez libellé, unité ou prix, reclassez avec ▲▼/⇄, renommez ou supprimez les catégories (✏️/🗑), cochez les produits à retirer, puis enregistrez. Prix vide = prix effacé.</span>
-        </p>
       </div>
     </form>
-    {% if est_proprietaire %}
-      <p class="muted">Le bouton « ✏️ Mode édition » révèle la saisie en
-         place : libellés, prix, ordre, catégories et ajouts se font
-         directement ici ; le catalogue de produits types reste
-         <a href="{% url 'portal:catalogue_standard' %}">importable en un clic</a>.</p>
-    {% endif %}
+    <p class="muted">Ici : créer, renommer, réordonner ou supprimer les
+       catégories, et déplacer les produits d'une catégorie à l'autre (⇄).
+       L'édition complète des produits (libellé, unité, prix, ordre, ajout,
+       retrait en lot) se fait sur la page
+       <a href="{% url 'portal:product_list' %}">Produits</a> du menu
+       « Gestion ».</p>
 </details>
+
 
 <details id="recoltes" class="bloc-replie" open>
   <summary><h2>🧺 {{ exploitant.vocab.recoltes_titre }} <span class="muted aide-replier">(vue calendaire hebdomadaire — cliquez pour replier/déplier)</span></h2></summary>
