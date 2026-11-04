@@ -35,6 +35,12 @@ from .notifications import notifier_client
 UNITES_ENTIERES = ("PC", "BO", "BQ")
 
 
+def mentions_legales(request):
+    """Mentions légales : application libre (dépôt GitHub), instance
+    hébergée par son opérateur, hébergeur technique AlwaysData."""
+    return render(request, "portal/mentions.html")
+
+
 def home(request):
     """Landing : bandeau, hero, présentation du portail."""
     exploitants = (Exploitant.objects.filter(visible=True)
@@ -399,6 +405,79 @@ def produit_edition_rapide(request):
         return None
 
     if request.method == "POST":
+        # Actions de gestion : renommer/supprimer une catégorie,
+        # retirer un ou plusieurs produits du catalogue. Le pk est
+        # porté par la valeur du bouton (« action:pk »).
+        action = request.POST.get("action", "")
+        nature_action, _, cible_pk = action.partition(":")
+
+        def _cible_categorie():
+            try:
+                pk = int(cible_pk)
+            except ValueError:
+                return None
+            return Categorie.objects.filter(pk=pk,
+                                            exploitant=exploitant).first()
+
+        if nature_action == "categorie_renommer":
+            cat = _cible_categorie()
+            if cat is None:
+                messages.error(request, "Catégorie introuvable.")
+                return redirect("portal:dashboard")
+            nom = request.POST.get(f"nom_cat_{cat.pk}", "").strip()
+            if nom:
+                cat.nom = nom[:80]
+                cat.save()
+                messages.success(request, f"Catégorie renommée « {cat.nom} ».")
+            else:
+                messages.error(request, "Nom de catégorie vide.")
+            return redirect("portal:dashboard")
+        if nature_action == "categorie_supprimer":
+            cat = _cible_categorie()
+            if cat is None:
+                messages.error(request, "Catégorie introuvable.")
+                return redirect("portal:dashboard")
+            nb = cat.produits.count()
+            Produit.objects.filter(categorie=cat).update(categorie=None,
+                                                         position=0)
+            cat.delete()
+            message = f"Catégorie « {cat.nom} » supprimée"
+            if nb:
+                message += (f" — {nb} produit(s) désormais sans catégorie "
+                            "(reclassez-les dans la colonne Catégorie).")
+            messages.info(request, message + ".")
+            return redirect("portal:dashboard")
+        if nature_action == "produit_retirer":
+            try:
+                pk = int(cible_pk)
+            except ValueError:
+                pk = None
+            produit = (Produit.objects.filter(pk=pk,
+                                              exploitant=exploitant).first()
+                       if pk else None)
+            if produit is None:
+                messages.error(request, "Produit introuvable.")
+            else:
+                produit.actif = False
+                produit.save()
+                messages.info(request, f"« {produit.nom} » retiré du "
+                              "catalogue (l'historique des commandes "
+                              "passées est conservé).")
+            return redirect("portal:dashboard")
+        if nature_action == "produits_retirer":
+            pks = request.POST.getlist("supprimer")
+            concernes = Produit.objects.filter(pk__in=pks,
+                                               exploitant=exploitant)
+            nb = concernes.update(actif=False)
+            if nb:
+                messages.info(request, f"{nb} produit(s) retiré(s) du "
+                              "catalogue (l'historique des commandes est "
+                              "conservé).")
+            else:
+                messages.error(request, "Cochez d'abord les produits à "
+                               "retirer.")
+            return redirect("portal:dashboard")
+
         # ▲▼ : déplacement d'un produit ou d'une catégorie
         mouvement = request.POST.get("mouvement", "")
         if mouvement:

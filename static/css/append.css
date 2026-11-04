@@ -30,3 +30,19 @@
 /* ---- Bouton d'appel à la commande sur la vitrine ---- */
 .producer-cta { margin-top: 0.8rem; display: flex; gap: 0.6rem;
                 flex-wrap: wrap; align-items: center; }
+
+/* ---- Statuts dashboard : à traiter (orange), en cours (jaune),
+        validée (vert) ---- */
+.badge-NOUVELLE { background: #f5a623; color: #fff; font-weight: 600; }
+.badge-PREPARATION { background: #f5c518; color: #6b4e00; font-weight: 600; }
+.badge-VALIDEE { background: var(--vert, #2e7d32); color: #fff; font-weight: 600; }
+
+/* ---- Dashboard : mise en page une colonne, vitrine en bas ---- */
+.dash-pleine-largeur { max-width: none; }
+
+/* ---- Footer : plan du site en ligne ---- */
+.footer-plan { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem;
+               margin-top: 0.5rem; font-size: 0.9rem; }
+.footer-plan a { color: inherit; opacity: 0.85; }
+.footer-plan a:hover { opacity: 1; text-decoration: underline; }
+

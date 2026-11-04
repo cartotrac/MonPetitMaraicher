@@ -1,8 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Mon espace pro — MonPetitProducteurLocal{% endblock %}
+{% block title %}Dashboard — MonPetitProducteurLocal{% endblock %}
 {% block retour_dashboard %}{% endblock %}
 {% block content %}
 <h1>Bienvenue {{ exploitant.nom_ferme }} 👋</h1>
+<nav class="quick-actions" aria-label="Rubriques du dashboard">
+  <a class="btn btn-outline btn-sm" href="#commandes">⏳ Commandes</a>
+  <a class="btn btn-outline btn-sm" href="#produits">🥕 Produits</a>
+  <a class="btn btn-outline btn-sm" href="#recoltes">🧺 Récoltes</a>
+  <a class="btn btn-outline btn-sm" href="#points">📍 Points &amp; créneaux</a>
+  <a class="btn btn-outline btn-sm" href="#vitrine">👁 Ma vitrine</a>
+</nav>
 
 {% if meteo %}
 <div class="meteo-hero card">
@@ -38,8 +45,7 @@
 </div>
 {% endif %}
 
-<div class="dashboard-cols">
-<div class="dash-main">
+<div class="dash-pleine-largeur">
 
 <div class="quick-actions">
   <a class="btn" href="{% url 'portal:harvest_new' %}">➕ Nouvelle récolte</a>
@@ -52,11 +58,12 @@
   <a class="btn btn-outline" href="{% url 'portal:points_manage' %}">📍 Points & créneaux</a>
 </div>
 
-<section>
+<section id="commandes">
   <h2>⏳ Commandes à valider</h2>
   {% for commande in commandes_attente %}
     <div class="card">
-      <strong>Commande #{{ commande.pk }}</strong> — {{ commande.nom_client }}
+      <strong>Commande #{{ commande.pk }}</strong> <span class="badge badge-NOUVELLE">à traiter</span>
+      — {{ commande.nom_client }}
       pour le {{ commande.date_livraison|date:"d/m/Y" }} ({{ commande.total }} €)
       <a class="btn btn-sm" href="{% url 'portal:order_list_filtered' 'NOUVELLE' %}">Traiter</a>
     </div>
@@ -67,11 +74,12 @@
 
 <section>
   <h2>🧺 Paniers en cours</h2>
-  <p>{{ paniers_en_cours }} panier(s) en préparation ou à livrer —
+  <p>{% if paniers_en_cours %}<span class="badge badge-PREPARATION">en cours</span>{% endif %}
+     {{ paniers_en_cours }} panier(s) en préparation ou à livrer —
      <a href="{% url 'portal:panier_list' %}">gérer les paniers</a></p>
 </section>
 
-<section>
+<section id="produits">
   <h2>🥕 Mes produits
       <button type="button" class="btn btn-outline btn-sm btn-bascule-edition"
               onclick="document.getElementById('bloc-produits').classList.toggle('edition');">✏️ Mode édition</button>
@@ -84,16 +92,21 @@
       {% csrf_token %}
       <div id="bloc-produits">
         {% for cat, liste in paires %}
-          <h3>{{ cat.nom|default:"Sans catégorie" }}
+          <h3><span class="view">{{ cat.nom|default:"Sans catégorie" }}</span>
             {% if cat.pk %}
               <span class="edit">
+                <input type="text" name="nom_cat_{{ cat.pk }}" value="{{ cat.nom }}" maxlength="80" size="16">
+                <button type="submit" name="action" value="categorie_renommer:{{ cat.pk }}" class="btn btn-sm" title="Renommer la catégorie">✏️</button>
                 <button type="submit" name="mouvement" value="categorie:{{ cat.pk }}:haut" class="btn btn-sm" title="Catégorie vers le haut">▲</button>
                 <button type="submit" name="mouvement" value="categorie:{{ cat.pk }}:bas" class="btn btn-sm" title="Catégorie vers le bas">▼</button>
+                <button type="submit" name="action" value="categorie_supprimer:{{ cat.pk }}"
+                        onclick="if(!confirm('Supprimer la catégorie « {{ cat.nom }} » ? Les produits deviennent « sans catégorie » (aucun produit supprimé).'))event.preventDefault();"
+                        class="btn btn-sm btn-danger" title="Supprimer la catégorie (les produits sont conservés)">🗑</button>
               </span>
             {% endif %}
           </h3>
           <table class="table table-produits">
-            <thead><tr><th>Produit</th><th>Unité</th><th>Prix (€)</th><th class="edit">Catégorie</th><th class="edit">Ordre</th></tr></thead>
+            <thead><tr><th>Produit</th><th>Unité</th><th>Prix (€)</th><th class="edit">Catégorie</th><th class="edit">Ordre</th><th class="edit">Retirer</th></tr></thead>
             <tbody>
               {% for produit in liste %}
                 <tr>
@@ -126,6 +139,12 @@
                     <button type="submit" name="mouvement" value="produit:{{ produit.pk }}:haut" class="btn btn-sm" title="Vers le haut">▲</button>
                     <button type="submit" name="mouvement" value="produit:{{ produit.pk }}:bas" class="btn btn-sm" title="Vers le bas">▼</button>
                   </td>
+                  <td class="edit">
+                    <input type="checkbox" name="supprimer" value="{{ produit.pk }}" title="Cocher pour retirer du catalogue">
+                    <button type="submit" name="action" value="produit_retirer:{{ produit.pk }}"
+                            onclick="if(!confirm('Retirer « {{ produit.nom }} » du catalogue ? Les commandes passées sont conservées.'))event.preventDefault();"
+                            class="btn btn-sm btn-danger" title="Retirer ce produit du catalogue">🗑</button>
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -157,7 +176,10 @@
         </div>
         <p class="save-bar">
           <button class="btn btn-enregistrer" type="submit">💾 Enregistrer les modifications</button>
-          <span class="muted aide-edition">Modifiez libellé, unité ou prix, reclassez avec ▲▼/⇄, ajoutez des produits et catégories, puis enregistrez. Prix vide = prix effacé.</span>
+          <button type="submit" name="action" value="produits_retirer"
+                  onclick="if(!confirm('Retirer du catalogue les produits cochés ? Les commandes passées sont conservées.'))event.preventDefault();"
+                  class="btn btn-outline btn-sm">🗑 Retirer les produits cochés</button>
+          <span class="muted aide-edition">Modifiez libellé, unité ou prix, reclassez avec ▲▼/⇄, renommez ou supprimez les catégories (✏️/🗑), cochez les produits à retirer, puis enregistrez. Prix vide = prix effacé.</span>
         </p>
       </div>
     </form>
@@ -169,7 +191,7 @@
     {% endif %}
 </section>
 
-<section>
+<section id="recoltes">
   <h2>🧺 Mes récoltes</h2>
   {% if semaines %}
     <ul class="recoltes-mini">
@@ -185,8 +207,8 @@
   {% endif %}
 </section>
 
-<section>
-  <h2>📍 Points de livraison & créneaux</h2>
+<section id="points">
+  <h2>📍 Points de livraison &amp; créneaux</h2>
   {% if points %}
     <p>{{ points|length }} point(s) de livraison —
        <a href="{% url 'portal:points_manage' %}">gérer les points et créneaux</a></p>
@@ -196,12 +218,11 @@
   {% endif %}
 </section>
 
-</div>
-<aside class="dash-side">
+<section id="vitrine" class="harvest-bloc">
   <h2>👁 Ma vitrine en direct</h2>
   <p><a class="btn btn-outline btn-sm" href="{% url 'portal:producer_detail' exploitant.slug %}" target="_blank">Ouvrir la page publique ↗</a></p>
   <iframe class="apercu-vitrine" src="{% url 'portal:producer_detail' exploitant.slug %}?apercu=1"
           title="Aperçu de la vitrine publique" loading="lazy"></iframe>
-</aside>
+</section>
 </div>
 {% endblock %}

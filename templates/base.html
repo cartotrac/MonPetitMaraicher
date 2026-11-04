@@ -17,11 +17,9 @@
       <a href="{% url 'portal:producer_search' %}">Chercher</a>
       {% if user.is_authenticated %}
         {% if exploitant_courant %}
-          <a href="{% url 'portal:dashboard' %}">Mon espace pro</a>
+          <a href="{% url 'portal:dashboard' %}">Dashboard</a>
           <a href="{% url 'portal:order_list' %}">Commandes</a>
           <a href="{% url 'portal:panier_list' %}">Paniers</a>
-          <a href="{% url 'portal:clients_suivi' %}">Clients</a>
-          <a href="{% url 'portal:points_manage' %}">Livraison</a>
           <a href="{% url 'portal:publications_manage' %}">Publications</a>
           <a href="{% url 'portal:parametres' %}">⚙️ Paramètres</a>
         {% else %}
@@ -56,6 +54,30 @@
 <footer class="site-footer">
   <div class="container">
     <p>MonPetitProducteurLocal — producteurs locaux, récoltes fraîches, circuits courts.</p>
+    <nav class="footer-plan" aria-label="Plan du site">
+      <a href="{% url 'portal:home' %}">Accueil</a>
+      <a href="{% url 'portal:producer_search' %}">Chercher un producteur</a>
+      {% if user.is_authenticated %}
+        {% if exploitant_courant %}
+          <a href="{% url 'portal:dashboard' %}">Dashboard</a>
+          <a href="{% url 'portal:order_list' %}">Commandes</a>
+          <a href="{% url 'portal:panier_list' %}">Paniers</a>
+          <a href="{% url 'portal:points_manage' %}">Points &amp; créneaux</a>
+          <a href="{% url 'portal:clients_suivi' %}">Mes clients</a>
+          <a href="{% url 'portal:publications_manage' %}">Publications</a>
+          <a href="{% url 'portal:parametres' %}">Paramètres</a>
+        {% else %}
+          <a href="{% url 'portal:my_orders' %}">Mes commandes</a>
+          <a href="{% url 'portal:mes_producteurs' %}">Mes producteurs</a>
+          <a href="{% url 'portal:profil_client' %}">Mon profil</a>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'portal:register_client' %}">Devenir client</a>
+        <a href="{% url 'portal:register_producer' %}">Je suis producteur</a>
+        <a href="{% url 'login' %}">Connexion</a>
+      {% endif %}
+      <a href="{% url 'portal:mentions_legales' %}">Mentions légales</a>
+    </nav>
   </div>
 </footer>
 {% block extrajs %}{% endblock %}

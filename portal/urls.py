@@ -6,6 +6,8 @@ app_name = "portal"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("mentions-legales/", views.mentions_legales,
+         name="mentions_legales"),
     path("recherche/", views.producer_search, name="producer_search"),
     path("carte/exploitants.json", views.producteurs_geojson,
          name="producers_geojson"),
