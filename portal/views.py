@@ -1,7 +1,11 @@
 import csv
 import datetime
 import io
+import re
 from decimal import Decimal, InvalidOperation
+
+import django.core.mail
+from django.conf import settings
 
 from django.contrib import messages
 from django.contrib.auth import login
@@ -14,11 +18,12 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from .forms import (InscriptionClientForm, InscriptionExploitantForm,
-                    ProduitForm, ProfilExploitantForm, ProfilPersonnelForm)
+from .forms import (AnnonceForm, BulletinForm, InscriptionClientForm,
+                    InscriptionExploitantForm, ProduitForm,
+                    ProfilExploitantForm, ProfilPersonnelForm)
 from .meteo import meteo_synthese
-from .models import (Categorie, Commande, CreneauLivraison, Exploitant,
-                    LigneCommande, LignePanier, LigneRecolte,
+from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
+                    Exploitant, LigneCommande, LignePanier, LigneRecolte,
                     MembreExploitation, Panier, ParametresVitrine,
                     PointLivraison, PreferenceContact, Produit,
                     ProduitStandard, ProfilClient, SemaineRecolte,
@@ -126,9 +131,23 @@ def producer_detail(request, slug):
         groupes[-1][1].append(ligne)
     vitrine, _cree = ParametresVitrine.objects.get_or_create(
         exploitant=exploitant)
+    # Équipe affichée sur la vitrine : gérant + associés rattachés,
+    # avec leur photo de profil externe si elle existe.
+    def _membre(user, role):
+        try:
+            photo = user.profil_client.photo_url
+        except Exception:
+            photo = ""
+        return {"nom": user.get_full_name() or user.username,
+                "role": role, "photo_url": photo}
+    equipe = [_membre(exploitant.user, "Gérant")]
+    equipe += [_membre(m.user, "Associé·e")
+                for m in exploitant.membres.select_related("user")]
     return render(request, "portal/producer_detail.html", {
         "exploitant": exploitant,
         "vitrine": vitrine,
+        "reseaux": vitrine.reseaux or {},
+        "equipe": equipe,
         "semaine": semaine,
         "lignes": lignes,
         "groupes_categories": groupes,
@@ -1269,6 +1288,17 @@ def categories_manage(request):
 
 # ---------------------------------------------------------------- client
 
+# Téléphone français : 0X XX XX XX XX, +33 ou 0033, séparateurs tolérés.
+RE_TEL = re.compile(
+    r"^(?:\+33|0033|0)[\s.-]*[1-9]"
+    r"(?:[\s.-]*\d{2}){4}$")
+
+
+def _tel_valide(numero):
+    """Numéro français fixe ou mobile, avec ou sans préfixe international."""
+    return bool(RE_TEL.match((numero or "").strip()))
+
+
 def order_create(request, slug):
     """Le client choisit produits/quantités/date et soumet sa commande.
 
@@ -1347,13 +1377,16 @@ def order_create(request, slug):
             email_client = request.POST.get("email_client", "").strip()
             telephone_client = request.POST.get(
                 "telephone_client", "").strip()
+            # Sans compte, le téléphone est le canal de contact du
+            # producteur : obligatoire et au format français (fixe/mobile).
             if not nom_client:
                 messages.error(request, "Merci d'indiquer votre nom.")
                 return redirect("portal:order_create", slug=slug)
-            if not email_client and not telephone_client:
-                messages.error(request, "Sans compte, indiquez un e-mail ou "
-                               "un téléphone pour que le producteur puisse "
-                               "vous recontacter.")
+            if not _tel_valide(telephone_client):
+                messages.error(
+                    request, "Merci d'indiquer un numéro de téléphone "
+                    "valide (ex : 06 12 34 56 78) : c'est le moyen de "
+                    "contact du producteur pour valider votre commande.")
                 return redirect("portal:order_create", slug=slug)
         with transaction.atomic():
             commande = Commande.objects.create(
@@ -1445,6 +1478,7 @@ def _enregistrer_infos_perso(request, redirect_vers):
         user.email = form.cleaned_data["email"]
         user.save()
         profil.telephone = form.cleaned_data["telephone"]
+        profil.photo_url = form.cleaned_data.get("photo_externe", "")
         profil.save()
         messages.success(request, "Vos informations personnelles ont été "
                          "mises à jour.")
@@ -1466,6 +1500,7 @@ def profil_client(request):
             "nom": request.user.last_name,
             "email": request.user.email,
             "telephone": profil.telephone,
+            "photo_externe": profil.photo_url,
         })
     return render(request, "portal/profil_client.html", {"form": form})
 
@@ -1486,14 +1521,20 @@ def profil_exploitant(request):
                                     instance=exploitant)
         if form.is_valid():
             form.save()
-            # Logo externe : stocke dans les parametres de vitrine
-            # (JSONB reseaux), aucun fichier heberge par le portail.
+            # Logo externe + réseaux/site : stockés dans les paramètres
+            # de vitrine (JSONB reseaux), aucun fichier hébergé.
             reseaux = dict(vitrine.reseaux or {})
             url = form.cleaned_data.get("logo_externe", "").strip()
             if url:
                 reseaux["logo_url"] = url
             else:
                 reseaux.pop("logo_url", None)
+            for cle in ("site_web", "facebook", "instagram"):
+                valeur = form.cleaned_data.get(cle, "").strip()
+                if valeur:
+                    reseaux[cle] = valeur
+                else:
+                    reseaux.pop(cle, None)
             vitrine.reseaux = reseaux
             vitrine.save()
             if exploitant.siret and not exploitant.siret_valide:
@@ -1505,10 +1546,13 @@ def profil_exploitant(request):
                 messages.success(request, "Votre fiche a été mise à jour.")
             return redirect("portal:dashboard")
     else:
+        reseaux = dict(vitrine.reseaux or {})
         form = ProfilExploitantForm(
             instance=exploitant,
-            initial={"logo_externe": (vitrine.reseaux or {}).get(
-                "logo_url", "")})
+            initial={"logo_externe": reseaux.get("logo_url", ""),
+                     "site_web": reseaux.get("site_web", ""),
+                     "facebook": reseaux.get("facebook", ""),
+                     "instagram": reseaux.get("instagram", "")})
     return render(request, "portal/pro/profil_exploitant.html",
                   {"form": form, "exploitant": exploitant})
 
@@ -1531,6 +1575,7 @@ def profil_personnel(request):
             "nom": request.user.last_name,
             "email": request.user.email,
             "telephone": profil.telephone,
+            "photo_externe": profil.photo_url,
         })
     return render(request, "portal/pro/profil_personnel.html",
                   {"form": form})
@@ -1592,4 +1637,90 @@ def equipe_manage(request):
         "exploitant": exploitant,
         "membres": membres,
         "est_proprietaire": est_proprietaire,
+    })
+
+
+@login_required
+@exploitant_requis
+def publications_manage(request):
+    """Newsletters (bulletins) et annonces ponctuelles de l'exploitation :
+    création, suppression et diffusion aux clients (e-mail des comptes
+    clients ET des commandes sans compte qui en ont laissé un)."""
+    exploitant = exploitant_pour(request.user)
+    form_b = BulletinForm(exploitant=exploitant)
+    form_a = AnnonceForm()
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "bulletin":
+            form_b = BulletinForm(request.POST, exploitant=exploitant)
+            if form_b.is_valid():
+                bulletin = form_b.save(commit=False)
+                bulletin.exploitant = exploitant
+                bulletin.save()
+                messages.success(request, "Newsletter « "
+                                 + bulletin.objet + " » créée.")
+                return redirect("portal:publications_manage")
+        elif action == "annonce":
+            form_a = AnnonceForm(request.POST)
+            if form_a.is_valid():
+                annonce = form_a.save(commit=False)
+                annonce.exploitant = exploitant
+                annonce.save()
+                messages.success(request, "Annonce « " + annonce.objet
+                                 + " » créée.")
+                return redirect("portal:publications_manage")
+        elif action == "diffuser":
+            modele = (Bulletin
+                      if request.POST.get("type") == "bulletin"
+                      else Annonce)
+            publication = modele.objects.filter(
+                exploitant=exploitant,
+                pk=request.POST.get("publication_id"),
+                envoye_le__isnull=True).first()
+            if publication is None:
+                messages.error(request, "Publication introuvable ou déjà "
+                               "diffusée.")
+            else:
+                destinataires = list(
+                    exploitant.commandes.exclude(email_client="")
+                    .values_list("email_client", flat=True).distinct())
+                envoyes, echecs = 0, []
+                for email in destinataires:
+                    try:
+                        django.core.mail.send_mail(
+                            f"[{exploitant.nom_ferme}] {publication.objet}",
+                            publication.corps,
+                            settings.DEFAULT_FROM_EMAIL, [email],
+                            fail_silently=False)
+                        envoyes += 1
+                    except Exception:
+                        echecs.append(email)
+                publication.envoye_le = timezone.now()
+                publication.save()
+                message = (f"Diffusion terminée : {envoyes} envoi(s) vers "
+                           "les clients ayant un e-mail.")
+                if echecs:
+                    message += f" Échecs : {', '.join(echecs)}."
+                messages.success(request, message)
+        elif action == "supprimer":
+            for modele in (Bulletin, Annonce):
+                objet = modele.objects.filter(
+                    exploitant=exploitant,
+                    pk=request.POST.get("publication_id")).first()
+                if objet:
+                    objet.delete()
+                    messages.info(request, "Publication supprimée.")
+                    break
+        return redirect("portal:publications_manage")
+
+    return render(request, "portal/pro/publications.html", {
+        "exploitant": exploitant,
+        "bulletins": (exploitant.bulletins.order_by(
+            "-id").select_related("semaine")),
+        "annonces": exploitant.annonces.order_by("-id"),
+        "form_bulletin": form_b,
+        "form_annonce": form_a,
+        "nb_destinataires": (exploitant.commandes.exclude(email_client="")
+                             .values("email_client").distinct().count()),
     })

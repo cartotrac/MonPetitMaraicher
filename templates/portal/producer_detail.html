@@ -54,6 +54,35 @@
 
 {% if exploitant.description %}<p class="producer-desc card">{{ exploitant.description }}</p>{% endif %}
 
+{% if reseaux.site_web or reseaux.facebook or reseaux.instagram %}
+<section class="reseaux-bloc">
+  {% if reseaux.site_web %}<a class="btn btn-outline" href="{{ reseaux.site_web }}" target="_blank" rel="noopener">🌐 Site web</a>{% endif %}
+  {% if reseaux.facebook %}<a class="btn btn-outline" href="{{ reseaux.facebook }}" target="_blank" rel="noopener">📘 Facebook</a>{% endif %}
+  {% if reseaux.instagram %}<a class="btn btn-outline" href="{{ reseaux.instagram }}" target="_blank" rel="noopener">📸 Instagram</a>{% endif %}
+</section>
+{% endif %}
+
+{% if equipe %}
+<section>
+  <h2>👥 L'équipe de la ferme</h2>
+  <div class="grid">
+    {% for membre in equipe %}
+      <div class="card membre-equipe">
+        {% if membre.photo_url %}
+          <img class="avatar" src="{{ membre.photo_url }}" alt="Photo de {{ membre.nom }}">
+        {% else %}
+          <div class="avatar avatar-placeholder">👤</div>
+        {% endif %}
+        <div>
+          <strong>{{ membre.nom }}</strong>
+          <p class="muted">{{ membre.role }}</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <section>
   <h2>🧺 Récolte de la semaine{% if semaine %} (semaine du {{ semaine.lundi|date:"d/m/Y" }}){% endif %}</h2>
   {% if semaine and semaine.note %}<p class="flash info">{{ semaine.note }}</p>{% endif %}

@@ -12,6 +12,9 @@
 {% for commande in commandes %}
   <div class="card order-card">
     <div class="order-head">
+      {% if commande.client and commande.client.profil_client.photo_url %}
+        <img class="avatar avatar-small" src="{{ commande.client.profil_client.photo_url }}" alt="Photo de {{ commande.nom_client }}">
+      {% endif %}
       <strong>#{{ commande.pk }} — {{ commande.nom_client }}</strong>
       <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
     </div>

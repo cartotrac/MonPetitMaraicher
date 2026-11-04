@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Publications — MonPetitMaraicher{% endblock %}
+{% block content %}
+<h1>📣 Mes publications</h1>
+<p class="muted">Newsletters (récoltes de la semaine, actualités) et annonces
+   ponctuelles (ex : « paniers disponibles samedi »). La diffusion part vers
+   les {{ nb_destinataires }} adresse(s) e-mail connues de vos clients —
+   comptes clients comme commandes sans compte ayant laissé un e-mail.</p>
+
+<div class="dashboard-cols">
+<div class="dash-main">
+
+<section>
+  <h2>✉️ Nouvelle newsletter</h2>
+  <form method="post" class="form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="bulletin">
+    {{ form_bulletin.as_p }}
+    <button class="btn" type="submit">💾 Créer la newsletter</button>
+  </form>
+</section>
+
+<section>
+  <h2>📌 Nouvelle annonce</h2>
+  <form method="post" class="form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="annonce">
+    {{ form_annonce.as_p }}
+    <button class="btn" type="submit">💾 Créer l'annonce</button>
+  </form>
+</section>
+
+<section>
+  <h2>✉️ Mes newsletters</h2>
+  {% for bulletin in bulletins %}
+    <div class="card">
+      <strong>{{ bulletin.objet }}</strong>
+      {% if bulletin.semaine %}<span class="muted">— récolte du
+        {{ bulletin.semaine.lundi|date:"d/m/Y" }}</span>{% endif %}
+      {% if bulletin.envoye_le %}
+        <span class="badge badge-ok">diffusée le {{ bulletin.envoye_le|date:"d/m/Y H:i" }}</span>
+      {% else %}
+        <form class="inline" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="diffuser">
+          <input type="hidden" name="type" value="bulletin">
+          <input type="hidden" name="publication_id" value="{{ bulletin.pk }}">
+          <button class="btn btn-sm" type="submit">📤 Diffuser</button>
+        </form>
+        <form class="inline" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="supprimer">
+          <input type="hidden" name="publication_id" value="{{ bulletin.pk }}">
+          <button class="btn-link" type="submit">✖ Supprimer</button>
+        </form>
+      {% endif %}
+      <p>{{ bulletin.corps|linebreaksbr }}</p>
+    </div>
+  {% empty %}
+    <p class="muted">Aucune newsletter pour l'instant.</p>
+  {% endfor %}
+</section>
+
+<section>
+  <h2>📌 Mes annonces</h2>
+  {% for annonce in annonces %}
+    <div class="card">
+      <strong>{{ annonce.objet }}</strong>
+      {% if annonce.envoye_le %}
+        <span class="badge badge-ok">diffusée le {{ annonce.envoye_le|date:"d/m/Y H:i" }}</span>
+      {% else %}
+        <form class="inline" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="diffuser">
+          <input type="hidden" name="type" value="annonce">
+          <input type="hidden" name="publication_id" value="{{ annonce.pk }}">
+          <button class="btn btn-sm" type="submit">📤 Diffuser</button>
+        </form>
+        <form class="inline" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="supprimer">
+          <input type="hidden" name="publication_id" value="{{ annonce.pk }}">
+          <button class="btn-link" type="submit">✖ Supprimer</button>
+        </form>
+      {% endif %}
+      <p>{{ annonce.corps|linebreaksbr }}</p>
+    </div>
+  {% empty %}
+    <p class="muted">Aucune annonce pour l'instant.</p>
+  {% endfor %}
+</section>
+
+</div>
+<aside class="dash-side">
+  <h2>ℹ️ Diffusion</h2>
+  <p class="muted">Sans configuration e-mail (EMAIL_HOST), les messages
+     sont journalisés au lieu d'être envoyés. Sur AlwaysData, ajoutez
+     <code>EMAIL_HOST=localhost</code> et <code>EMAIL_PORT=25</code>
+     dans le .env pour un envoi réel.</p>
+</aside>
+</div>
+{% endblock %}

@@ -56,6 +56,8 @@ urlpatterns = [
          name="panier_detail"),
     path("clients/", views.clients_suivi, name="clients_suivi"),
     path("points-livraison/", views.points_manage, name="points_manage"),
+    path("publications/", views.publications_manage,
+         name="publications_manage"),
 
     # Espace client
     path("profil/", views.profil_client, name="profil_client"),

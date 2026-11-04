@@ -2,7 +2,8 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Categorie, Exploitant, Produit, ProfilClient
+from .models import (Annonce, Bulletin, Categorie, Exploitant, Produit,
+                    ProfilClient, SemaineRecolte)
 
 
 class InscriptionExploitantForm(UserCreationForm):
@@ -109,6 +110,10 @@ class ProfilExploitantForm(forms.ModelForm):
     logo_externe = forms.URLField(
         label="Lien logo externe (drive, cloud, réseau — alternative au "
               "fichier : rien n'est hébergé sur le portail)", required=False)
+    site_web = forms.URLField(
+        label="Site web de l'exploitation", required=False)
+    facebook = forms.URLField(label="Page Facebook", required=False)
+    instagram = forms.URLField(label="Compte Instagram", required=False)
     field_order = ["nom_ferme", "siret", "mode_production", "logo",
                    "logo_externe", "description", "adresse", "ville",
                    "code_postal", "departement", "telephone", "latitude",
@@ -131,10 +136,43 @@ class ProfilExploitantForm(forms.ModelForm):
 
 class ProfilPersonnelForm(forms.Form):
     """Informations personnelles du compte individuel (client, maraîcher
-    propriétaire ou membre d'une équipe) : prénom, nom, e-mail, téléphone."""
+    propriétaire ou membre d'une équipe) : prénom, nom, e-mail, téléphone,
+    photo (lien externe)."""
 
     prenom = forms.CharField(label="Prénom", max_length=150, required=False)
     nom = forms.CharField(label="Nom", max_length=150, required=False)
     email = forms.EmailField(label="E-mail")
     telephone = forms.CharField(label="Téléphone", max_length=20,
                                 required=False)
+    photo_externe = forms.URLField(
+        label="Photo de profil externe (drive, cloud, réseau — rien "
+              "n'est hébergé sur le portail)", required=False)
+
+
+class BulletinForm(forms.ModelForm):
+    """Newsletter / bulletin diffusé aux clients d'une exploitation."""
+
+    class Meta:
+        model = Bulletin
+        fields = ["semaine", "objet", "corps"]
+        labels = {"semaine": "Récolte liée (optionnel)",
+                  "objet": "Objet du message",
+                  "corps": "Message"}
+
+    def __init__(self, *args, exploitant=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if exploitant is not None:
+            self.fields["semaine"].queryset = SemaineRecolte.objects.filter(
+                exploitant=exploitant).order_by("-lundi")
+        else:
+            self.fields["semaine"].queryset = (
+                SemaineRecolte.objects.none())
+
+
+class AnnonceForm(forms.ModelForm):
+    """Annonce ponctuelle (« paniers disponibles », …)."""
+
+    class Meta:
+        model = Annonce
+        fields = ["objet", "corps"]
+        labels = {"objet": "Objet de l'annonce", "corps": "Annonce"}

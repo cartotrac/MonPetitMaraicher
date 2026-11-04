@@ -61,6 +61,11 @@ var COUCHES_ADMIN = {
   }
 };
 
+/* Zoom minimum à partir duquel chaque couche administrative devient
+   disponible : en dessous, elle est grisée dans le contrôle et son
+   chargement est refusé (trop de tuiles/features pour l'emprise). */
+var SEUILS = { "Régions": 0, "Départements": 6, "EPCI": 8, "Communes": 10 };
+
 var couchesAdmin = {};
 Object.keys(COUCHES_ADMIN).forEach(function (nom) {
   couchesAdmin[nom] = L.layerGroup();
@@ -73,10 +78,48 @@ L.control.layers(
   { position: "topleft" }
 ).addTo(carte);
 
-// Les couches administratives se chargent au premier affichage seulement
+// Disponibilité d'une couche selon le zoom courant
+function coucheDisponible(nom) {
+  var seuil = SEUILS[nom] || 0;
+  return carte.getZoom() >= seuil;
+}
+
+// Griser / dégriser les cases des couches administratives dans le contrôle
+function majCouleurs() {
+  document.querySelectorAll(".leaflet-control-layers-overlays label").forEach(function (lab) {
+    var texte = (lab.textContent || "").trim();
+    Object.keys(COUCHES_ADMIN).forEach(function (nom) {
+      if (texte.indexOf(nom) === -1) return;
+      var input = lab.querySelector("input");
+      if (!input) return;
+      if (coucheDisponible(nom)) {
+        input.disabled = false;
+        lab.style.opacity = 1;
+        lab.title = "";
+      } else {
+        input.disabled = true;
+        lab.style.opacity = 0.45;
+        lab.title = "Disponible à partir du zoom " + (SEUILS[nom] || 0);
+        // retirer la couche si elle était affichée
+        if (input.checked && carte.hasLayer(couchesAdmin[nom])) {
+          carte.removeLayer(couchesAdmin[nom]);
+        }
+      }
+    });
+  });
+}
+
+// Les couches administratives se chargent au premier affichage seulement,
+// et uniquement si le zoom est suffisant
 carte.on("overlayadd", function (e) {
   var conf = COUCHES_ADMIN[e.name];
   if (!conf || conf.chargee) return;
+  if (!coucheDisponible(e.name)) {
+    // zoom insuffisant : décocher immédiatement, la couche reste grisé
+    conf.grisee = true;
+    majCouleurs();
+    return;
+  }
   conf.chargee = true;
   fetch(conf.url).then(function (r) { return r.json(); }).then(function (data) {
     var geo = L.geoJSON(data, {
@@ -94,6 +137,9 @@ carte.on("overlayadd", function (e) {
     conf.chargee = false;  // permet de retenter en recochant la couche
   });
 });
+
+carte.on("zoomend", majCouleurs);
+carte.whenReady(majCouleurs);
 
 /* --------------------------------------------------------------- legende */
 var legend = L.control({ position: "bottomright" });

@@ -25,22 +25,22 @@
   {% if not user.is_authenticated %}
     <div class="card param-card">
       <h3>Vous n'avez pas de compte ? Pas de souci 🌱</h3>
-      <p class="muted">Laissez vos coordonnées : le producteur vous recontactera
-         par e-mail ou téléphone pour valider votre commande. (Créer un compte
-         vous permet de suivre vos commandes et d'être notifié.)</p>
+      <p class="muted">Laissez votre numéro : le producteur vous appelle
+         pour valider votre commande. L'e-mail est optionnel — il permet
+         de recevoir la liste des récoltes de la semaine par newsletter.</p>
       <div class="form-row">
         <label>Votre nom *
           <input type="text" name="nom_client" required
                  placeholder="Prénom et nom"></label>
-        <label>Votre e-mail
+        <label>Votre téléphone *
+          <input type="tel" name="telephone_client" required
+                 pattern="(?:\+33|0033|0)[\s.-]*[1-9](?:[\s.-]*\d{2}){4}"
+                 title="Numéro français : 06 12 34 56 78, 05 65 43 21 09…"
+                 placeholder="06 12 34 56 78"></label>
+        <label>Votre e-mail (optionnel, newsletter récoltes)
           <input type="email" name="email_client"
-                 placeholder="email (si vous en avez un)"></label>
-        <label>ou votre téléphone
-          <input type="tel" name="telephone_client"
-                 placeholder="06 … (si pas d'e-mail)"></label>
+                 placeholder="email (pour la newsletter)"></label>
       </div>
-      <p class="muted">E-mail OU téléphone obligatoire : sans moyen de
-         contact, le producteur ne pourra pas vous répondre.</p>
     </div>
   {% endif %}
 
