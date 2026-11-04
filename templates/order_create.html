@@ -69,15 +69,15 @@
     <label>Point de livraison / retrait (requis)
       <select name="point_livraison" required>
         {% for point in points_livraison %}
-          <option value="{{ point.pk }}" {% if point.pk|stringformat:"s" == point_choisi %}selected{% endif %}>{{ point.nom }} — {{ point.ville }}</option>
+          <option value="{{ point.pk }}" data-jours="{{ points_jours|get_item:point.pk }}" {% if point.pk|stringformat:"s" == point_choisi %}selected{% endif %}>{{ point.nom }} — {{ point.ville }}</option>
         {% endfor %}
       </select></label>
   {% endif %}
 
-  <label>Date souhaitée (selon les créneaux du producteur)
+  <label>Date souhaitée (selon les créneaux du producteur pour ce point)
     <select name="date_livraison">
-      {% for date in dates %}
-        <option value="{{ date|date:'Y-m-d' }}" {% if date|date:'Y-m-d' == date_choisie %}selected{% endif %}>{{ date|date:"l d F Y" }}</option>
+      {% for d in dates %}
+        <option value="{{ d.date|date:'Y-m-d' }}" data-jour="{{ d.jour }}" {% if d.date|date:'Y-m-d' == date_choisie %}selected{% endif %}>{{ d.date|date:"l d F Y" }}</option>
       {% endfor %}
     </select></label>
 
@@ -175,6 +175,31 @@
     "click", function () { modal.hidden = true; });
   modal.querySelector(".modal-recap-fond").addEventListener(
     "click", function () { modal.hidden = true; });
+})();
+
+/* Dates proposées : filtrées selon le point de livraison choisi (les
+   créneaux de ce point cadrent les jours possibles). */
+(function () {
+  var point = document.querySelector("select[name='point_livraison']");
+  var date = document.querySelector("select[name='date_livraison']");
+  if (!point || !date) { return; }
+  function majDates() {
+    var opt = point.options[point.selectedIndex];
+    var jours = (opt && opt.dataset.jours)
+      ? opt.dataset.jours.split(",").map(Number) : null;
+    Array.prototype.forEach.call(date.options, function (o) {
+      var autorise = !jours
+        || jours.indexOf(Number(o.dataset.jour)) !== -1;
+      o.hidden = !autorise;
+    });
+    var choix = date.selectedOptions[0];
+    if (choix && choix.hidden) {
+      var premiere = date.querySelector("option:not([hidden])");
+      if (premiere) { date.value = premiere.value; }
+    }
+  }
+  point.addEventListener("change", majDates);
+  majDates();
 })();
 </script>
 {% endblock %}

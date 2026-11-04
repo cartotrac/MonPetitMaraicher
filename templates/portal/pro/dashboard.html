@@ -3,13 +3,6 @@
 {% block retour_dashboard %}{% endblock %}
 {% block content %}
 <h1>Bienvenue {{ exploitant.nom_ferme }} 👋</h1>
-<nav class="quick-actions" aria-label="Rubriques du dashboard">
-  <a class="btn btn-outline btn-sm" href="#commandes" onclick="document.getElementById('commandes').open=true;">⏳ Commandes</a>
-  <a class="btn btn-outline btn-sm" href="#produits" onclick="document.getElementById('produits').open=true;">🥕 Produits</a>
-  <a class="btn btn-outline btn-sm" href="#recoltes" onclick="document.getElementById('recoltes').open=true;">🧺 Récoltes</a>
-  <a class="btn btn-outline btn-sm" href="#points" onclick="document.getElementById('points').open=true;">📍 Points &amp; créneaux</a>
-  <a class="btn btn-outline btn-sm" href="#vitrine" onclick="document.getElementById('vitrine').open=true;">👁 Ma vitrine</a>
-</nav>
 
 {% if meteo %}
 <div class="meteo-hero card">
@@ -196,22 +189,30 @@
 </details>
 
 <details id="recoltes" class="bloc-replie" open>
-  <summary><h2>🧺 Mes récoltes <span class="muted aide-replier">(cliquez pour replier/déplier)</span></h2></summary>
-  {% if semaines %}
-    <ul class="recoltes-mini">
-      {% for s in semaines %}
-        <li><a href="{% url 'portal:harvest_manage' s.pk %}">Semaine du {{ s.lundi|date:"d/m/Y" }}</a>
-            — {{ s.nb_lignes }} produit(s)
-            {% if s.publiee %}<span class="badge badge-ok">publiée</span>{% else %}<span class="badge badge-off">non publiée</span>{% endif %}</li>
-      {% endfor %}
-    </ul>
-    <p><a href="{% url 'portal:harvest_list' %}">Toutes mes récoltes →</a></p>
-  {% else %}
-    <p class="etat-vide"><span class="etat-vide-emoji">🧺</span>
-       Aucune récolte saisie. Publiez chaque semaine la liste de ce que
-       vous récoltez : vos clients commanderont dessus.
-       <a class="btn" href="{% url 'portal:harvest_new' %}">➕ Créer ma première récolte</a></p>
-  {% endif %}
+  <summary><h2>🧺 Mes récoltes <span class="muted aide-replier">(vue calendaire hebdomadaire — cliquez pour replier/déplier)</span></h2></summary>
+  <div class="cal-semaines">
+    {% for s in calendrier %}
+      {% if s.semaine %}
+        <a class="cal-semaine {% if s.passe %}passe{% endif %}"
+           href="{% url 'portal:harvest_manage' s.semaine.pk %}">
+          <span class="cal-dates">{{ s.lundi|date:"d/m" }} → {{ s.dimanche|date:"d/m/Y" }}</span><br>
+          {% if s.semaine.publiee %}
+            <span class="badge badge-ok cal-etat">publiée</span>
+          {% else %}
+            <span class="badge badge-off cal-etat">brouillon</span>
+          {% endif %}
+          <span class="muted">{{ s.nb_lignes }} produit(s)</span>
+        </a>
+      {% else %}
+        <a class="cal-semaine {% if s.passe %}passe{% endif %}"
+           href="{% url 'portal:harvest_new' %}">
+          <span class="cal-dates">{{ s.lundi|date:"d/m" }} → {{ s.dimanche|date:"d/m/Y" }}</span><br>
+          <span class="cal-etat muted">➕ créer la récolte</span>
+        </a>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <p><a href="{% url 'portal:harvest_list' %}">Toutes mes récoltes →</a></p>
 </details>
 
 <details id="points" class="bloc-replie" open>
@@ -234,4 +235,16 @@
           title="Aperçu de la vitrine publique" loading="lazy"></iframe>
 </details>
 </div>
+{% endblock %}
+{% block extrajs %}
+<script>
+/* Depuis le bandeau « Gestion » ou une ancre (#produits…), la rubrique
+   ciblée du dashboard se déplie automatiquement. */
+(function () {
+  if (!location.hash) { return; }
+  var cible = document.querySelector(
+    "details" + location.hash.replace(/[^\w-]/g, ""));
+  if (cible) { cible.open = true; cible.scrollIntoView(); }
+})();
+</script>
 {% endblock %}

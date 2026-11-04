@@ -22,8 +22,16 @@
       {% if user.is_authenticated %}
         {% if exploitant_courant %}
           <a href="{% url 'portal:dashboard' %}">Dashboard</a>
-          <a href="{% url 'portal:order_list' %}">Commandes</a>
-          <a href="{% url 'portal:panier_list' %}">Paniers</a>
+          <div class="nav-gestion">
+            <a class="nav-gestion-titre" href="{% url 'portal:dashboard' %}#produits">Gestion ▾</a>
+            <div class="nav-gestion-menu">
+              <a href="{% url 'portal:dashboard' %}#produits">🥕 Produits</a>
+              <a href="{% url 'portal:harvest_list' %}">🧺 Récoltes</a>
+              <a href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
+              <a href="{% url 'portal:order_list' %}">⏳ Commandes</a>
+              <a href="{% url 'portal:panier_list' %}">🧺 Paniers</a>
+            </div>
+          </div>
           <a href="{% url 'portal:publications_manage' %}">Publications</a>
           <a href="{% url 'portal:parametres' %}">⚙️ Paramètres</a>
         {% else %}

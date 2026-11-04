@@ -44,18 +44,21 @@
   <form method="post" class="form card">
     {% csrf_token %}
     <input type="hidden" name="action" value="creneau_ajouter">
+    <p class="muted">Cochez un ou plusieurs jours : un créneau sera créé
+       pour chacun. Ces jours cadrent les dates proposées aux clients
+       qui choisissent ce point de livraison.</p>
+    <fieldset class="form-row jours-choix">
+      <legend>Jours</legend>
+      {% for valeur, libelle in jours %}
+        <label class="jour-puce"><input type="checkbox" name="jours" value="{{ valeur }}"> {{ libelle }}</label>
+      {% endfor %}
+    </fieldset>
     <div class="form-row">
       <label>Point
         <select name="point">
           <option value="">— sans point précis —</option>
           {% for point in points %}
             <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
-          {% endfor %}
-        </select></label>
-      <label>Jour
-        <select name="jour">
-          {% for valeur, libelle in jours %}
-            <option value="{{ valeur }}">{{ libelle }}</option>
           {% endfor %}
         </select></label>
     </div>
@@ -72,6 +75,37 @@
     </div>
     <button class="btn" type="submit">Ajouter le créneau</button>
   </form>
+</section>
+
+<section class="harvest-bloc">
+  <h2>🗓 Ma semaine type</h2>
+  {% if creneaux %}
+    <table class="table">
+      <thead><tr>
+        {% for valeur, libelle in jours %}<th>{{ libelle }}</th>{% endfor %}
+      </tr></thead>
+      <tbody><tr>
+        {% for valeur, libelle in jours %}
+          <td>
+            {% for creneau in creneaux %}
+              {% if creneau.jour|stringformat:"s" == valeur|stringformat:"s" %}
+                <div class="badge">{{ creneau.heure_debut|time:"H:i" }}–{{ creneau.heure_fin|time:"H:i" }}</div>
+                <div class="muted">{{ creneau.point_livraison.nom|default:"sans point" }}</div>
+              {% endif %}
+            {% endfor %}
+          </td>
+        {% endfor %}
+      </tr></tbody>
+    </table>
+    <p class="muted">La vue ci-dessus récapitule vos créneaux récurrents ;
+       les clients ne peuvent choisir que les dates tombant sur ces jours
+       (et uniquement ceux du point de livraison sélectionné).</p>
+  {% else %}
+    <p class="card etat-vide"><span class="etat-vide-emoji">🗓</span>
+       Aucun créneau : les clients se voient proposer tous les jours.
+       Créez vos créneaux ci-dessus pour cadrer vos livraisons.
+    </p>
+  {% endif %}
 </section>
 
 <section class="harvest-bloc">

@@ -291,6 +291,33 @@ def proprietaire_requis(fonction):
 
 @login_required
 @exploitant_requis
+def _calendrier_recoltes(exploitant):
+    """Vue calendaire hebdomadaire des récoltes (dashboard) : les 8
+    prochaines semaines, chacune reliée à sa semaine de récolte si elle
+    existe (publiée ou brouillon), sinon à la création."""
+    aujourd_hui = timezone.localdate()
+    lundi_courant = aujourd_hui - datetime.timedelta(
+        days=aujourd_hui.weekday())
+    semaines = (SemaineRecolte.objects
+                .filter(exploitant=exploitant,
+                        lundi__gte=lundi_courant
+                        - datetime.timedelta(days=7))
+                .annotate(nb_lignes=Count("lignes")))
+    par_lundi = {s.lundi: s for s in semaines}
+    calendrier = []
+    for i in range(8):
+        lundi = lundi_courant + datetime.timedelta(weeks=i)
+        s = par_lundi.get(lundi)
+        calendrier.append({
+            "lundi": lundi,
+            "dimanche": lundi + datetime.timedelta(days=6),
+            "semaine": s,
+            "nb_lignes": s.nb_lignes if s else 0,
+            "passe": lundi < lundi_courant,
+        })
+    return calendrier
+
+
 def dashboard(request):
     """Page centrale du maraîcher : rubriques à gauche, aperçu de la
     vitrine publique en direct à droite, hero météo et bandeau des
@@ -322,6 +349,7 @@ def dashboard(request):
                          .filter(exploitant=exploitant)
                          .annotate(nb_lignes=Count("lignes"))
                          .order_by("-lundi")[:6]),
+        "calendrier": _calendrier_recoltes(exploitant),
         "points": exploitant.points_livraison.all(),
         "creneaux": exploitant.creneaux.select_related("point_livraison"),
         "commandes_attente": exploitant.commandes
@@ -1412,7 +1440,9 @@ def points_manage(request):
             point = (exploitant.points_livraison
                      .filter(pk=brut_point).first() if brut_point else None)
             try:
-                jour = int(request.POST.get("jour", ""))
+                jours_choisis = [int(j) for j in
+                                 request.POST.getlist("jours")
+                                 if j.strip().isdigit()]
                 capacite = int(request.POST.get("capacite") or 10)
                 heure_debut = datetime.time.fromisoformat(
                     request.POST.get("heure_debut", ""))
@@ -1420,21 +1450,33 @@ def points_manage(request):
                     request.POST.get("heure_fin", ""))
             except (TypeError, ValueError):
                 messages.error(request, "Créneau invalide "
-                               "(jour, horaires ou capacité).")
+                               "(jours, horaires ou capacité).")
                 return redirect("portal:points_manage")
             frequence = request.POST.get("frequence", "")
-            if not (1 <= jour <= 7) or heure_debut >= heure_fin:
+            if not jours_choisis:
+                messages.error(request, "Cochez au moins un jour de la "
+                               "semaine pour ce créneau.")
+            elif any(not (1 <= j <= 7) for j in jours_choisis):
                 messages.error(request, "Créneau invalide : jour entre "
-                               "lundi et dimanche, fin après le début.")
+                               "lundi et dimanche.")
+            elif heure_debut >= heure_fin:
+                messages.error(request, "Créneau invalide : la fin doit "
+                               "arriver après le début.")
             elif frequence not in CreneauLivraison.Frequence.values:
                 messages.error(request, "Fréquence inconnue.")
             else:
-                CreneauLivraison.objects.create(
-                    exploitant=exploitant, point_livraison=point,
-                    jour=jour, heure_debut=heure_debut,
-                    heure_fin=heure_fin, frequence=frequence,
-                    capacite=capacite)
-                messages.success(request, "Créneau ajouté.")
+                for jour in jours_choisis:
+                    CreneauLivraison.objects.create(
+                        exploitant=exploitant, point_livraison=point,
+                        jour=jour, heure_debut=heure_debut,
+                        heure_fin=heure_fin, frequence=frequence,
+                        capacite=capacite)
+                messages.success(
+                    request, "Créneau ajouté : "
+                    + ", ".join(dict(CreneauLivraison._meta
+                                     .get_field("jour").choices)[j]
+                                for j in jours_choisis)
+                    + f" {heure_debut}–{heure_fin}.")
         elif action == "creneau_supprimer":
             creneau = get_object_or_404(CreneauLivraison,
                                         pk=request.POST.get("pk"),
@@ -1449,6 +1491,7 @@ def points_manage(request):
         "points": points,
         "jours": CreneauLivraison._meta.get_field("jour").choices,
         "frequences": CreneauLivraison.Frequence.choices,
+        "creneaux": exploitant.creneaux.select_related("point_livraison"),
         "creneaux_sans_point": exploitant.creneaux
                               .filter(point_livraison__isnull=True),
     })
@@ -1735,6 +1778,15 @@ def order_create(request, slug):
                .order_by("-lundi").first())
     offres, mode = _offres_commande(exploitant, semaine)
     dates = _dates_livraison(exploitant, today)
+    # Jour (lundi=1…dimanche=7) de chaque date proposée + jours de
+    # créneau de chaque point : le formulaire client filtre les dates
+    # selon le point de livraison choisi.
+    dates_aff = [{"date": d, "jour": d.isoweekday()} for d in dates]
+    points_jours = {
+        p.pk: ",".join(str(c.jour)
+                       for c in p.creneaux.all())
+        for p in exploitant.points_livraison.all()
+        if p.creneaux.exists()}
 
     def _afficher(soumis=None):
         valeurs = dict(_valeurs_prefill(request, offres, exploitant))
@@ -1744,7 +1796,7 @@ def order_create(request, slug):
                     "offres": offres, "groupes": _groupes_offres(offres),
                     "mode": mode,
                     "points_livraison": exploitant.points_livraison.all(),
-                    "dates": dates}
+                    "dates": dates_aff, "points_jours": points_jours}
         contexte["valeurs"] = (soumis or {}).get("valeurs", valeurs)
         contexte["date_choisie"] = ((soumis or {}).get("date_livraison", "")
                                     or date_pre)

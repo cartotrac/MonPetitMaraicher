@@ -90,6 +90,56 @@ details.bloc-replie > summary .aide-replier { font-size: 0.7em;
   .nav-links .btn { margin: 0.2rem 0; }
 }
 
+/* ---- Bandeau pro : menu déroulant « Gestion » ---- */
+.nav-gestion { position: relative; display: inline-block; }
+.nav-gestion-titre::after { content: ""; }
+.nav-gestion-menu { display: none; position: absolute; top: 100%;
+                    left: 0; min-width: 11rem; background: #fff;
+                    border-radius: 0 0 10px 10px; padding: 0.35rem 0;
+                    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
+                    z-index: 60; }
+.nav-gestion:hover .nav-gestion-menu,
+.nav-gestion:focus-within .nav-gestion-menu { display: block; }
+.nav-gestion-menu a { display: block; text-align: left;
+                      color: var(--accent-dark, #2e7d32);
+                      padding: 0.4rem 1rem; }
+.nav-gestion-menu a:hover { background: var(--accent-light, #e8f5e9); }
+@media (max-width: 820px) {
+  /* Dans le menu burger, la rubrique se déplie d'elle-même et le
+     libellé « Gestion ▾ » disparaît : liens directs. */
+  .nav-gestion-titre { display: none; }
+  .nav-gestion-menu { display: block; position: static; background:
+                      transparent; box-shadow: none; border-radius: 0;
+                      padding: 0 0 0.2rem 0.9rem; min-width: 0; }
+  .nav-gestion-menu a { padding: 0.25rem 0.2rem; }
+}
+
+/* ---- Dashboard : calendrier hebdomadaire des récoltes ---- */
+.cal-semaines { display: grid; grid-template-columns:
+                repeat(auto-fill, minmax(11.5rem, 1fr));
+                gap: 0.7rem; margin: 0.8rem 0; }
+.cal-semaine { display: block; text-decoration: none; color: inherit;
+               border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 10px;
+               padding: 0.6rem 0.8rem; }
+.cal-semaine:hover { border-color: var(--accent, #2e7d32);
+                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+.cal-semaine .cal-dates { font-weight: 600; }
+.cal-semaine .cal-etat { display: inline-block; margin-top: 0.3rem;
+                         font-size: 0.8rem; }
+.cal-semaine.passe { opacity: 0.55; }
+
+/* ---- Points & créneaux : sélection des jours par puces ---- */
+.jours-choix { border: none; padding: 0; margin: 0; }
+.jours-choix legend { font-weight: 600; margin-bottom: 0.3rem; }
+.jour-puce { display: inline-flex; align-items: center; gap: 0.25rem;
+             border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 999px;
+             padding: 0.2rem 0.7rem; margin: 0 0.3rem 0.3rem 0;
+             cursor: pointer; }
+.jour-puce:has(input:checked) {
+  background: var(--accent, #2e7d32); color: #fff;
+  border-color: var(--accent, #2e7d32); }
+.jour-puce input { margin: 0; }
+
 /* ---- Récapitulatif de commande : fenêtre de confirmation ---- */
 .modal-recap { position: fixed; inset: 0; z-index: 100; display: flex;
                align-items: center; justify-content: center;
