@@ -8,9 +8,9 @@
 
    Superpositions administratives (chargees a la demande, au premier
    affichage uniquement) :
-   - Regions, Departements, Communes : france-geojson (gregoiredavid)
-   Les departements (numero + nom) et communes (nom) portent une
-   etiquette permanente, revelee au-dela d'un seuil de zoom.
+   - Regions, Departements : france-geojson (gregoiredavid)
+   Les departements (numero + nom) portent une etiquette permanente,
+   revelee au-dela d'un seuil de zoom.
 */
 
 var CAT_STYLES = {
@@ -56,20 +56,16 @@ var COUCHES_ADMIN = {
     url: FOND_ADMIN + "departements.geojson",
     style: { color: "#1565c0", weight: 1.5, fill: false, opacity: 0.8 },
     etiquette: "dep"      // numéro + nom affichés au-delà du zoom label
-  },
-  "Communes": {
-    url: FOND_ADMIN + "communes-version-simplifiee.geojson",
-    style: { color: "#ef6c00", weight: 0.8, fill: false, opacity: 0.7 },
-    etiquette: "com"      // nom affiché au-delà du zoom label
   }
 };
 
 /* Zoom minimum à partir duquel chaque couche administrative devient
    disponible : en dessous, elle est grisée dans le contrôle et son
-   chargement est refusé (trop de tuiles/features pour l'emprise). */
-var SEUILS = { "Régions": 0, "Départements": 6, "Communes": 10 };
+   chargement est refusé. (La couche Communes a été retirée : trop
+   lourde, et le fond Plan IGN suffit à identifier les communes.) */
+var SEUILS = { "Régions": 0, "Départements": 6 };
 /* Zoom minimum pour afficher les étiquettes (noms) des couches actives */
-var SEUILS_LABELS = { "dep": 8, "com": 12 };
+var SEUILS_LABELS = { "dep": 8 };
 
 var couchesAdmin = {};
 Object.keys(COUCHES_ADMIN).forEach(function (nom) {
@@ -117,8 +113,8 @@ function majCouleurs() {
 // Afficher / masquer les étiquettes (noms) selon le zoom et l'activation
 function majLabels() {
   var conteneur = carte.getContainer();
-  ["dep", "com"].forEach(function (cle) {
-    var nomCouche = (cle === "dep") ? "Départements" : "Communes";
+  ["dep"].forEach(function (cle) {
+    var nomCouche = "Départements";
     var actif = carte.hasLayer(couchesAdmin[nomCouche])
       && carte.getZoom() >= (SEUILS_LABELS[cle] || 0);
     conteneur.classList.toggle("labels-" + cle + "-on", actif);

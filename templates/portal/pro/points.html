@@ -1,10 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Points de livraison — MonPetitMaraicher{% endblock %}
+{% block extra_style %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
 {% block content %}
 <h1>📍 Points de livraison & créneaux</h1>
 <p class="muted">Les points de livraison s'affichent sur votre vitrine et sont
-   proposés à la commande. Les créneaux (jour, horaires, fréquence, capacité)
-   cadrent les dates de livraison proposées aux clients.</p>
+   proposés à la commande. Positionnez chaque point sur la carte (clic ou
+   géocodage de l'adresse) : le client reçoit la localisation dès que son
+   panier passe en prêt ou livré. Les créneaux (jour, horaires, fréquence,
+   capacité) cadrent les dates de livraison proposées aux clients.</p>
 
 <section class="harvest-bloc">
   <h2>➕ Nouveau point</h2>
@@ -20,6 +24,17 @@
       <label>Code postal <input type="text" name="code_postal" placeholder="CP"></label>
     </div>
     <label>Précisions <input type="text" name="note" placeholder="Ex : à côté de la fontaine"></label>
+    <button type="button" class="btn btn-outline btn-sm"
+            data-geocoder data-adresse="id_adresse" data-cp="id_code_postal"
+            data-ville="id_ville" data-carte="carte-point"
+            data-libelle="📍 Localiser l'adresse">📍 Localiser l'adresse</button>
+    <div class="form-row">
+      <label>Latitude <input type="text" name="latitude" id="id_latitude" placeholder="par carte ou géocodage"></label>
+      <label>Longitude <input type="text" name="longitude" id="id_longitude" placeholder="par carte ou géocodage"></label>
+    </div>
+    <p class="muted">… ou cliquez directement sur la carte ci-dessous :</p>
+    <div id="carte-point" data-pick-map data-lat-input="id_latitude"
+         data-lon-input="id_longitude" style="height: 320px; border-radius: 8px;"></div>
     <button class="btn" type="submit">Créer le point</button>
   </form>
 </section>
@@ -67,6 +82,26 @@
         <strong>{{ point.nom }}</strong> — {{ point.adresse }},
         {{ point.code_postal }} {{ point.ville }}
         {% if point.note %}<span class="muted">— {{ point.note }}</span>{% endif %}
+        {% if point.latitude %}
+          <span class="badge badge-ok">🗺️ localisé</span>
+          <a href="https://www.openstreetmap.org/?mlat={{ point.latitude|floatformat:'6' }}&mlon={{ point.longitude|floatformat:'6' }}#map=17/{{ point.latitude|floatformat:'6' }}/{{ point.longitude|floatformat:'6' }}" target="_blank" rel="noopener">voir la position</a>
+        {% else %}
+          <form method="post" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="point_geo">
+            <input type="hidden" name="pk" value="{{ point.pk }}">
+            <button type="button" class="btn btn-sm btn-outline"
+                    data-geocoder data-adresse="geo_adresse_{{ point.pk }}"
+                    data-cp="geo_cp_{{ point.pk }}" data-ville="geo_ville_{{ point.pk }}"
+                    data-lat="geo_lat_{{ point.pk }}" data-lon="geo_lon_{{ point.pk }}"
+                    data-submit data-libelle="📍 Localiser">📍 Localiser</button>
+            <input type="hidden" id="geo_adresse_{{ point.pk }}" value="{{ point.adresse }}">
+            <input type="hidden" id="geo_cp_{{ point.pk }}" value="{{ point.code_postal }}">
+            <input type="hidden" id="geo_ville_{{ point.pk }}" value="{{ point.ville }}">
+            <input type="hidden" id="geo_lat_{{ point.pk }}" name="latitude">
+            <input type="hidden" id="geo_lon_{{ point.pk }}" name="longitude">
+          </form>
+        {% endif %}
         <ul>
           {% for creneau in point.creneaux.all %}
             <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut }}–{{ creneau.heure_fin }},
@@ -108,4 +143,8 @@
     </div>
   {% endif %}
 </section>
+{% endblock %}
+{% block extrajs %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/pick-map.js' %}" defer></script>
 {% endblock %}

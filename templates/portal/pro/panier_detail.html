@@ -2,7 +2,7 @@
 {% load l10n %}
 {% block title %}Panier n°{{ panier.numero }} — MonPetitMaraicher{% endblock %}
 {% block content %}
-<h1>🧺 Panier n°{{ panier.numero }} — {{ panier.nom_client }}</h1>
+<h1>🧺 Panier n°{{ panier.numero }} — {% if panier.client %}{{ panier.client.get_full_name|default:panier.client.username }}{% else %}{{ panier.nom_client }}{% endif %}</h1>
 {% if panier.client.profil_client.photo_url %}
   <p><img class="avatar" src="{{ panier.client.profil_client.photo_url }}" alt="Photo de {{ panier.nom_client }}"></p>
 {% endif %}

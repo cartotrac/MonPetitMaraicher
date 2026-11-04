@@ -8,78 +8,75 @@
   <a class="btn {% if filtre_statut == 'NOUVELLE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'NOUVELLE' %}">À valider</a>
   <a class="btn {% if filtre_statut == 'VALIDEE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'VALIDEE' %}">Validées</a>
 </div>
+<p class="muted">Les commandes sont regroupées par jour de livraison, du plus
+   récent au plus ancien. Le dernier jour est déplié ; cliquez sur un jour
+   pour déplier/replier ses commandes.</p>
 
-{% if dates %}
-<form method="get" class="inline-form">
-  <label for="date">Jour de livraison :</label>
-  <select id="date" name="date" onchange="this.form.submit()">
-    <option value="">Tous les jours</option>
-    {% for d in dates %}
-      <option value="{{ d|date:'Y-m-d' }}" {% if d|date:'Y-m-d' == date_filter %}selected{% endif %}>{{ d|date:"l d F Y" }}</option>
-    {% endfor %}
-  </select>
-  <noscript><button class="btn btn-sm" type="submit">Filtrer</button></noscript>
-</form>
-{% endif %}
-
-{% for commande in commandes %}
-  <div class="card order-card">
-    <div class="order-head">
-      {% if commande.client and commande.client.profil_client.photo_url %}
-        <img class="avatar avatar-small" src="{{ commande.client.profil_client.photo_url }}" alt="Photo de {{ commande.nom_client }}">
-      {% endif %}
-      <strong>#{{ commande.pk }} — {{ commande.nom_client }}</strong>
-      <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
-    </div>
-    <p>📅 Livraison : {{ commande.date_livraison|date:"d/m/Y" }}
-       {% if commande.point_livraison %}à {{ commande.point_livraison.nom }}{% endif %}
-       — 💰 {{ commande.total }} €</p>
-    <p class="muted">✉️ {{ commande.email_client }}{% if commande.telephone_client %} · 📞 {{ commande.telephone_client }}{% endif %}
-       {% if commande.canal_pref %} · 💬 contact préféré : {{ commande.canal_pref }}{% endif %}</p>
-    <ul>
-      {% for ligne in commande.lignes.all %}
-        <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.unite_courte }} ({{ ligne.prix_unitaire }} €/u)</li>
-      {% endfor %}
-    </ul>
-    {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}
-    {% if commande.statut == 'NOUVELLE' %}
-      <form method="post" action="{% url 'portal:order_validate' commande.pk %}" class="inline-form">
-        {% csrf_token %}
-        <p class="muted">Ajustez si besoin les quantités (0 = retirer la ligne, vide = conserver la quantité commandée) :</p>
-        <ul>
-          {% for ligne in commande.lignes.all %}
-            <li>
-              <label>
-                <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0"
-                       name="qty_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}">
-                × {{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u)
-              </label>
-            </li>
-          {% endfor %}
-        </ul>
-        {% if commande.point_livraison %}
-          <p class="muted">📍 Point de livraison : <strong>{{ commande.point_livraison.nom }}</strong></p>
-        {% elif points %}
-          <label>Point de livraison (requis pour valider — le panier est
-            numéroté par jour et par point) :
-            <select name="point_livraison" required>
-              <option value="">— choisir un point —</option>
-              {% for point in points %}
-                <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
-              {% endfor %}
-            </select></label>
-        {% else %}
-          <p class="flash warning">⚠️ Aucun point de livraison : créez-en un
-            dans « Livraison » avant de valider cette commande.</p>
+{% regroup commandes by date_livraison as jours %}
+{% for jour in jours %}
+  <details class="groupe-jour" {% if forloop.first %}open{% endif %}>
+    <summary>📅 {{ jour.grouper|date:"l d F Y" }}
+      <span class="badge">{{ jour.list|length }} commande{{ jour.list|length|pluralize }}</span></summary>
+    {% for commande in jour.list %}
+    <div class="card order-card">
+      <div class="order-head">
+        {% if commande.client.profil_client.photo_url %}
+          <img class="avatar avatar-small" src="{{ commande.client.profil_client.photo_url }}" alt="Photo du client">
         {% endif %}
-        <label>Commentaire (visible par le client) :
-          <textarea name="note" rows="2"></textarea>
-        </label>
-        <button class="btn" name="action" value="validate" type="submit">✅ Valider</button>
-        <button class="btn btn-outline" name="action" value="refuse" type="submit">❌ Refuser</button>
-      </form>
-    {% endif %}
-  </div>
+        <strong>#{{ commande.pk }} — {% if commande.client %}{{ commande.client.get_full_name|default:commande.client.username }}{% else %}{{ commande.nom_client }}{% endif %}</strong>
+        <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
+      </div>
+      <p>📅 Livraison : {{ commande.date_livraison|date:"d/m/Y" }}
+         {% if commande.point_livraison %}à {{ commande.point_livraison.nom }}{% endif %}
+         — 💰 {{ commande.total }} €</p>
+      <p class="muted">✉️ {% if commande.client %}{{ commande.client.email }}{% if commande.client.profil_client.telephone %} · 📞 {{ commande.client.profil_client.telephone }}{% endif %}{% else %}{{ commande.email_client }}{% if commande.telephone_client %} · 📞 {{ commande.telephone_client }}{% endif %}{% endif %}
+         {% if commande.canal_pref %} · 💬 contact préféré : {{ commande.canal_pref }}{% endif %}</p>
+      <ul>
+        {% for ligne in commande.lignes.all %}
+          <li>{{ ligne.produit.nom }} × {{ ligne.quantite }} {{ ligne.produit.unite_courte }} ({{ ligne.prix_unitaire }} €/u)</li>
+        {% endfor %}
+      </ul>
+      {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}
+      {% if commande.statut == 'NOUVELLE' %}
+        <form method="post" action="{% url 'portal:order_validate' commande.pk %}" class="inline-form">
+          {% csrf_token %}
+          <p class="muted">Ajustez si besoin les quantités (0 = retirer la ligne, vide = conserver la quantité commandée) :</p>
+          <ul>
+            {% for ligne in commande.lignes.all %}
+              <li>
+                <label>
+                  <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0"
+                         name="qty_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}">
+                  × {{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u)
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if commande.point_livraison %}
+            <p class="muted">📍 Point de livraison : <strong>{{ commande.point_livraison.nom }}</strong></p>
+          {% elif points %}
+            <label>Point de livraison (requis pour valider — le panier est
+              numéroté par jour et par point) :
+              <select name="point_livraison" required>
+                <option value="">— choisir un point —</option>
+                {% for point in points %}
+                  <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
+                {% endfor %}
+              </select></label>
+          {% else %}
+            <p class="flash warning">⚠️ Aucun point de livraison : créez-en un
+              dans « Livraison » avant de valider cette commande.</p>
+          {% endif %}
+          <label>Commentaire (visible par le client) :
+            <textarea name="note" rows="2"></textarea>
+          </label>
+          <button class="btn" name="action" value="validate" type="submit">✅ Valider</button>
+          <button class="btn btn-outline" name="action" value="refuse" type="submit">❌ Refuser</button>
+        </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </details>
 {% empty %}
   <p class="muted">Aucune commande pour l'instant.</p>
 {% endfor %}

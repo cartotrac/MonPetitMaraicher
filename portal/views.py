@@ -556,28 +556,17 @@ def order_list(request, statut=None):
     """Commandes reçues, avec contact client (e-mail, téléphone, canal
     préféré si le client en a exprimé un)."""
     exploitant = exploitant_pour(request.user)
-    commandes = exploitant.commandes.order_by("-creee_le")
+    commandes = exploitant.commandes.order_by("-date_livraison", "-creee_le")
     if statut:
         commandes = commandes.filter(statut=statut)
-    # Menu déroulant des jours de livraison (du plus récent au plus ancien)
-    date_filter = request.GET.get("date", "").strip()
-    try:
-        date_filter = datetime.date.fromisoformat(date_filter).isoformat()
-    except ValueError:
-        date_filter = ""
-    if date_filter:
-        commandes = commandes.filter(date_livraison=date_filter)
-    dates = sorted(
-        set(exploitant.commandes.values_list("date_livraison", flat=True)),
-        reverse=True)
     canaux = {p.client_id: p.get_canal_display()
               for p in PreferenceContact.objects.filter(exploitant=exploitant)}
-    commandes = list(commandes.prefetch_related("lignes__produit"))
+    commandes = list(commandes.prefetch_related("lignes__produit",
+                                                "client__profil_client"))
     for c in commandes:
         c.canal_pref = canaux.get(c.client_id) if c.client_id else None
     return render(request, "portal/pro/orders.html",
                   {"commandes": commandes, "filtre_statut": statut,
-                   "dates": dates, "date_filter": date_filter,
                    "points": exploitant.points_livraison.all()})
 
 
@@ -820,25 +809,13 @@ def order_validate(request, commande_id):
 @login_required
 @exploitant_requis
 def panier_list(request):
-    """Liste des paniers, filtrable par jour de livraison."""
+    """Liste des paniers, regroupés visuellement par jour de livraison."""
     exploitant = exploitant_pour(request.user)
     paniers = (exploitant.paniers.select_related("client", "point_livraison")
-               .prefetch_related("lignes__produit")
+               .prefetch_related("lignes__produit", "client__profil_client")
                .order_by("-date_livraison", "numero"))
-    date_filter = request.GET.get("date", "").strip()
-    if date_filter:
-        try:
-            date_filter = datetime.date.fromisoformat(date_filter).isoformat()
-        except ValueError:
-            date_filter = ""
-        else:
-            paniers = paniers.filter(date_livraison=date_filter)
-    dates = sorted(
-        set(exploitant.paniers.values_list("date_livraison", flat=True)),
-        reverse=True)
     return render(request, "portal/pro/paniers.html",
-                  {"paniers": paniers, "date_filter": date_filter,
-                   "dates": dates})
+                  {"paniers": paniers})
 
 
 @login_required
@@ -1095,6 +1072,16 @@ def clients_suivi(request):
                   {"rows": rows, "q": request.GET.get("q", "")})
 
 
+def _latlon(brut):
+    """Latitude/longitude saisie ou reçue du widget carte : None si vide
+    ou invalide (la position reste optionnelle)."""
+    try:
+        valeur = float((brut or "").strip().replace(",", "."))
+        return valeur if -180 <= valeur <= 180 else None
+    except (TypeError, ValueError):
+        return None
+
+
 @login_required
 @exploitant_requis
 def points_manage(request):
@@ -1109,15 +1096,30 @@ def points_manage(request):
             ville = request.POST.get("ville", "").strip()
             code_postal = request.POST.get("code_postal", "").strip()
             note = request.POST.get("note", "").strip()
+            latitude = _latlon(request.POST.get("latitude"))
+            longitude = _latlon(request.POST.get("longitude"))
             if not nom or not ville:
                 messages.error(request, "Nom et ville du point requis.")
             else:
                 PointLivraison.objects.create(
                     exploitant=exploitant, nom=nom[:150],
                     adresse=adresse[:255], ville=ville[:100],
-                    code_postal=code_postal[:10], note=note)
+                    code_postal=code_postal[:10], note=note,
+                    latitude=latitude, longitude=longitude)
                 messages.success(request,
                                  f"Point « {nom} » créé.")
+        elif action == "point_geo":
+            # Position du point : géocodée (Nominatim) ou posée sur la
+            # carte par le maraîcher — transmise au client au moment de
+            # la mise en prêt/livré du panier.
+            point = get_object_or_404(PointLivraison,
+                                      pk=request.POST.get("pk"),
+                                      exploitant=exploitant)
+            point.latitude = _latlon(request.POST.get("latitude"))
+            point.longitude = _latlon(request.POST.get("longitude"))
+            point.save()
+            messages.success(request,
+                             f"Position de « {point.nom} » enregistrée.")
         elif action == "point_supprimer":
             point = get_object_or_404(PointLivraison,
                                      pk=request.POST.get("pk"),
@@ -1447,18 +1449,8 @@ def my_orders(request):
     """Commandes du client ; les paniers validés montrent le contenu
     livré côte à côte du souhaité, avec le commentaire du producteur."""
     commandes = (request.user.commandes.select_related("exploitant")
-                 .prefetch_related("lignes__produit").order_by("-creee_le"))
-    # Menu déroulant des jours de livraison (du plus récent au plus ancien)
-    date_filter = request.GET.get("date", "").strip()
-    try:
-        date_filter = datetime.date.fromisoformat(date_filter).isoformat()
-    except ValueError:
-        date_filter = ""
-    if date_filter:
-        commandes = commandes.filter(date_livraison=date_filter)
-    dates = sorted(
-        set(request.user.commandes.values_list("date_livraison", flat=True)),
-        reverse=True)
+                 .prefetch_related("lignes__produit")
+                 .order_by("-date_livraison", "-creee_le"))
     resultats = []
     for commande in commandes:
         panier = (Panier.objects.filter(commande=commande)
@@ -1477,8 +1469,7 @@ def my_orders(request):
         resultats.append({"commande": commande, "panier": panier,
                           "lignes_panier": lignes_panier})
     return render(request, "portal/my_orders.html",
-                  {"resultats": resultats, "dates": dates,
-                   "date_filter": date_filter})
+                  {"resultats": resultats})
 
 
 @login_required

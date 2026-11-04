@@ -293,6 +293,11 @@ class PointLivraison(models.Model):
     ville = models.CharField("Ville", max_length=100)
     code_postal = models.CharField("Code postal", max_length=10)
     note = models.TextField("Précisions", blank=True)
+    # Position cartographique (Plan IGN) : géocodée depuis l'adresse ou
+    # posée par clic sur la carte par le maraîcher ; transmise au client
+    # dès que son panier passe en prêt/livré (lien vers la carte).
+    latitude = models.FloatField("Latitude", null=True, blank=True)
+    longitude = models.FloatField("Longitude", null=True, blank=True)
 
     class Meta:
         verbose_name = "Point de livraison"

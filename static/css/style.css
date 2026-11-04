@@ -311,3 +311,15 @@ border: none; box-shadow: none;
 .image-picker-en-erreur .image-picker-cadre { border-color: #b71c1c; }
 .image-picker-en-erreur .image-picker-erreur { display: flex; }
 .image-picker-aide { font-size: 0.8rem; max-width: 46ch; }
+/* ---- Sections par jour (commandes, paniers, mes commandes) ---- */
+details.groupe-jour { margin: 0.8rem 0; border: 1px solid var(--border);
+                      border-radius: 10px; background: var(--card); }
+details.groupe-jour > summary { cursor: pointer; padding: 0.7rem 1rem;
+                                font-weight: 600; font-size: 1.05rem;
+                                list-style: none; display: flex;
+                                align-items: center; gap: 0.6rem; }
+details.groupe-jour > summary::before { content: "▸"; color: var(--accent);
+                                        font-size: 0.9rem; transition: transform 0.15s; }
+details.groupe-jour[open] > summary::before { transform: rotate(90deg); }
+details.groupe-jour > summary .badge { font-weight: 400; }
+.groupe-jour .card { margin: 0.4rem 1rem 0.8rem; }
