@@ -102,11 +102,6 @@ CATALOGUES = {
 }
 
 
-class Command(BaseCommand):
-    help = ("Charge les catalogues de produits types par activité "
-            "(idempotent : lancez-le après chaque mise à jour).")
-
-
 # Mots-clés (sans accent, minuscule) pour deviner l'emoji d'un produit
 # type qui n'en a pas — chaque produit finit donc avec un symbole.
 EMOJIS_PAR_MOTCLE = [
@@ -178,6 +173,11 @@ def emoji_pour_nom(nom):
         if cle in texte:
             return emoji
     return ""
+
+
+class Command(BaseCommand):
+    help = ("Charge les catalogues de produits types par activité "
+            "(idempotent : lancez-le après chaque mise à jour).")
 
     def handle(self, *args, **options):
         # 1. Le catalogue existant est explicitement classé maraîcher.
