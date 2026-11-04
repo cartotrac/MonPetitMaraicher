@@ -79,6 +79,9 @@
     {% endfor %}
   </details>
 {% empty %}
-  <p class="muted">Aucune commande pour l'instant.</p>
+  <p class="card etat-vide"><span class="etat-vide-emoji">📥</span>
+     Aucune commande pour l'instant{% if filtre_statut %} avec ce filtre{% endif %}.
+     Dès qu'un client commande sur votre vitrine, elle apparaît ici.
+     <a class="btn btn-outline btn-sm" href="{% url 'portal:order_direct' %}">📝 Saisir une commande au marché</a></p>
 {% endfor %}
 {% endblock %}

@@ -4,12 +4,11 @@
 {% block content %}
 <h1>Bienvenue {{ exploitant.nom_ferme }} 👋</h1>
 <nav class="quick-actions" aria-label="Rubriques du dashboard">
-  <a class="btn btn-outline btn-sm" href="#commandes">⏳ Commandes</a>
-  <a class="btn btn-outline btn-sm" href="#produits"
-     onclick="document.getElementById('produits').open=true;">🥕 Produits</a>
-  <a class="btn btn-outline btn-sm" href="#recoltes">🧺 Récoltes</a>
-  <a class="btn btn-outline btn-sm" href="#points">📍 Points &amp; créneaux</a>
-  <a class="btn btn-outline btn-sm" href="#vitrine">👁 Ma vitrine</a>
+  <a class="btn btn-outline btn-sm" href="#commandes" onclick="document.getElementById('commandes').open=true;">⏳ Commandes</a>
+  <a class="btn btn-outline btn-sm" href="#produits" onclick="document.getElementById('produits').open=true;">🥕 Produits</a>
+  <a class="btn btn-outline btn-sm" href="#recoltes" onclick="document.getElementById('recoltes').open=true;">🧺 Récoltes</a>
+  <a class="btn btn-outline btn-sm" href="#points" onclick="document.getElementById('points').open=true;">📍 Points &amp; créneaux</a>
+  <a class="btn btn-outline btn-sm" href="#vitrine" onclick="document.getElementById('vitrine').open=true;">👁 Ma vitrine</a>
 </nav>
 
 {% if meteo %}
@@ -59,8 +58,8 @@
   <a class="btn btn-outline" href="{% url 'portal:points_manage' %}">📍 Points & créneaux</a>
 </div>
 
-<section id="commandes">
-  <h2>⏳ Commandes à valider</h2>
+<details id="commandes" class="bloc-replie" open>
+  <summary><h2>⏳ Commandes à valider <span class="muted aide-replier">(cliquez pour replier/déplier)</span></h2></summary>
   {% for commande in commandes_attente %}
     <div class="card">
       <strong>Commande #{{ commande.pk }}</strong> <span class="badge badge-NOUVELLE">à traiter</span>
@@ -69,16 +68,19 @@
       <a class="btn btn-sm" href="{% url 'portal:order_list_filtered' 'NOUVELLE' %}">Traiter</a>
     </div>
   {% empty %}
-    <p class="muted">Aucune commande en attente. 🎉</p>
+    <p class="etat-vide"><span class="etat-vide-emoji">🎉</span>
+       Aucune commande en attente : tout est traité ! Les nouvelles
+       commandes des clients apparaîtront ici.
+       <a class="btn btn-outline btn-sm" href="{% url 'portal:order_direct' %}">📝 Saisir une commande au marché</a></p>
   {% endfor %}
-</section>
+</details>
 
-<section>
-  <h2>🧺 Paniers en cours</h2>
+<details id="paniers" class="bloc-replie" open>
+  <summary><h2>🧺 Paniers en cours <span class="muted aide-replier">(cliquez pour replier/déplier)</span></h2></summary>
   <p>{% if paniers_en_cours %}<span class="badge badge-PREPARATION">en cours</span>{% endif %}
      {{ paniers_en_cours }} panier(s) en préparation ou à livrer —
      <a href="{% url 'portal:panier_list' %}">gérer les paniers</a></p>
-</section>
+</details>
 
 <details id="produits" class="bloc-replie">
   <summary><h2>🥕 Mes produits <span class="muted aide-replier">(cliquez pour déplier la liste)</span></h2></summary>
@@ -193,8 +195,8 @@
     {% endif %}
 </details>
 
-<section id="recoltes">
-  <h2>🧺 Mes récoltes</h2>
+<details id="recoltes" class="bloc-replie" open>
+  <summary><h2>🧺 Mes récoltes <span class="muted aide-replier">(cliquez pour replier/déplier)</span></h2></summary>
   {% if semaines %}
     <ul class="recoltes-mini">
       {% for s in semaines %}
@@ -205,26 +207,31 @@
     </ul>
     <p><a href="{% url 'portal:harvest_list' %}">Toutes mes récoltes →</a></p>
   {% else %}
-    <p class="muted">Aucune récolte saisie. <a href="{% url 'portal:harvest_new' %}">Créer ma première récolte</a></p>
+    <p class="etat-vide"><span class="etat-vide-emoji">🧺</span>
+       Aucune récolte saisie. Publiez chaque semaine la liste de ce que
+       vous récoltez : vos clients commanderont dessus.
+       <a class="btn" href="{% url 'portal:harvest_new' %}">➕ Créer ma première récolte</a></p>
   {% endif %}
-</section>
+</details>
 
-<section id="points">
-  <h2>📍 Points de livraison &amp; créneaux</h2>
+<details id="points" class="bloc-replie" open>
+  <summary><h2>📍 Points de livraison &amp; créneaux <span class="muted aide-replier">(cliquez pour replier/déplier)</span></h2></summary>
   {% if points %}
     <p>{{ points|length }} point(s) de livraison —
        <a href="{% url 'portal:points_manage' %}">gérer les points et créneaux</a></p>
   {% else %}
-    <p class="muted">Aucun point de livraison : créez-en un pour numéroter
-       les paniers. <a href="{% url 'portal:points_manage' %}">En ajouter</a></p>
+    <p class="etat-vide"><span class="etat-vide-emoji">📍</span>
+       Aucun point de livraison : créez-en un (marché, ferme, dépôt) pour
+       que les clients choisissent où récupérer leurs paniers.
+       <a class="btn" href="{% url 'portal:points_manage' %}">➕ En ajouter</a></p>
   {% endif %}
-</section>
+</details>
 
-<section id="vitrine" class="harvest-bloc">
-  <h2>👁 Ma vitrine en direct</h2>
+<details id="vitrine" class="bloc-replie harvest-bloc" open>
+  <summary><h2>👁 Ma vitrine en direct <span class="muted aide-replier">(cliquez pour replier/déplier)</span></h2></summary>
   <p><a class="btn btn-outline btn-sm" href="{% url 'portal:producer_detail' exploitant.slug %}" target="_blank">Ouvrir la page publique ↗</a></p>
   <iframe class="apercu-vitrine" src="{% url 'portal:producer_detail' exploitant.slug %}?apercu=1"
           title="Aperçu de la vitrine publique" loading="lazy"></iframe>
-</section>
+</details>
 </div>
 {% endblock %}

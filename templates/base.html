@@ -13,7 +13,10 @@
 <header class="site-header">
   <nav class="nav container">
     <a class="brand" href="{% url 'portal:home' %}">🌱 MonPetitProducteurLocal</a>
-    <div class="nav-links">
+    <button class="nav-burger" type="button" id="nav-burger"
+            aria-controls="nav-principal" aria-expanded="false"
+            aria-label="Ouvrir le menu">☰</button>
+    <div class="nav-links" id="nav-principal">
       <a href="{% url 'portal:producer_search' %}">Chercher</a>
       {% if user.is_authenticated %}
         {% if exploitant_courant %}
@@ -81,5 +84,20 @@
   </div>
 </footer>
 {% block extrajs %}{% endblock %}
+<script>
+/* Navigation mobile : bouton burger qui déplie/replie les liens. */
+(function () {
+  var burger = document.getElementById("nav-burger");
+  var liens = document.getElementById("nav-principal");
+  if (!burger || !liens) { return; }
+  burger.addEventListener("click", function () {
+    var ouvert = liens.classList.toggle("ouvert");
+    burger.setAttribute("aria-expanded", ouvert ? "true" : "false");
+    burger.setAttribute("aria-label",
+                         ouvert ? "Fermer le menu" : "Ouvrir le menu");
+    burger.textContent = ouvert ? "✕" : "☰";
+  });
+})();
+</script>
 </body>
 </html>

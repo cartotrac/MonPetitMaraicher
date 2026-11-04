@@ -37,6 +37,9 @@
     {% endfor %}
   </details>
 {% empty %}
-  <p class="muted">Aucun panier pour l'instant. Validez une commande (ou <a href="{% url 'portal:order_direct' %}">saisissez-en une directement</a>) et le panier numéroté sera créé.</p>
+  <p class="card etat-vide"><span class="etat-vide-emoji">🧺</span>
+     Aucun panier pour l'instant. Validez une commande (ou saisissez-en
+     une directement) et le panier numéroté sera créé automatiquement.
+     <a class="btn btn-outline btn-sm" href="{% url 'portal:order_direct' %}">📝 Saisir une commande directe</a></p>
 {% endfor %}
 {% endblock %}

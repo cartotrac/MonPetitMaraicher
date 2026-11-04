@@ -1,7 +1,9 @@
 """Envois e-mail / SMS aux clients (issue #3) — zéro dépendance externe.
 
-E-mail : SMTP configuré via variables d'environnement (EMAIL_HOST, etc.).
-Sans EMAIL_HOST, Django journalise au lieu d'envoyer et l'interface
+E-mail : chaque exploitation peut configurer son propre serveur SMTP
+(page Paramètres → Messagerie) ; sans configuration locale, on retombe
+sur le SMTP global du serveur (variables d'environnement EMAIL_HOST…).
+Sans aucun SMTP, Django journalise au lieu d'envoyer et l'interface
 informe l'exploitant.
 
 SMS : passerelle HTTP Free Mobile (notificationsAPI, identifiants dans
@@ -16,9 +18,10 @@ import urllib.request
 
 from django.conf import settings
 from django.contrib import messages
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage, get_connection, send_mail
 
-from .models import ConfigMessagerie, ModeleMessage, PreferenceContact
+from .models import (ConfigMessagerie, ModeleMessage, ParametresVitrine,
+                     PreferenceContact)
 
 EMAILS_PAR_DEFAUT = {
     "CONFIRMATION_COMMANDE": {
@@ -110,9 +113,34 @@ def envoyer_sms(exploitant, texte):
                   "non implémentée en V1")
 
 
+def _connexion_smtp_exploitant(exploitant):
+    """Connexion SMTP propre à l'exploitation (page Paramètres →
+    Messagerie) : None si l'exploitation n'en configure pas, auquel cas
+    on retombe sur le backend global du serveur. Retourne
+    (connexion, expediteur)."""
+    vitrine = (ParametresVitrine.objects
+               .filter(exploitant=exploitant).first())
+    m = (vitrine.messagerie if vitrine else None) or {}
+    expediteur = m.get("email_from") or settings.DEFAULT_FROM_EMAIL
+    if not m.get("email_host"):
+        return None, expediteur
+    try:
+        port = int(m.get("email_port") or 25)
+    except (TypeError, ValueError):
+        port = 25
+    connexion = get_connection(
+        host=m["email_host"], port=port,
+        username=m.get("email_user") or None,
+        password=m.get("email_password") or None,
+        use_tls=bool(m.get("email_tls")), fail_silently=False)
+    return connexion, expediteur
+
+
 def notifier_client(request, panier, type_msg):
     """Notifie le client du panier selon son canal préféré (e-mail par
-    défaut). Feedback via messages Django — TOUJOURS informatif : une
+    défaut). L'e-mail part par le SMTP de l'exploitation s'il en a
+    configuré un (Paramètres → Messagerie), sinon par celui du serveur.
+    Feedback via messages Django — TOUJOURS informatif : une
     notification non envoyée n'invalide jamais la commande/le panier,
     qui sont déjà créés à ce stade. Retourne True si envoyé."""
     pref = None
@@ -149,19 +177,30 @@ def notifier_client(request, panier, type_msg):
                       "adresse du client absente. La commande, elle, est "
                       "bien enregistrée.")
         return False
-    if not getattr(settings, "EMAIL_HOST", ""):
+    connexion, expediteur = _connexion_smtp_exploitant(panier.exploitant)
+    if connexion is None and not getattr(settings, "EMAIL_HOST", ""):
         messages.info(request, "ℹ️ Notification e-mail non envoyée : "
-                      "serveur e-mail non configuré (ajoutez EMAIL_HOST "
-                      "dans le .env puis redémarrez). La commande, elle, "
-                      "est bien enregistrée — rien n'est perdu.")
+                      "aucun serveur SMTP configuré (ni pour la ferme dans "
+                      "Paramètres → Messagerie, ni pour le serveur : "
+                      "EMAIL_HOST dans le .env puis redémarrage). La "
+                      "commande, elle, est bien enregistrée — rien n'est "
+                      "perdu.")
         return False
     try:
-        send_mail(objet, corps, settings.DEFAULT_FROM_EMAIL,
-                  [panier.email_client], fail_silently=False)
+        if connexion is not None:
+            # SMTP propre à l'exploitation : les notifications partent au
+            # nom de la ferme (bouton « test_email » de la même page).
+            EmailMessage(objet, corps, expediteur, [panier.email_client],
+                         connection=connexion).send()
+        else:
+            send_mail(objet, corps, expediteur, [panier.email_client],
+                      fail_silently=False)
     except Exception as err:
         messages.info(request, "ℹ️ Notification e-mail non envoyée (échec "
                       "SMTP : " + str(err) + "). La commande, elle, est "
                       "bien enregistrée.")
         return False
-    messages.success(request, "✉️ E-mail envoyé à " + panier.email_client + ".")
+    messages.success(request, "✉️ E-mail envoyé à " + panier.email_client
+                     + ("" if connexion is None
+                        else " (via le serveur de la ferme)") + ".")
     return True
