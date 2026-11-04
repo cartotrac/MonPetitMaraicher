@@ -29,7 +29,7 @@ from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
                     ParametresVitrine, PointLivraison, PreferenceContact,
                     Produit, ProduitStandard, ProfilClient, SemaineRecolte,
                     exploitant_pour)
-from .notifications import notifier_client
+from .notifications import envoyer_sms, notifier_client
 
 # Unités vendues à la pièce : quantités entières uniquement.
 UNITES_ENTIERES = ("PC", "BO", "BQ")
@@ -2074,6 +2074,49 @@ def parametres(request):
                     if vitrine.messagerie.get("email_host")
                     else "Paramètres de messagerie effacés.")
                 return redirect("portal:parametres")
+
+        elif section == "test_email" and est_proprietaire:
+            destinataire = request.user.email
+            if not destinataire:
+                messages.error(request, "Votre compte n'a pas d'adresse "
+                               "e-mail : renseignez-la d'abord dans « Mon "
+                               "profil », puis revenez tester ici.")
+            else:
+                connexion = _connexion_email(vitrine)
+                expediteur = ((vitrine.messagerie or {}).get("email_from")
+                              or settings.DEFAULT_FROM_EMAIL)
+                try:
+                    django.core.mail.EmailMessage(
+                        "[Test] Votre messagerie — "
+                        + exploitant.nom_ferme,
+                        "Ceci est un e-mail de test envoyé depuis la page "
+                        "Paramètres. Si vous le lisez, votre configuration "
+                        "SMTP fonctionne : newsletters et annonces "
+                        "partiront au nom de votre ferme.",
+                        expediteur, [destinataire],
+                        connection=connexion).send()
+                    messages.success(request, "✉️ E-mail de test envoyé à "
+                                     + destinataire + " : vérifiez votre "
+                                     "boîte de réception (et les "
+                                     "indésirables).")
+                except Exception as err:
+                    messages.error(request, "❌ Échec de l'envoi de test : "
+                                   + str(err))
+            return redirect("portal:parametres")
+
+        elif section == "test_sms" and est_proprietaire:
+            ok, info = envoyer_sms(
+                exploitant,
+                "Test SMS " + exploitant.nom_ferme
+                + " : votre passerelle SMS fonctionne.")
+            if ok:
+                messages.success(request, "📱 SMS de test envoyé (" + info
+                                 + ") : il part vers VOTRE numéro Free "
+                                 "Mobile configuré dans l'admin.")
+            else:
+                messages.error(request, "❌ SMS de test non envoyé (" + info
+                               + ").")
+            return redirect("portal:parametres")
 
     # Affichage de la page (ou re-affichage après erreur de formulaire)
     reseaux = dict(vitrine.reseaux or {})

@@ -59,4 +59,11 @@ details.bloc-replie > summary .aide-replier { font-size: 0.7em;
 .flash.warning { background: #fff4e5; border: 1px solid #f5a623;
                  color: #6b4e00; }
 
+/* ---- Page Paramètres : aide SMTP repliable ---- */
+.aide-smtp { margin-top: 0.9rem; }
+.aide-smtp > summary { cursor: pointer; list-style: none; }
+.aide-smtp > summary::-webkit-details-marker { display: none; }
+.aide-smtp ul { margin: 0.6rem 0 0 1.2rem; }
+
+
 

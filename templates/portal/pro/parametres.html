@@ -5,8 +5,8 @@
 {% block content %}
 <h1>⚙️ Paramètres</h1>
 <p class="muted">Tout ce qui concerne votre compte et votre exploitation,
-   sur une seule page. Les sections Équipe et Messagerie sont réservées au
-   propriétaire de l'exploitation.</p>
+   sur une seule page. Chaque section s'enregistre séparément — pensez à
+   cliquer sur le bouton 💾 de la section modifiée.</p>
 
 <nav class="quick-actions" aria-label="Sections des paramètres">
   <a class="btn btn-outline btn-sm" href="#profil">👤 Mon profil</a>
@@ -19,43 +19,51 @@
 
 <section class="harvest-bloc" id="profil">
   <h2>👤 Mon profil</h2>
+  <div class="card">
   <p class="muted">Votre identité de compte individuel : prénom, nom,
      e-mail, téléphone et photo (lien externe). Modifier votre nom met à
      jour toutes vos commandes et paniers passés.</p>
-  <form method="post" class="form card">
+  <form method="post" class="form">
     {% csrf_token %}
     <input type="hidden" name="section" value="profil">
     {{ form_profil.as_p }}
-    <button class="btn" type="submit">💾 Enregistrer mon profil</button>
+    <div class="save-bar">
+      <button class="btn" type="submit">💾 Enregistrer mon profil</button>
+    </div>
   </form>
+  </div>
 </section>
 
 <section class="harvest-bloc" id="ferme">
   <h2>🚜 Ma ferme</h2>
+  <div class="card">
   <p class="muted">Ces informations sont affichées sur votre vitrine
      publique : activité, SIRET, logo (fichier ou lien externe), réseaux
      sociaux, position. Le département est déduit du code postal si vous
      le laissez vide.</p>
-  <form method="post" enctype="multipart/form-data" class="form card">
+  <form method="post" enctype="multipart/form-data" class="form">
     {% csrf_token %}
     <input type="hidden" name="section" value="ferme">
     <div id="carte-ferme" data-pick-map data-lat-input="id_latitude"
-         data-lon-input="id_longitude" style="height: 300px; border-radius: 8px; margin-bottom: 1rem;"></div>
+         data-lon-input="id_longitude" style="height: 300px; border-radius: 8px; margin-bottom: 0.4rem;"></div>
     <p class="muted">👆 Cliquez sur la carte pour positionner la ferme :
        latitude/longitude sont renseignées automatiquement.</p>
     {{ form_ferme.as_p }}
-    <button class="btn" type="submit">💾 Enregistrer ma fiche</button>
+    <div class="save-bar">
+      <button class="btn" type="submit">💾 Enregistrer ma fiche</button>
+    </div>
   </form>
+  </div>
 </section>
 
 {% if est_proprietaire %}
 <section class="harvest-bloc" id="equipe">
   <h2>👨‍🌾 Mon équipe</h2>
-  <p class="muted">Plusieurs comptes peuvent gérer la même ferme
-     (même SIRET). Rattachez un compte existant par e-mail ou
-     identifiant : la personne doit d'abord créer son compte sur le
-     portail.</p>
   <div class="card">
+    <p class="muted">Plusieurs comptes peuvent gérer la même ferme
+       (même SIRET). Rattachez un compte existant par e-mail ou
+       identifiant : la personne doit d'abord créer son compte sur le
+       portail.</p>
     <p><strong>Gérant :</strong> {{ request.user.get_full_name|default:request.user.username }}</p>
     <ul>
       {% for membre in membres %}
@@ -87,16 +95,50 @@
 <section class="harvest-bloc" id="messagerie">
   <h2>✉️ Messagerie (e-mails & SMS)</h2>
   <p class="muted">Serveur SMTP d'envoi de vos publications (newsletters,
-     annonces) : renseignez-le ici pour que vos e-mails partent au nom de
-     votre ferme, sans dépendre de la configuration du serveur. La
-     passerelle SMS servira à envoyer la disponibilité hebdo de vos
-     produits. Champs vides = paramètre retiré.</p>
-  <form method="post" class="form card">
+     annonces, notifications de panier) : renseignez-le ici pour que vos
+     e-mails partent au nom de votre ferme, sans dépendre de la
+     configuration du serveur. Champs vides = paramètre retiré.</p>
+  <div class="card">
+  <form method="post" class="form">
     {% csrf_token %}
     <input type="hidden" name="section" value="messagerie">
     {{ form_messagerie.as_p }}
-    <button class="btn" type="submit">💾 Enregistrer la messagerie</button>
+    <div class="save-bar">
+      <button class="btn" type="submit">💾 Enregistrer la messagerie</button>
+    </div>
   </form>
+  <div class="quick-actions">
+    <form method="post" class="inline">{% csrf_token %}
+      <input type="hidden" name="section" value="test_email">
+      <button class="btn btn-outline btn-sm" type="submit">✉️ M'envoyer un e-mail de test</button>
+    </form>
+    <form method="post" class="inline">{% csrf_token %}
+      <input type="hidden" name="section" value="test_sms">
+      <button class="btn btn-outline btn-sm" type="submit">📱 M'envoyer un SMS de test</button>
+    </form>
+  </div>
+  <p class="muted">L'e-mail de test part vers l'adresse de « Mon profil ».
+     Le SMS de test part vers votre numéro Free Mobile configuré dans
+     l'admin (passerelle V1).</p>
+  <details class="aide-smtp">
+    <summary class="btn btn-outline btn-sm">💡 Exemples de configuration SMTP</summary>
+    <ul class="muted">
+      <li><strong>AlwaysData</strong> (le plus simple) : hôte
+        <code>localhost</code>, port <code>25</code>, sans identifiant —
+        si votre offre inclut le service e-mail.</li>
+      <li><strong>Gmail</strong> : hôte <code>smtp.gmail.com</code>,
+        port <code>587</code>, TLS ✅, identifiant = votre adresse Gmail,
+        mot de passe = <em>mot de passe d'application</em> (à créer dans
+        votre compte Google, pas votre mot de passe habituel).</li>
+      <li><strong>OVH</strong> : hôte <code>ssl0.ovh.net</code>,
+        port <code>587</code>, TLS ✅, identifiants de votre adresse
+        e-mail OVH.</li>
+    </ul>
+    <p class="muted">Après chaque modification : 💾 enregistrez, puis
+       testez avec le bouton ✉️ — le résultat s'affiche en haut de la
+       page.</p>
+  </details>
+  </div>
 </section>
 {% endif %}
 
