@@ -16,6 +16,8 @@ urlpatterns = [
          name="producer_detail"),
 
     # Authentification / inscription
+    path("apres-connexion/", views.apres_connexion,
+         name="apres_connexion"),
     path("inscription/exploitant/", views.register_exploitant,
          name="register_producer"),
     path("inscription/client/", views.register_client,

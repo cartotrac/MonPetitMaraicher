@@ -827,13 +827,22 @@ class MembreExploitation(models.Model):
 
 
 class Favori(models.Model):
-    """Producteur favori d'un client (compte) : accès rapide depuis
-    « Mes producteurs », aux côtés des fermes déjà commandées."""
+    """Producteur favori d'un compte : accès rapide depuis
+    « Mes favoris ». Les clients ajoutent simplement des producteurs ;
+    les pros distinguent leurs Fournisseurs de leurs Clients pro."""
+
+    class Nature(models.TextChoices):
+        CLIENT = "CLIENT", "Producteur suivi"
+        FOURNISSEUR = "FOURNISSEUR", "Fournisseur"
+        CLIENT_PRO = "CLIENT_PRO", "Client pro"
 
     user = models.ForeignKey(User, on_delete=models.CASCADE,
                              related_name="favoris")
     exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
                                    related_name="clients_favoris")
+    nature = models.CharField("Nature du favori", max_length=20,
+                              choices=Nature.choices,
+                              default=Nature.CLIENT)
     ajoute_le = models.DateTimeField("Ajouté le", auto_now_add=True)
 
     class Meta:

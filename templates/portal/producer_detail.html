@@ -8,6 +8,7 @@
   <div>
     <h1>{{ exploitant.nom_ferme }}</h1>
     <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
+    {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 Ferme de démonstration</span>{% endif %}
     {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Certifié AB</span>
     {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
     {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Agriculture paysanne</span>
@@ -18,10 +19,23 @@
     <div class="producer-cta">
       <a class="btn btn-lg" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander chez ce producteur</a>
       {% if user.is_authenticated %}
-        <form method="post" class="inline" action="{% url 'portal:favoris_toggle' exploitant.slug %}">
-          {% csrf_token %}
-          <button class="btn btn-outline" type="submit">{% if est_favori %}⭐ Mes favoris{% else %}☆ Ajouter à mes producteurs{% endif %}</button>
-        </form>
+        {% if est_compte_pro %}
+          <form method="post" class="inline" action="{% url 'portal:favoris_toggle' exploitant.slug %}">
+            {% csrf_token %}
+            <input type="hidden" name="nature" value="FOURNISSEUR">
+            <button class="btn btn-outline" type="submit">{% if nature_favori == 'FOURNISSEUR' %}⭐ Fournisseur{% else %}☆ Favori fournisseur{% endif %}</button>
+          </form>
+          <form method="post" class="inline" action="{% url 'portal:favoris_toggle' exploitant.slug %}">
+            {% csrf_token %}
+            <input type="hidden" name="nature" value="CLIENT_PRO">
+            <button class="btn btn-outline" type="submit">{% if nature_favori == 'CLIENT_PRO' %}⭐ Client pro{% else %}☆ Favori client pro{% endif %}</button>
+          </form>
+        {% else %}
+          <form method="post" class="inline" action="{% url 'portal:favoris_toggle' exploitant.slug %}">
+            {% csrf_token %}
+            <button class="btn btn-outline" type="submit">{% if est_favori %}⭐ Mes favoris{% else %}☆ Ajouter à mes favoris{% endif %}</button>
+          </form>
+        {% endif %}
       {% endif %}
     </div>
   </div>

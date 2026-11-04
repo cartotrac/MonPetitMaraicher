@@ -169,6 +169,16 @@ carte.on("zoomend", function () { majCouleurs(); majLabels(); });
 carte.on("overlayremove", majLabels);
 carte.whenReady(majCouleurs);
 
+var ACTIVITES = {
+  "MARAICHER": "🥬 Maraîcher·ère",
+  "ARBORICULTEUR": "🍎 Arboriculteur·rice",
+  "ELEVEUR": "🐄 Éleveur·euse",
+  "FROMAGER": "🧀 Fromager·ère",
+  "APICULTEUR": "🍯 Apiculteur·rice",
+  "MICRO_BRASSEUR": "🍺 Micro-brasseur·euse",
+  "AUTRE": "🌾 Autre production locale"
+};
+
 /* --------------------------------------------------------------- legende */
 var legend = L.control({ position: "bottomright" });
 legend.onAdd = function () {
@@ -180,6 +190,14 @@ legend.onAdd = function () {
       '<span class="legend-dot" style="background:' + style.color + '"></span>' +
       style.label + "</label>";
   }
+  /* Symboles par activité (identiques aux marqueurs et aux vignettes) */
+  var symboles = document.createElement("div");
+  symboles.className = "legend-symbole";
+  symboles.innerHTML = Object.keys(ACTIVITES).map(function (cle) {
+    var libelle = ACTIVITES[cle].split(" ");
+    return "<span>" + libelle[0] + " " + libelle.slice(1).join(" ") + "</span>";
+  }).join("");
+  div.appendChild(symboles);
   return div;
 };
 legend.addTo(carte);
@@ -187,29 +205,24 @@ legend.addTo(carte);
 var markers = [];
 var present = {};
 var exploitants = JSON.parse(bloc.textContent);
-var ACTIVITES = {
-  "MARAICHER": "🥬 Maraîcher·ère",
-  "ARBORICULTEUR": "🍎 Arboriculteur·rice",
-  "ELEVEUR": "🐄 Éleveur·euse",
-  "FROMAGER": "🧀 Fromager·ère",
-  "APICULTEUR": "🍯 Apiculteur·rice",
-  "MICRO_BRASSEUR": "🍺 Micro-brasseur·euse",
-  "AUTRE": "🌾 Autre production locale"
-};
 
 exploitants.forEach(function (e) {
   present[e.mode_production] = true;
   var style = CAT_STYLES[e.mode_production] || CAT_STYLES.CONV;
   var activite = ACTIVITES[e.activite] || "";
+  var symbole = (activite || "🌾 Autre").split(" ")[0];
   var badgeDemo = e.est_demo
     ? '<br><span class="badge badge-demo">🧪 DÉMO</span>' : "";
-  var marker = L.circleMarker([e.latitude, e.longitude], {
-    radius: 8,
-    color: "#fff",
-    weight: 1.5,
-    fillColor: style.color,
-    fillOpacity: 0.85
-  }).bindPopup(
+  /* Marqueur : pastille couleur du mode de production + symbole de
+     l'activité en exposant (🥬 🍎 🐄 🧀 🍯 🍺 🌾) — le symbole
+     apparaît aussi dans le popup, avec le libellé complet. */
+  var icone = L.divIcon({
+    className: "marker-exploitant",
+    html: '<span class="marker-point" style="background:' + style.color + '"></span>' +
+          '<span class="marker-activite">' + symbole + "</span>",
+    iconSize: [26, 26], iconAnchor: [13, 13]
+  });
+  var marker = L.marker([e.latitude, e.longitude], { icon: icone }).bindPopup(
     "<strong>" + e.nom_ferme + "</strong>" +
     (activite ? '<br><span class="muted">' + activite + "</span>" : "") +
     badgeDemo +

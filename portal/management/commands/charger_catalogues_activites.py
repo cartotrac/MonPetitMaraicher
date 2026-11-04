@@ -12,8 +12,7 @@ from django.core.management.base import BaseCommand
 from portal.models import Exploitant, ProduitStandard
 
 # (nom, categorie, unite, emoji, saisons)
-CATALOGUES = {
-    Exploitant.Activite.ARBORICULTEUR: [
+CATALOGUES = {    Exploitant.Activite.ARBORICULTEUR: [
         ("Pomme", "Fruits", "KG", "🍎", ["automne", "hiver"]),
         ("Pomme à jus", "Fruits", "KG", "🍎", ["automne"]),
         ("Poire", "Fruits", "KG", "🍐", ["automne"]),
@@ -102,6 +101,66 @@ class Command(BaseCommand):
     help = ("Charge les catalogues de produits types par activité "
             "(idempotent : lancez-le après chaque mise à jour).")
 
+
+# Mots-clés (sans accent, minuscule) pour deviner l'emoji d'un produit
+# type qui n'en a pas — chaque produit finit donc avec un symbole.
+EMOJIS_PAR_MOTCLE = [
+    ("carotte", "🥕"), ("tomate", "🍅"), ("pomme de terre", "🥔"),
+    ("patate", "🥔"), ("oignon", "🧅"), ("échalote", "🧅"),
+    ("echalote", "🧅"), ("ail", "🧄"), ("courgette", "🥒"),
+    ("concombre", "🥒"), ("courge", "🎃"), ("potiron", "🎃"),
+    ("potimarron", "🎃"), ("citrouille", "🎃"), ("aubergine", "🍆"),
+    ("poivron", "🫑"), ("piment", "🌶️"), ("salade", "🥬"),
+    ("laitue", "🥬"), ("roquette", "🥬"), ("mâche", "🥬"),
+    ("mache", "🥬"), ("épinard", "🥬"), ("epinard", "🥬"),
+    ("choux", "🥬"), ("chou", "🥬"), ("brocoli", "🥦"),
+    ("poireau", "🥬"), ("betterave", "🟣"), ("navet", "🟠"),
+    ("radis", "🌶️"), ("haricot", "🫛"), ("pois", "🫛"),
+    ("fève", "🫛"), ("feve", "🫛"), ("fenouil", "🌿"),
+    ("céleri", "🌿"), ("celeri", "🌿"), ("asperge", "🌿"),
+    ("artichaut", "🌿"), ("herbe", "🌿"), ("persil", "🌿"),
+    ("basilic", "🌿"), ("ciboule", "🌿"), ("coriandre", "🌿"),
+    ("thym", "🌿"), ("menthe", "🌿"), ("laurier", "🌿"),
+    ("maïs", "🌽"), ("mais", "🌽"), ("champignon", "🍄"),
+    ("pomme", "🍎"), ("poire", "🍐"), ("pêche", "🍑"),
+    ("peche", "🍑"), ("nectarine", "🍑"), ("abricot", "🍑"),
+    ("cerise", "🍒"), ("prune", "🫐"), ("fraise", "🍓"),
+    ("framboise", "🍓"), ("myrtille", "🫐"), ("cassis", "🫐"),
+    ("groseille", "🫐"), ("raisin", "🍇"), ("melon", "🍈"),
+    ("pastèque", "🍉"), ("pasteque", "🍉"), ("kiwi", "🥝"),
+    ("citron", "🍋"), ("orange", "🍊"), ("mandarine", "🍊"),
+    ("clémentine", "🍊"), ("clementine", "🍊"), ("avocat", "🥑"),
+    ("banane", "🍌"), ("figue", "🫒"), ("noix", "🌰"),
+    ("noisette", "🌰"), ("amande", "🌰"), ("œuf", "🥚"),
+    ("oeuf", "🥚"), ("lait", "🥛"), ("yaourt", "🥛"),
+    ("faisselle", "🥛"), ("fromage", "🧀"), ("tomme", "🧀"),
+    ("cantal", "🧀"), ("reblochon", "🧀"), ("chèvre", "🧀"),
+    ("chevre", "🧀"), ("brebis", "🧀"), ("beurre", "🧈"),
+    ("crème", "🥛"), ("creme", "🥛"), ("miel", "🍯"),
+    ("gelée", "🍯"), ("gelee", "🍯"), ("confiture", "🍯"),
+    ("bière", "🍺"), ("biere", "🍺"), ("houblon", "🍺"),
+    ("fût", "🛢️"), ("fut", "🛢️"), ("jus", "🧃"), ("sirop", "🧃"),
+    ("compote", "🥧"), ("tarte", "🥧"), ("pain", "🍞"),
+    ("farine", "🌾"), ("lentille", "🫘"), ("pois chiche", "🫘"),
+    ("haricot sec", "🫘"), ("huile", "🫒"), ("olive", "🫒"),
+    ("bœuf", "🐄"), ("boeuf", "🐄"), ("veau", "🐂"),
+    ("agneau", "🐑"), ("mouton", "🐑"), ("porc", "🐖"),
+    ("saucisse", "🌭"), ("saucisson", "🌭"), ("jambon", "🥓"),
+    ("poulet", "🐔"), ("canard", "🦆"), ("oie", "🦢"),
+    ("dinde", "🦃"), ("lapin", "🐇"), ("escargot", "🐌"),
+    ("truite", "🐟"), ("saumon", "🐟"), ("poisson", "🐟"),
+]
+
+
+def emoji_pour_nom(nom):
+    """Emoji deviné par mot-clé du nom du produit (sans accent,
+    minuscule). Défaut : symbole de l'activité (🥬 maraîcher)."""
+    texte = nom.lower()
+    for motcle, emoji in EMOJIS_PAR_MOTCLE:
+        if motcle in texte:
+            return emoji
+    return ""
+
     def handle(self, *args, **options):
         # 1. Le catalogue existant est explicitement classé maraîcher.
         existants = ProduitStandard.objects.filter(
@@ -125,6 +184,22 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"{libelle} : {total} produit(s) "
                 f"({crees} nouveau(x) cette exécution).")
+
+        # 3. Aucun produit type sans emoji : on devine le symbole par
+        #    mot-clé du nom, avec le symbole de l'activité en dernier
+        #    recours — chaque produit a ainsi son emoji (vignettes,
+        #    commandes, paniers, récoltes).
+        sans_emoji = ProduitStandard.objects.filter(emoji="")
+        remplaces = 0
+        for std in sans_emoji:
+            emoji = emoji_pour_nom(std.nom)
+            if not emoji:
+                emoji = Exploitant.ACTIVITE_EMOJIS.get(
+                    std.activite, "🌱")
+            std.emoji = emoji
+            std.save(update_fields=["emoji"])
+            remplaces += 1
+        self.stdout.write(f"Emojis complétés : {remplaces} produit(s).")
 
         self.stdout.write(self.style.SUCCESS(
             "Catalogues par activité chargés."))

@@ -35,6 +35,17 @@ from .notifications import envoyer_sms, notifier_client
 UNITES_ENTIERES = ("PC", "BO", "BQ")
 
 
+def apres_connexion(request):
+    """Après connexion (et après inscription) : un compte pro tombe
+    directement sur son dashboard ; un client sur « Mes commandes » ;
+    un visiteur non connecté sur l'accueil."""
+    if not request.user.is_authenticated:
+        return redirect("portal:home")
+    if exploitant_pour(request.user) is not None:
+        return redirect("portal:dashboard")
+    return redirect("portal:my_orders")
+
+
 def mentions_legales(request):
     """Mentions légales : application libre (dépôt GitHub), instance
     hébergée par son opérateur, hébergeur technique AlwaysData."""
@@ -167,6 +178,11 @@ def producer_detail(request, slug):
     est_favori = (request.user.is_authenticated
                   and Favori.objects.filter(user=request.user,
                                             exploitant=exploitant).exists())
+    nature_favori = ""
+    if est_favori:
+        nature_favori = (Favori.objects.filter(
+            user=request.user, exploitant=exploitant)
+            .values_list("nature", flat=True).first() or "")
     return render(request, "portal/producer_detail.html", {
         "exploitant": exploitant,
         "vitrine": vitrine,
@@ -178,6 +194,8 @@ def producer_detail(request, slug):
         "semaines_avenir": semaines_avenir,
         "restes": restes,
         "est_favori": est_favori,
+        "nature_favori": nature_favori,
+        "est_compte_pro": exploitant_pour(request.user) is not None,
         "meteo": meteo_synthese(exploitant),
         "points_livraison": exploitant.points_livraison.all(),
         "creneaux": exploitant.creneaux.select_related("point_livraison"),
@@ -189,33 +207,60 @@ def producer_detail(request, slug):
 
 @login_required
 def favoris_toggle(request, slug):
-    """Ajoute/retire un producteur des favoris du client (étoile sur la
-    vitrine). Redirige vers la page du producteur."""
+    """Ajoute/retire un producteur des favoris (étoile sur la vitrine).
+    Les comptes pro précisent la nature : Fournisseur ou Client pro ;
+    les clients l'ajoutent simplement. Redirige vers la vitrine."""
     exploitant = get_object_or_404(Exploitant, slug=slug, visible=True)
+    nature = request.POST.get("nature", Favori.Nature.CLIENT)
+    if nature not in Favori.Nature.values:
+        nature = Favori.Nature.CLIENT
+    # Un non-pro ne peut créer que des favoris « client »
+    if (nature != Favori.Nature.CLIENT
+            and exploitant_pour(request.user) is None):
+        nature = Favori.Nature.CLIENT
     favori = Favori.objects.filter(user=request.user,
                                    exploitant=exploitant).first()
     if favori:
         favori.delete()
         messages.info(request, f"{exploitant.nom_ferme} retiré de vos "
-                       "producteurs favoris.")
+                       "favoris.")
     else:
-        Favori.objects.create(user=request.user, exploitant=exploitant)
+        Favori.objects.create(user=request.user, exploitant=exploitant,
+                              nature=nature)
+        libelle = dict(Favori.Nature.choices).get(nature, "")
         messages.success(request, f"{exploitant.nom_ferme} ajouté à vos "
-                          "producteurs favoris ⭐")
+                         f"favoris ⭐ ({libelle.lower()})")
     return redirect("portal:producer_detail", slug=slug)
 
 
 @login_required
 def mes_producteurs(request):
-    """Les producteurs du client : favoris d'abord, puis les fermes chez
-    lesquelles il a déjà commandé — accès rapide sans recherche."""
-    favoris = (Favori.objects.filter(user=request.user)
-               .select_related("exploitant"))
+    """Les favoris du compte : côté client, les producteurs suivis et
+    les fermes déjà commandées ; côté pro, distinction Fournisseurs /
+    Clients pro (les fermes déjà commandées sont intégrées)."""
+    favoris = list(Favori.objects.filter(user=request.user)
+                   .select_related("exploitant"))
+    exploitant_ids = [f.exploitant_id for f in favoris]
     deja_commandes = (Exploitant.objects.filter(
         visible=True, commandes__client=request.user)
-        .exclude(pk__in=[f.exploitant_id for f in favoris])
+        .exclude(pk__in=exploitant_ids)
         .distinct().order_by("nom_ferme"))
+    est_pro = exploitant_pour(request.user) is not None
+    if est_pro:
+        # Les fermes déjà commandées sont classées « client pro »
+        deja = list(deja_commandes)
+        return render(request, "portal/mes_producteurs.html", {
+            "est_pro": True,
+            "favoris_fournisseurs": [f.exploitant for f in favoris
+                                     if f.nature
+                                     == Favori.Nature.FOURNISSEUR],
+            "favoris_clients": [f.exploitant for f in favoris
+                                if f.nature
+                                != Favori.Nature.FOURNISSEUR],
+            "deja_commandes": deja,
+        })
     return render(request, "portal/mes_producteurs.html", {
+        "est_pro": False,
         "favoris": [f.exploitant for f in favoris],
         "deja_commandes": deja_commandes,
     })
@@ -257,7 +302,7 @@ def register_client(request):
             user = form.save()
             login(request, user)
             messages.success(request, "Compte client créé. À vous de commander !")
-            return redirect("portal:home")
+            return redirect("portal:apres_connexion")
     else:
         form = InscriptionClientForm()
     return render(request, "portal/registration/register_client.html",
@@ -901,22 +946,88 @@ def harvest_manage(request, semaine_id=None, nouvelle=False):
 
 @login_required
 @exploitant_requis
+def _groupes_lignes(lignes):
+    """Lignes de commande (ou de panier) triées et regroupées par
+    catégorie du produit — même présentation que la vitrine :
+    [(nom_categorie, [lignes…]), …]."""
+    lignes = sorted(lignes, key=lambda l: (
+        (l.produit.categorie.position
+         if l.produit.categorie else 9999) or 9999,
+        l.produit.categorie.nom if l.produit.categorie else "zz",
+        l.produit.nom))
+    groupes = []
+    for ligne in lignes:
+        nom = (ligne.produit.categorie.nom
+               if ligne.produit.categorie else "Sans catégorie")
+        if not groupes or groupes[-1][0] != nom:
+            groupes.append((nom, []))
+        groupes[-1][1].append(ligne)
+    return groupes
+
+
+def _profils_clients(user_ids):
+    """Photos et téléphones des clients concernés, SANS lever l'erreur
+    « profil client inexistant » (un compte pro qui commande chez un
+    confrère n'a pas de ProfilClient : c'est ce qui provoquait les
+    erreurs 500 sur les listes commandes/paniers)."""
+    profils = {p.user_id: p for p in ProfilClient.objects.filter(
+        user_id__in=user_ids)}
+    return ({i: profils[i].photo_url for i in profils
+             if profils[i].photo_url},
+            {i: profils[i].telephone for i in profils
+             if profils[i].telephone})
+
+
+def _badges_par_jour(objets, champ_statut, statuts):
+    """Pour l'en-tête de chaque jour (commandes, paniers) : comptage par
+    statut, ordonné, avec libellé — [(statut, nombre, libellé), …]."""
+    comptes = {}
+    for objet in objets:
+        statut = getattr(objet, champ_statut)
+        par_statut = comptes.setdefault(getattr(objet, "date_livraison"), {})
+        par_statut[statut] = par_statut.get(statut, 0) + 1
+    libelles = dict(statuts)
+    return {jour: [(statut, par[statut], libelles[statut])
+                  for statut, _libelle in statuts if statut in par]
+            for jour, par in comptes.items()}
+
+
+@login_required
+@exploitant_requis
 def order_list(request, statut=None):
     """Commandes reçues, avec contact client (e-mail, téléphone, canal
-    préféré si le client en a exprimé un)."""
+    préféré si le client en a exprimé un). Produits rangés par
+    catégorie ; pour les commandes validées, les ajustements faits à
+    la validation (contenu du panier) sont affichés."""
     exploitant = exploitant_pour(request.user)
     commandes = exploitant.commandes.order_by("-date_livraison", "-creee_le")
     if statut:
         commandes = commandes.filter(statut=statut)
     canaux = {p.client_id: p.get_canal_display()
               for p in PreferenceContact.objects.filter(exploitant=exploitant)}
-    commandes = list(commandes.prefetch_related("lignes__produit__origine_standard",
-                                                "client__profil_client"))
+    commandes = list(commandes.prefetch_related(
+        "lignes__produit__categorie", "lignes__produit__origine_standard"))
+    # Ajustements de la validation : quantités retenues dans le panier
+    paniers_valides = {p.commande_id: p for p in Panier.objects.filter(
+        commande_id__in=[c.pk for c in commandes],
+        exploitant=exploitant).prefetch_related("lignes")}
+    ajustements = {cid: {ligne.produit_id: ligne.quantite
+                         for ligne in panier.lignes.all()}
+                   for cid, panier in paniers_valides.items()}
+    photos, telephones = _profils_clients(
+        {c.client_id for c in commandes if c.client_id})
     for c in commandes:
         c.canal_pref = canaux.get(c.client_id) if c.client_id else None
-    return render(request, "portal/pro/orders.html",
-                  {"commandes": commandes, "filtre_statut": statut,
-                   "points": exploitant.points_livraison.all()})
+        c.photo_client = photos.get(c.client_id, "")
+        c.tel_client = telephones.get(c.client_id, "")
+        c.groupes_lignes = _groupes_lignes(list(c.lignes.all()))
+        c.ajustements = ajustements.get(c.pk)
+    return render(request, "portal/pro/orders.html", {
+        "commandes": commandes, "filtre_statut": statut,
+        "points": exploitant.points_livraison.all(),
+        "jours_badges": _badges_par_jour(commandes, "statut",
+                                         Commande.Statut.choices),
+    })
 
 
 def _quantite_ajustee(brut, quantite_commandee, produit):
@@ -1187,13 +1298,25 @@ def order_validate(request, commande_id):
 @login_required
 @exploitant_requis
 def panier_list(request):
-    """Liste des paniers, regroupés visuellement par jour de livraison."""
+    """Liste des paniers, regroupés visuellement par jour de livraison
+    (en-tête du jour : comptage par statut, code couleur associé)."""
     exploitant = exploitant_pour(request.user)
-    paniers = (exploitant.paniers.select_related("client", "point_livraison")
-               .prefetch_related("lignes__produit", "client__profil_client")
-               .order_by("-date_livraison", "numero"))
-    return render(request, "portal/pro/paniers.html",
-                  {"paniers": paniers})
+    paniers = list((exploitant.paniers
+                    .select_related("client", "point_livraison")
+                    .prefetch_related("lignes__produit__categorie",
+                                      "lignes__produit__origine_standard")
+                    .order_by("-date_livraison", "numero")))
+    photos, telephones = _profils_clients(
+        {p.client_id for p in paniers if p.client_id})
+    for panier in paniers:
+        panier.photo_client = photos.get(panier.client_id, "")
+        panier.tel_client = telephones.get(panier.client_id, "")
+        panier.groupes_lignes = _groupes_lignes(list(panier.lignes.all()))
+    return render(request, "portal/pro/paniers.html", {
+        "paniers": paniers,
+        "jours_badges": _badges_par_jour(paniers, "statut",
+                                         Panier.Statut.choices),
+    })
 
 
 @login_required
@@ -1391,8 +1514,15 @@ def panier_detail(request, panier_id):
     if panier.commande_id:
         souhaitees = {lc.produit_id: lc.quantite
                      for lc in panier.commande.lignes.all()}
+    lignes = list(panier.lignes.select_related(
+        "produit__categorie", "produit__origine_standard"))
+    lignes.sort(key=lambda l: (
+        (l.produit.categorie.position
+         if l.produit.categorie else 9999) or 9999,
+        l.produit.categorie.nom if l.produit.categorie else "zz",
+        l.produit.nom))
     rows = []
-    for ligne in panier.lignes.select_related("produit__origine_standard"):
+    for ligne in lignes:
         souh = souhaitees.get(ligne.produit_id)
         rows.append({
             "ligne": ligne,
@@ -1400,9 +1530,15 @@ def panier_detail(request, panier_id):
             "ajuste": souh is not None and souh != ligne.quantite,
             "step": "0.01" if ligne.produit.unite_vente == "KG" else "1",
         })
+    if panier.client_id:
+        photos, telephones = _profils_clients([panier.client_id])
+    else:
+        photos, telephones = {}, {}
     return render(request, "portal/pro/panier_detail.html", {
         "panier": panier,
         "rows": rows,
+        "photo_client": photos.get(panier.client_id, ""),
+        "tel_client": telephones.get(panier.client_id, ""),
         "verrouille": verrouille,
         "produits": (exploitant.produits.filter(actif=True)
                      .select_related("origine_standard")),

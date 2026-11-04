@@ -141,7 +141,7 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL",
                          "noreply@monpetitmaraicher.cartotrac.fr")
 
 LOGIN_URL = "/comptes/connexion/"
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/apres-connexion/"
 LOGOUT_REDIRECT_URL = "/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load unites %}
 {% block title %}Paniers — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>🧺 Paniers</h1>
@@ -9,19 +10,23 @@
   <a class="btn btn-outline" href="{% url 'portal:panier_export' %}?mode=production">⬇️ Export production (livrés)</a>
 </div>
 <p class="muted">Les paniers sont regroupés par jour de livraison, du plus
-   récent au plus ancien. Le dernier jour est déplié ; cliquez sur un jour
-   pour déplier/replier ses paniers.</p>
+   récent au plus ancien — l'en-tête de chaque jour compte les paniers
+   <strong>par statut</strong> (code couleur : orange en préparation,
+   vert prêt, jaune livré, vert foncé reçu). Produits rangés par
+   catégorie. Le dernier jour est déplié.</p>
 
 {% regroup paniers by date_livraison as jours %}
 {% for jour in jours %}
   <details class="groupe-jour" {% if forloop.first %}open{% endif %}>
     <summary>📅 {{ jour.grouper|date:"l d F Y" }}
-      <span class="badge">{{ jour.list|length }} panier{{ jour.list|length|pluralize }}</span></summary>
+      {% for statut, nb, libelle in jours_badges|get_item:jour.grouper %}
+        <span class="badge badge-{{ statut }}">{{ nb }} {{ libelle|lower }}</span>
+      {% endfor %}</summary>
     {% for panier in jour.list %}
-      <div class="card order-card">
+      <div class="card order-card statut-{{ panier.statut }}">
         <div class="order-head">
-          {% if panier.client.profil_client.photo_url %}
-            <img class="avatar avatar-small" src="{{ panier.client.profil_client.photo_url }}" alt="Photo du client">
+          {% if panier.photo_client %}
+            <img class="avatar avatar-small" src="{{ panier.photo_client }}" alt="Photo du client">
           {% endif %}
           <strong>Panier n°{{ panier.numero }} — {% if panier.client %}{{ panier.client.get_full_name|default:panier.client.username }}{% else %}{{ panier.nom_client }}{% endif %}</strong>
           <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
@@ -30,8 +35,16 @@
            {% if panier.point_livraison %}à {{ panier.point_livraison.nom }}{% endif %}
            — 💰 {{ panier.total }} €
            — {{ panier.lignes.count }} article(s)</p>
-        <p class="muted">✉️ {% if panier.client %}{{ panier.client.email }}{% if panier.client.profil_client.telephone %} · 📞 {{ panier.client.profil_client.telephone }}{% endif %}{% else %}{{ panier.email_client }}{% if panier.telephone_client %} · 📞 {{ panier.telephone_client }}{% endif %}{% endif %}
+        <p class="muted">✉️ {{ panier.email_client }}{% if panier.telephone_client %} · 📞 {{ panier.telephone_client }}{% endif %}{% if panier.tel_client %} · 📞 {{ panier.tel_client }}{% endif %}
            {% if panier.client %}· 💻 client avec compte{% else %}· sans compte{% endif %}</p>
+        {% for nom_cat, lignes in panier.groupes_lignes %}
+          <p class="cat-lignes">{{ nom_cat }}</p>
+          <ul>
+            {% for ligne in lignes %}
+              <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}</li>
+            {% endfor %}
+          </ul>
+        {% endfor %}
         <a class="btn btn-sm" href="{% url 'portal:panier_detail' panier.pk %}">Préparer / modifier</a>
       </div>
     {% endfor %}

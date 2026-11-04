@@ -1,6 +1,5 @@
 {% extends "base.html" %}
-{% load unites %}
-{% load l10n %}
+{% load unites %}{% load l10n %}
 {% block title %}Commandes reçues — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>📥 Commandes reçues</h1>
@@ -10,19 +9,23 @@
   <a class="btn {% if filtre_statut == 'VALIDEE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'VALIDEE' %}">Validées</a>
 </div>
 <p class="muted">Les commandes sont regroupées par jour de livraison, du plus
-   récent au plus ancien. Le dernier jour est déplié ; cliquez sur un jour
-   pour déplier/replier ses commandes.</p>
+   récent au plus ancien — l'en-tête de chaque jour compte les commandes
+   <strong>par statut</strong> (code couleur). Produits rangés par catégorie ;
+   les ajustements faits à la validation sont affichés sur les commandes
+   validées.</p>
 
 {% regroup commandes by date_livraison as jours %}
 {% for jour in jours %}
   <details class="groupe-jour" {% if forloop.first %}open{% endif %}>
     <summary>📅 {{ jour.grouper|date:"l d F Y" }}
-      <span class="badge">{{ jour.list|length }} commande{{ jour.list|length|pluralize }}</span></summary>
+      {% for statut, nb, libelle in jours_badges|get_item:jour.grouper %}
+        <span class="badge badge-{{ statut }}">{{ nb }} {{ libelle|lower }}</span>
+      {% endfor %}</summary>
     {% for commande in jour.list %}
-    <div class="card order-card">
+    <div class="card order-card statut-{{ commande.statut }}">
       <div class="order-head">
-        {% if commande.client.profil_client.photo_url %}
-          <img class="avatar avatar-small" src="{{ commande.client.profil_client.photo_url }}" alt="Photo du client">
+        {% if commande.photo_client %}
+          <img class="avatar avatar-small" src="{{ commande.photo_client }}" alt="Photo du client">
         {% endif %}
         <strong>#{{ commande.pk }} — {% if commande.client %}{{ commande.client.get_full_name|default:commande.client.username }}{% else %}{{ commande.nom_client }}{% endif %}</strong>
         <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
@@ -30,29 +33,43 @@
       <p>📅 Livraison : {{ commande.date_livraison|date:"d/m/Y" }}
          {% if commande.point_livraison %}à {{ commande.point_livraison.nom }}{% endif %}
          — 💰 {{ commande.total }} €</p>
-      <p class="muted">✉️ {% if commande.client %}{{ commande.client.email }}{% if commande.client.profil_client.telephone %} · 📞 {{ commande.client.profil_client.telephone }}{% endif %}{% else %}{{ commande.email_client }}{% if commande.telephone_client %} · 📞 {{ commande.telephone_client }}{% endif %}{% endif %}
+      <p class="muted">✉️ {{ commande.email_client }}{% if commande.telephone_client %} · 📞 {{ commande.telephone_client }}{% endif %}{% if commande.tel_client %} · 📞 {{ commande.tel_client }}{% endif %}
          {% if commande.canal_pref %} · 💬 contact préféré : {{ commande.canal_pref }}{% endif %}</p>
-      <ul>
-        {% for ligne in commande.lignes.all %}
-          <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)</li>
-        {% endfor %}
-      </ul>
+      {% for nom_cat, lignes in commande.groupes_lignes %}
+        <p class="cat-lignes">{{ nom_cat }}</p>
+        <ul>
+          {% for ligne in lignes %}
+            <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)
+              {% if commande.ajustements %}
+                {% with aj=commande.ajustements|get_item:ligne.produit_id %}
+                  {% if aj == '' %}<span class="badge badge-off">retiré à la validation</span>
+                  {% elif aj != ligne.quantite %}<span class="badge badge-ok">ajusté : {{ aj|qte }} {{ aj|unite:ligne.produit }}</span>
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
       {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}
       {% if commande.statut == 'NOUVELLE' %}
         <form method="post" action="{% url 'portal:order_validate' commande.pk %}" class="inline-form">
           {% csrf_token %}
           <p class="muted">Ajustez si besoin les quantités (0 = retirer la ligne, vide = conserver la quantité commandée) :</p>
-          <ul>
-            {% for ligne in commande.lignes.all %}
-              <li>
-                <label>
-                  <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0"
-                         name="qty_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}">
-                  × {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u)
-                </label>
-              </li>
-            {% endfor %}
-          </ul>
+          {% for nom_cat, lignes in commande.groupes_lignes %}
+            <p class="cat-lignes">{{ nom_cat }}</p>
+            <ul>
+              {% for ligne in lignes %}
+                <li>
+                  <label>
+                    <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0"
+                           name="qty_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}">
+                    × {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u)
+                  </label>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endfor %}
           {% if commande.point_livraison %}
             <p class="muted">📍 Point de livraison : <strong>{{ commande.point_livraison.nom }}</strong></p>
           {% elif points %}

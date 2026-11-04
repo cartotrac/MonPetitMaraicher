@@ -165,3 +165,43 @@ details.bloc-replie > summary .aide-replier { font-size: 0.7em;
        estimée) : alerte visuelle orange, la commande reste possible ---- */
 .table tr.ligne-exces td { background: #ffe9d6; }
 .table tr.ligne-exces td input { border-color: #e0862d; background: #fff4e5; }
+
+/* ---- Codes couleur par statut (badges + vignettes commandes/paniers) ----
+   Paniers : orange en préparation, vert prêt, jaune livré, vert foncé reçu.
+   Commandes : orange à valider, vert validée, rouge refusée, gris annulée. */
+.badge-PREPARATION { background: #f9a825; color: #4e342e; }
+.badge-PRET { background: #43a047; color: #fff; }
+.badge-LIVRE { background: #fdd835; color: #4e342e; }
+.badge-RECU { background: #1b5e20; color: #fff; }
+.badge-NOUVELLE { background: #fb8c00; color: #fff; }
+.badge-VALIDEE { background: #43a047; color: #fff; }
+.badge-REFUSEE { background: #c62828; color: #fff; }
+.badge-ANNULEE { background: #9e9e9e; color: #fff; }
+.order-card.statut-PREPARATION { border-left: 4px solid #f9a825; }
+.order-card.statut-PRET { border-left: 4px solid #43a047; }
+.order-card.statut-LIVRE { border-left: 4px solid #fdd835; }
+.order-card.statut-RECU { border-left: 4px solid #1b5e20; }
+.order-card.statut-NOUVELLE { border-left: 4px solid #fb8c00; }
+.order-card.statut-VALIDEE { border-left: 4px solid #43a047; }
+.order-card.statut-REFUSEE { border-left: 4px solid #c62828; }
+.order-card.statut-ANNULEE { border-left: 4px solid #9e9e9e; }
+
+/* ---- Produits rangés par catégorie (commandes, paniers) ---- */
+.cat-lignes { margin: 0.5rem 0 0.15rem; font-size: 0.82rem;
+              font-weight: 700; color: var(--accent-dark);
+              text-transform: uppercase; letter-spacing: 0.4px;
+              border-bottom: 1px solid var(--accent-light);
+              padding-bottom: 0.15rem; }
+
+/* ---- Carte recherche : marqueur = pastille couleur (mode de
+       production) + symbole d'activité en exposant ---- */
+.marker-exploitant { position: relative; width: 26px; height: 26px; }
+.marker-point { position: absolute; inset: 4px; border-radius: 50%;
+                border: 1.5px solid #fff;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
+.marker-activite { position: absolute; top: -7px; right: -9px;
+                   font-size: 12px; line-height: 1;
+                   filter: drop-shadow(0 0 2px #fff)
+                           drop-shadow(0 0 2px #fff); }
+.legend-symbole { font-size: 0.85rem; margin-top: 0.3rem; }
+.legend-symbole span { margin-right: 0.5rem; white-space: nowrap; }

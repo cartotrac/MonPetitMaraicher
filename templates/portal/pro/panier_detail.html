@@ -2,12 +2,12 @@
 {% load l10n %}{% load unites %}
 {% block title %}Panier n°{{ panier.numero }} — MonPetitProducteurLocal{% endblock %}
 {% block content %}
-<h1>🧺 Panier n°{{ panier.numero }} — {% if panier.client %}{{ panier.client.get_full_name|default:panier.client.username }}{% else %}{{ panier.nom_client }}{% endif %}</h1>
-{% if panier.client.profil_client.photo_url %}
-  <p><img class="avatar" src="{{ panier.client.profil_client.photo_url }}" alt="Photo de {{ panier.nom_client }}"></p>
+<h1>🧺 Panier n°{{ panier.numero }} — {% if panier.client %}{{ panier.client.get_full_name|default:panier.client.username }}{% else %}{{ panier.nom_client }}{% endif %}
+  <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span></h1>
+{% if photo_client %}
+  <p><img class="avatar" src="{{ photo_client }}" alt="Photo de {{ panier.nom_client }}"></p>
 {% endif %}
 <p>
-  <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
   📅 Livraison le {{ panier.date_livraison|date:"d/m/Y" }}
   {% if panier.point_livraison %}à {{ panier.point_livraison.nom }}{% endif %}
   — 💰 {{ panier.total }} €
