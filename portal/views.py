@@ -84,6 +84,7 @@ def producer_search(request):
         "ville": e.ville,
         "latitude": e.latitude,
         "longitude": e.longitude,
+        "est_demo": e.est_demo,
         "url": e.get_absolute_url(),
     } for e in exploitants
         if e.latitude is not None and e.longitude is not None]
@@ -107,6 +108,7 @@ def producteurs_geojson(request):
         "ville": e.ville,
         "latitude": e.latitude,
         "longitude": e.longitude,
+        "est_demo": e.est_demo,
         "url": e.get_absolute_url(),
     } for e in exploitants]
     return JsonResponse(list(data), encoder=DjangoJSONEncoder, safe=False)

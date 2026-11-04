@@ -48,6 +48,7 @@
       {% endif %}
       <h2>{{ exploitant.nom_ferme }}</h2>
       <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
+      {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
       {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
       {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
       {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>

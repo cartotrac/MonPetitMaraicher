@@ -1,10 +1,14 @@
 """Peuple l'instance avec des fermes et clients de DÉMONSTRATION.
 
-Crée deux exploitations fictives du Tarn (arboriculture et fromagerie),
-leurs catalogues (à partir des produits types), points de livraison et
-créneaux, récoltes de la semaine, clients de démo et un historique de
-commandes/paniers couvrant tous les statuts — de quoi montrer le portail
-de bout en bout en quelques clics.
+Crée trois exploitations fictives du Tarn (maraîcher, arboriculture et
+fromagerie) avec des catalogues MIXTES multi-catégories (issus des
+produits types), points de livraison et créneaux, récoltes de la
+semaine, clients de démo et un historique de commandes/paniers couvrant
+tous les statuts — de quoi montrer le portail de bout en bout en
+quelques clics.
+
+Les fermes de démo sont identifiables partout (vignettes de recherche,
+carte, fiche producteur) par un badge 🧪 DÉMO.
 
 ⚠️ Toutes les données sont FICTIVES : noms, SIRET (valides au format
 Luhn mais inventés), adresses et coordonnées ne référencent aucune
@@ -15,10 +19,11 @@ Usage :
     python manage.py peupler_demo --purge   # supprime les comptes de démo
 
 Comptes créés (mot de passe : demo1234!) :
-    demo.vergers  (producteur arboriculteur) — Les Vergers de l'Agout
-    demo.fromager (producteur fromager)     — Ferme des Cabanes
-    demo.cliente  (cliente avec compte)
-    demo.client   (client avec compte)
+    demo.maraicher (producteur maraîcher)   — Les Jardins du Sor
+    demo.vergers   (producteur arboriculteur) — Les Vergers de l'Agout
+    demo.fromager  (producteur fromager)    — Ferme des Cabanes
+    demo.cliente   (cliente avec compte)
+    demo.client    (client avec compte)
 """
 import datetime
 from decimal import Decimal
@@ -56,6 +61,43 @@ def _siret_valide(prefixe13):
 
 FERMES = [
     {
+        "utilisateur": "demo.maraicher",
+        "ferme": "Les Jardins du Sor",
+        "activite": Exploitant.Activite.MARAICHER,
+        "mode": Exploitant.ModeProduction.PERMA,
+        "siret_prefixe": "8150012300003",
+        "adresse": "Chemin de Gandalou",
+        "ville": "Lavaur",
+        "cp": "81500",
+        "lat": 43.699, "lon": 1.915,
+        "tel": "05 63 00 00 03",
+        "description": ("Jardin maraîcher en permaculture dans la vallée "
+                        "du Sor : légumes de saison, herbes aromatiques, "
+                        "œufs fermiers et fruits du verger, en "
+                        "distribution directe."),
+        "prix_base": Decimal("2.20"),
+        "mix": [
+            {"activite": Exploitant.Activite.MARAICHER, "limite": 24},
+            {"activite": Exploitant.Activite.ARBORICULTEUR,
+             "categorie": "Fruits", "limite": 6},
+            {"activite": Exploitant.Activite.ELEVEUR,
+             "categorie": "Œufs", "limite": 2},
+            {"activite": Exploitant.Activite.APICULTEUR, "limite": 3},
+        ],
+        "points": [
+            ("Marché de Lavaur", "Place de la Halle",
+             "Lavaur", "81500", 43.700, 1.900),
+            ("Quai de Rabastens", "Parking des halles",
+             "Rabastens", "81600", 43.820, 1.722),
+        ],
+        "creneaux": [(6, "08:00", "12:00", 0), (2, "17:30", "19:30", 1)],
+        "note_semaine": "Arrivée des premières courges — butternut et potimarron !",
+        "bulletin": ("Paniers de la semaine aux Jardins du Sor",
+                     "Courges d'hiver, poireaux, choux kale et salades "
+                     "d'automne. Œufs fermiers en nombre limité, "
+                     "pensez à les réserver avec votre panier."),
+    },
+    {
         "utilisateur": "demo.vergers",
         "ferme": "Les Vergers de l'Agout",
         "activite": Exploitant.Activite.ARBORICULTEUR,
@@ -71,6 +113,12 @@ FERMES = [
                         "petits fruits et jus de la ferme, récoltés à "
                         "maturité et vendus en circuit court."),
         "prix_base": Decimal("1.90"),
+        "mix": [
+            {"activite": Exploitant.Activite.ARBORICULTEUR, "limite": 20},
+            {"activite": Exploitant.Activite.APICULTEUR, "limite": 4},
+            {"activite": Exploitant.Activite.ELEVEUR,
+             "categorie": "Œufs", "limite": 3},
+        ],
         "points": [
             ("Marché de Saint-Sulpice", "Place de la Halle",
              "Saint-Sulpice-la-Pointe", "81370", 43.660, 2.140),
@@ -100,6 +148,12 @@ FERMES = [
                         "fromages frais et caillé, fabrication à la ferme "
                         "en bidons de cuivre."),
         "prix_base": Decimal("4.50"),
+        "mix": [
+            {"activite": Exploitant.Activite.FROMAGER, "limite": 20},
+            {"activite": Exploitant.Activite.APICULTEUR, "limite": 2},
+            {"activite": Exploitant.Activite.ELEVEUR,
+             "categorie": "Œufs", "limite": 2},
+        ],
         "points": [
             ("Halte de Réalmont", "Place de la République",
              "Réalmont", "81280", 43.775, 2.528),
@@ -155,26 +209,39 @@ class Command(BaseCommand):
             description=spec["description"], adresse=spec["adresse"],
             ville=spec["ville"], code_postal=spec["cp"],
             telephone=spec["tel"], latitude=spec["lat"],
-            longitude=spec["lon"], visible=True)
+            longitude=spec["lon"], visible=True, est_demo=True)
 
-        # Catalogue : 10 premiers produits types de l'activité, prix
-        # progressifs simples et réalistes.
+        # Catalogue MIXTE multi-catégories : on pioche dans les
+        # catalogues types de plusieurs activités (la catégorie type
+        # de chaque produit devient une catégorie du producteur) ;
+        # les prix progressent au sein de chaque catégorie.
         produits = []
-        for i, std in enumerate(ProduitStandard.objects.filter(
-                activite=spec["activite"])[:10]):
-            cat, _cree = Categorie.objects.get_or_create(
-                exploitant=exploitant, nom=std.categorie)
-            if _cree:
-                cat.position = exploitant.categories.count()
-                cat.save()
-            produit = Produit.objects.create(
-                exploitant=exploitant, nom=std.nom, categorie=cat,
-                unite_vente=std.unite_vente,
-                attributs={"saisons": std.saisons},
-                origine_standard=std,
-                prix=spec["prix_base"] + Decimal(i) * Decimal("0.50"),
-                actif=True)
-            produits.append(produit)
+        for source in spec["mix"]:
+            qs = ProduitStandard.objects.filter(
+                activite=source["activite"])
+            if source.get("categorie"):
+                qs = qs.filter(categorie=source["categorie"])
+            for std in qs[:source["limite"]]:
+                if Produit.objects.filter(
+                        exploitant=exploitant,
+                        origine_standard=std).exists():
+                    continue
+                cat, _cree = Categorie.objects.get_or_create(
+                    exploitant=exploitant, nom=std.categorie)
+                if _cree:
+                    cat.position = exploitant.categories.count()
+                    cat.save()
+                rang = (Produit.objects
+                        .filter(exploitant=exploitant, categorie=cat)
+                        .count())
+                produit = Produit.objects.create(
+                    exploitant=exploitant, nom=std.nom, categorie=cat,
+                    unite_vente=std.unite_vente,
+                    attributs={"saisons": std.saisons},
+                    origine_standard=std,
+                    prix=spec["prix_base"] + Decimal(rang) * Decimal("0.50"),
+                    actif=True)
+                produits.append(produit)
 
         # Points de livraison + créneaux
         points = []
@@ -210,7 +277,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"🌾 {exploitant.nom_ferme} créée (compte "
             f"{spec['utilisateur']}, mot de passe {MOT_DE_PASSE_DEMO}) : "
-            f"{len(produits)} produits, {len(points)} points."))
+            f"{len(produits)} produits en "
+            f"{exploitant.categories.count()} catégories, "
+            f"{len(points)} points."))
         return exploitant, produits, points
 
     def _clients(self):
@@ -329,8 +398,10 @@ class Command(BaseCommand):
                            panier_statut=Panier.Statut.LIVRE,
                            quantite_livree=ajuste)
         self.stdout.write(self.style.SUCCESS(
-            "Démonstration prête : 2 fermes fictives du Tarn (arboration "
-            "et fromagerie), 2 clients, commandes à valider, paniers en "
-            "préparation, prêts et livrés (lecture seule)."))
-        self.stdout.write("Connexion producteur : demo.vergers ou "
-                          "demo.fromager — mot de passe " + MOT_DE_PASSE_DEMO)
+            "Démonstration prête : 3 fermes fictives du Tarn (maraîcher, "
+            "arboriculture, fromagerie) avec catalogues multi-catégories, "
+            "2 clients, commandes à valider, paniers en préparation, "
+            "prêts et livrés (lecture seule)."))
+        self.stdout.write("Connexion producteur : demo.maraicher, "
+                          "demo.vergers ou demo.fromager — mot de passe "
+                          + MOT_DE_PASSE_DEMO)

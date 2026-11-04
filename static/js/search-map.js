@@ -200,6 +200,8 @@ exploitants.forEach(function (e) {
   present[e.mode_production] = true;
   var style = CAT_STYLES[e.mode_production] || CAT_STYLES.CONV;
   var activite = ACTIVITES[e.activite] || "";
+  var badgeDemo = e.est_demo
+    ? '<br><span class="badge badge-demo">🧪 DÉMO</span>' : "";
   var marker = L.circleMarker([e.latitude, e.longitude], {
     radius: 8,
     color: "#fff",
@@ -209,6 +211,7 @@ exploitants.forEach(function (e) {
   }).bindPopup(
     "<strong>" + e.nom_ferme + "</strong>" +
     (activite ? '<br><span class="muted">' + activite + "</span>" : "") +
+    badgeDemo +
     "<br>" + (e.ville || "") +
     '<br><a href="' + e.url + '">Voir la ferme →</a>'
   );

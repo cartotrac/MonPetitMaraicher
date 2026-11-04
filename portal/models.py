@@ -75,6 +75,10 @@ class Exploitant(models.Model):
     longitude = models.FloatField("Longitude", blank=True, null=True,
                                    help_text="Position sur la carte (optionnel)")
     visible = models.BooleanField("Visible publiquement", default=True)
+    # Exploitation fictive créée par la commande peupler_demo : les
+    # vignettes, la fiche et la carte l'affichent clairement comme DÉMO.
+    est_demo = models.BooleanField("Exploitation de démonstration",
+                                    default=False)
     creee_le = models.DateTimeField(auto_now_add=True)
 
     class Meta:

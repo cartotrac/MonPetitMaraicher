@@ -59,6 +59,9 @@ details.bloc-replie > summary .aide-replier { font-size: 0.7em;
 .flash.warning { background: #fff4e5; border: 1px solid #f5a623;
                  color: #6b4e00; }
 
+/* ---- Ferme de démonstration : badge identifiable partout ---- */
+.badge-demo { background: #7b2ff7; color: #fff; font-weight: 600; }
+
 /* ---- Page Paramètres : aide SMTP repliable ---- */
 .aide-smtp { margin-top: 0.9rem; }
 .aide-smtp > summary { cursor: pointer; list-style: none; }
