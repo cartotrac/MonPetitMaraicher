@@ -25,12 +25,15 @@ var bloc = document.getElementById("donnees-carte");
 var carte = L.map("carte-recherche").setView([46.6, 2.4], 6);
 
 /* ------------------------------------------------------------------ fonds */
-/* Fond « Plan » : tuiles OpenStreetMap officielles (mêmes tuiles que dans
-   QGIS : https://tile.openstreetmap.org/{z}/{x}/{y}.png, sans clé). */
+/* Fond « Plan » : Plan IGN V2 (Géoplateforme IGN, données ouvertes, WMTS
+   SANS clé — plus fiable que les tuiles OSM directes qui renvoient 403).
+   Même source que le Géoportail : data.geopf.fr. */
 var fondPlan = L.tileLayer(
-  "https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" +
+  "&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png" +
+  "&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}", {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    attribution: "Plan IGN V2 &copy; <a href=\"https://www.geoportail.gouv.fr/\">IGN</a>"
   });
 
 var fondOrtho = L.tileLayer(
