@@ -1,8 +1,8 @@
-# 🌱 MonPetitMaraicher
+# 🌱 MonPetitProducteurLocal
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
-**Portail web libre de mise en relation et de gestion pour les maraîchers/producteurs locaux et leurs clients : vitrine, commandes, paniers hebdomadaires et communication directe (e-mail/SMS).**
+**Portail web libre de mise en relation et de gestion pour les producteurs locaux — maraîchers, arboriculteurs, éleveurs, fromagers, apiculteurs… — et leurs clients : vitrine, commandes, paniers hebdomadaires et communication directe (e-mail/SMS).**
 
 Le producteur crée sa vitrine en ligne, publie ses récoltes et son planning de livraison, reçoit et gère ses commandes et ses clients (validation, paniers numérotés préparés pour chaque jour de livraison), et communique directement avec eux : newsletter de la semaine, annonce de la mise à disposition des paniers, validation des livraisons. Le client découvre les producteurs près de chez lui, commande ses paniers et suit ses livraisons.
 
@@ -10,8 +10,8 @@ Le producteur crée sa vitrine en ligne, publie ses récoltes et son planning de
 
 ## Pour qui ?
 
-- 🧑‍🌾 **Les maraîchers et petits producteurs** : vitrine publique gratuite, catalogue illustré, récoltes hebdo, planning de livraison, gestion des commandes et de la communication client
-- 🛒 **Les clients** : recherche par producteur, produit ou localisation, consultation libre sans compte, commande en quelques clics
+- 🧑‍🌾 **Les petits producteurs locaux** (maraîchers, arboriculteurs, éleveurs, fromagers, apiculteurs…) : vitrine publique gratuite, catalogue illustré par activité, récoltes hebdo, planning de livraison, gestion des commandes et de la communication client
+- 🛒 **Les clients** : recherche par producteur, produit ou localisation, consultation libre sans compte, commande en quelques clics, favoris et recommande de commandes passées
 - 🌍 **Les collectivités, AMAP et associations** : déployer une instance pour leur territoire — le code est libre et réplicable
 
 ## La page d'accueil
@@ -25,11 +25,13 @@ Le producteur crée sa vitrine en ligne, publie ses récoltes et son planning de
 
 | Espace | Fonctions |
 |---|---|
-| **Public** | Landing avec carte des producteurs, recherche multi-critères (producteur, produit, ville, département, catégorie de production), pages publiques des fermes (logo, présentation, certification, produits, récolte de la semaine, équipe, points de livraison géolocalisés, créneaux, réseaux sociaux) |
-| **Maraîcher** | Inscription (SIRET validé, mode de production, logo, localisation par clic carte) ; **catalogue produit illustré** édité **directement en mode édition du dashboard** (ajout, reclassement ▲▼, changement de catégorie, catégories personnalisables, attributs libres JSONB) ; **équipe multi-comptes** : le propriétaire administre (fiche, équipe, paramètres, catalogue standard), des membres rattachés au SIRET gèrent le courant |
-| **Récoltes & dispo** | Saisie des **dispos hebdo = estimations** ; la page de commande affiche la **dispo restante de la semaine** (estimation − quantités déjà commandées) ; **sans récolte publiée, commande possible sur le catalogue** avec avertissement « quantités soumises à validation » |
-| **Commandes** | Via le portail **ou saisies par le producteur** ; validation/refus ; **paniers numérotés n°1..X par jour et par point de livraison** ; commandes/paniers **regroupés par jour** (sections dépliables) côté maraîcher et client ; position du point **transmise au client** (adresse + lien carte) au passage en prêt/livré ; **export comptable des paniers livrés** (CSV) |
-| **Client** | Commande **avec ou sans compte** (nom + téléphone obligatoires, e-mail optionnel pour la newsletter), mention « commandé à Nom de l'exploitation », suivi et annulation ; **identité vivante** : le profil mis à jour remonte rétroactivement dans commandes et paniers |
+| **Public** | Landing avec carte des producteurs, recherche multi-critères (producteur, produit, ville, département, **activité**), pages publiques des fermes (logo, présentation, certification, badge activité, produits avec emoji, récolte de la semaine, équipe, points de livraison géolocalisés, créneaux, réseaux sociaux) ; **mentions légales** et plan du site complet en pied de page |
+| **Producteur** | Inscription simplifiée (nom de la ferme, **activité**, ville, code postal, localisation par clic carte) ; **catalogues de produits types par activité** (maraîcher, arboriculture, élevage, fromagerie, ruche…) importables en un clic, onglets par activité ; catalogue illustré édité **directement en mode édition du dashboard** (ajout, renommé, reclassement ▲▼, changement de catégorie, catégories renommables/supprimables sans perdre les produits, retrait de produits en conservant l'historique) ; **équipe multi-comptes** : le propriétaire administre (fiche, équipe, paramètres, catalogue standard), des membres rattachés au SIRET gèrent le courant |
+| **Dashboard** | Une colonne avec **ancres de navigation** (commandes, produits, récoltes, points, vitrine) ; hero météo en direct ; bandeau des créneaux ; **badges de statut** (à traiter orange, en cours jaune, validée verte) ; rubrique produits **repliée par défaut** ; **aperçu de la vitrine en direct** en bas de page |
+| **Récoltes & dispo** | Saisie des **dispos hebdo = estimations** groupées par catégorie, **reprise automatique des valeurs de la semaine précédente** et rechargement depuis n'importe quelle semaine ; la page de commande affiche la **dispo restante de la semaine** (estimation − quantités déjà commandées) ; **sans récolte publiée, commande possible sur le catalogue** avec avertissement « quantités soumises à validation » |
+| **Commandes** | Via le portail (saisie directe depuis la vitrine, quantités pré-remplies, **recommande d'une commande annulée en un clic**) **ou saisies par le producteur** ; validation/refus ; **paniers numérotés n°1..X par jour et par point de livraison** ; commandes/paniers **regroupés par jour** (sections dépliables) côté producteur et client ; position du point **transmise au client** (adresse + lien carte) au passage en prêt/livré ; **export comptable des paniers livrés** (CSV) |
+| **Paniers** | Ajustement ligne à ligne (souhaité client vs livré, quantités propres par unité : kg décimal, pièces/bottes/barquettes entières) ; **paniers « Livré » / « Reçu » verrouillés en lecture seule** (le contenu livré sert au décompte de production et à l'export comptable) ; **export CSV** |
+| **Client** | Commande **avec ou sans compte** (nom + téléphone obligatoires, e-mail optionnel pour la newsletter), mention « commandé à Nom de l'exploitation », suivi et annulation, badge « en cours de traitement » ; **identité vivante** : le profil mis à jour remonte rétroactivement dans commandes et paniers ; **favoris** (« Mes producteurs ») et reprise de commande |
 | **Communication** | Onglet **Publications** : newsletter de la semaine et annonces, diffusion e-mail ; **annonce SMS de la mise à disposition des paniers** ; envoi via **le SMTP propre à l'exploitation** (page Paramètres) et **la passerelle SMS de son choix** |
 | **Paramètres** | Page unique **Ma ferme / Mon profil / Équipe / Messagerie** (SMTP + passerelle SMS par exploitation, propriétaire uniquement) |
 | **Admin** | Back-office Django complet (`/admin/`) |
@@ -45,7 +47,7 @@ Le backlog détaillé est suivi dans les [issues du dépôt](https://github.com/
 - [x] [#5 — Catégories personnalisables et attributs libres des produits (JSONB)](https://github.com/cartotrac/MonPetitMaraicher/issues/5)
 - [x] [#6 — Paniers numérotés par jour de livraison et par point](https://github.com/cartotrac/MonPetitMaraicher/issues/6)
 - [x] [#7 — Géocodage des adresses + carte (clic, Nominatim, fond IGN)](https://github.com/cartotrac/MonPetitMaraicher/issues/7) *(clustering à venir)*
-- [ ] [#8 — Export comptable des paniers livrés (CSV)](https://github.com/cartotrac/MonPetitMaraicher/issues/8)
+- [x] [#8 — Export comptable des paniers livrés (CSV)](https://github.com/cartotrac/MonPetitMaraicher/issues/8)
 - [x] [#9 — Écrans producteur : points de livraison et créneaux hebdo](https://github.com/cartotrac/MonPetitMaraicher/issues/9)
 
 Plus loin : panier multi-producteurs, mutualisation par département / pays, automatisation du déploiement.
