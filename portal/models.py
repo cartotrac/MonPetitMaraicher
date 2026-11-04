@@ -267,9 +267,20 @@ class Produit(models.Model):
         return ""
 
     def save(self, *args, **kwargs):
-        if not self.slug:
-            from django.utils.text import slugify
-            self.slug = slugify(self.nom) or "produit"
+        from django.utils.text import slugify
+        if not self.slug or self.slug == slugify(self.nom or ""):
+            # Slug dérivé du nom, dédoublonné au sein de l'exploitation
+            # (comme Exploitant) : deux produits homonymes ne doivent
+            # pas casser la contrainte (exploitant, slug).
+            base = slugify(self.nom) or "produit"
+            slug = base
+            n = 2
+            while Produit.objects.filter(
+                    exploitant_id=self.exploitant_id,
+                    slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
         super().save(*args, **kwargs)
 
     # Libellé d'unité pour l'affichage public : « kg », « pièce(s) »…
