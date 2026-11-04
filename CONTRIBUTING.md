@@ -1,4 +1,4 @@
-# 🤝 Contribuer à MonPetitMaraicher
+# 🤝 Contribuer à MonPetitProducteurLocal
 
 Merci de vouloir contribuer ! Ce projet est porté par et pour les
 **producteurs indépendants** et les personnes qui veulent renforcer les

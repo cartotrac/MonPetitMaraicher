@@ -38,17 +38,17 @@ Le producteur crée sa vitrine en ligne, publie ses récoltes et son planning de
 
 ## Feuille de route
 
-Le backlog détaillé est suivi dans les [issues du dépôt](https://github.com/cartotrac/MonPetitMaraicher/issues) :
+Le backlog détaillé est suivi dans les [issues du dépôt](https://github.com/cartotrac/MonPetitProducteurLocal/issues) :
 
-- [x] [#1 — Catalogue de produits standard embarqué (emojis/SVG libres) avec filtres](https://github.com/cartotrac/MonPetitMaraicher/issues/1)
-- [x] [#2 — Saisie directe de commandes par le producteur](https://github.com/cartotrac/MonPetitMaraicher/issues/2)
-- [x] [#3 — Communication producteur ↔ clients : newsletter, annonces, confirmations e-mail/SMS](https://github.com/cartotrac/MonPetitMaraicher/issues/3) *(SMS : passerelle paramétrable, envoi à brancher)*
-- [x] [#4 — Vitrine producteur personnalisable](https://github.com/cartotrac/MonPetitMaraicher/issues/4)
-- [x] [#5 — Catégories personnalisables et attributs libres des produits (JSONB)](https://github.com/cartotrac/MonPetitMaraicher/issues/5)
-- [x] [#6 — Paniers numérotés par jour de livraison et par point](https://github.com/cartotrac/MonPetitMaraicher/issues/6)
-- [x] [#7 — Géocodage des adresses + carte (clic, Nominatim, fond IGN)](https://github.com/cartotrac/MonPetitMaraicher/issues/7) *(clustering à venir)*
-- [x] [#8 — Export comptable des paniers livrés (CSV)](https://github.com/cartotrac/MonPetitMaraicher/issues/8)
-- [x] [#9 — Écrans producteur : points de livraison et créneaux hebdo](https://github.com/cartotrac/MonPetitMaraicher/issues/9)
+- [x] [#1 — Catalogue de produits standard embarqué (emojis/SVG libres) avec filtres](https://github.com/cartotrac/MonPetitProducteurLocal/issues/1)
+- [x] [#2 — Saisie directe de commandes par le producteur](https://github.com/cartotrac/MonPetitProducteurLocal/issues/2)
+- [x] [#3 — Communication producteur ↔ clients : newsletter, annonces, confirmations e-mail/SMS](https://github.com/cartotrac/MonPetitProducteurLocal/issues/3) *(SMS : passerelle paramétrable, envoi à brancher)*
+- [x] [#4 — Vitrine producteur personnalisable](https://github.com/cartotrac/MonPetitProducteurLocal/issues/4)
+- [x] [#5 — Catégories personnalisables et attributs libres des produits (JSONB)](https://github.com/cartotrac/MonPetitProducteurLocal/issues/5)
+- [x] [#6 — Paniers numérotés par jour de livraison et par point](https://github.com/cartotrac/MonPetitProducteurLocal/issues/6)
+- [x] [#7 — Géocodage des adresses + carte (clic, Nominatim, fond IGN)](https://github.com/cartotrac/MonPetitProducteurLocal/issues/7) *(clustering à venir)*
+- [x] [#8 — Export comptable des paniers livrés (CSV)](https://github.com/cartotrac/MonPetitProducteurLocal/issues/8)
+- [x] [#9 — Écrans producteur : points de livraison et créneaux hebdo](https://github.com/cartotrac/MonPetitProducteurLocal/issues/9)
 
 Plus loin : panier multi-producteurs, mutualisation par département / pays, automatisation du déploiement.
 

@@ -1,6 +1,6 @@
 # Déploiement sur AlwaysData (sous-domaine)
 
-MonPetitMaraicher est une application Django servie en **WSGI**,
+MonPetitProducteurLocal est une application Django servie en **WSGI**,
 directement supporté par AlwaysData. Base de données recommandée :
 **PostgreSQL** (natif chez AlwaysData, champs JSONB pour les attributs
 personnalisés des produits et les paramètres).
@@ -9,7 +9,7 @@ personnalisés des produits et les paramètres).
 
 - Une offre AlwaysData avec accès **SSH** et **Python 3.11+**
   (Web > Sites > type d'application Python/WSGI)
-- Un sous-domaine configuré (ex : `monpetitmaraicher.tondomaine.fr`) pointé
+- Un sous-domaine configuré (ex : `monpetitproducteurlocal.tondomaine.fr`) pointé
   vers AlwaysData
 
 ## 2. Installation via SSH
@@ -17,8 +17,8 @@ personnalisés des produits et les paramètres).
 ```bash
 ssh toncompte@ssh-toncompte.alwaysdata.net
 
-git clone https://github.com/cartotrac/MonPetitMaraicher.git ~/monpetitmaraicher
-cd ~/monpetitmaraicher
+git clone https://github.com/cartotrac/MonPetitProducteurLocal.git ~/monpetitproducteurlocal
+cd ~/monpetitproducteurlocal
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
 venv/bin/pip install "psycopg[binary]"
@@ -35,8 +35,8 @@ Renseigner ensuite les variables d'environnement (voir `.env.example`) :
 ```
 DJANGO_SECRET_KEY=<générée>
 DJANGO_DEBUG=0
-DJANGO_ALLOWED_HOSTS=monpetitmaraicher.tondomaine.fr
-CSRF_TRUSTED_ORIGINS=https://monpetitmaraicher.tondomaine.fr
+DJANGO_ALLOWED_HOSTS=monpetitproducteurlocal.tondomaine.fr
+CSRF_TRUSTED_ORIGINS=https://monpetitproducteurlocal.tondomaine.fr
 DB_ENGINE=django.db.backends.postgresql
 DB_NAME=toncompte_mpm
 DB_USER=toncompte_mpm
@@ -68,8 +68,8 @@ venv/bin/python manage.py collectstatic
 | Réglage | Valeur |
 |---|---|
 | Type | WSGI (Python) |
-| Chemin de l'application | `/home/toncompte/monpetitmaraicher/config/wsgi.py` |
-| Environnement Python | virtualenv : `/home/toncompte/monpetitmaraicher/venv` |
+| Chemin de l'application | `/home/toncompte/monpetitproducteurlocal/config/wsgi.py` |
+| Environnement Python | virtualenv : `/home/toncompte/monpetitproducteurlocal/venv` |
 
 Ajouter les variables d'environnement ci-dessus dans « Variables
 d'environnement » du site.
@@ -94,8 +94,8 @@ Toujours dans **Web > Sites**, ajouter deux « Collections » (routes) :
 
 | Route | Réglage | Dossier racine |
 |---|---|---|
-| `/static/` | Fichiers statiques | `/home/toncompte/monpetitmaraicher/staticfiles` |
-| `/media/` | Fichiers statiques | `/home/toncompte/monpetitmaraicher/media` |
+| `/static/` | Fichiers statiques | `/home/toncompte/monpetitproducteurlocal/staticfiles` |
+| `/media/` | Fichiers statiques | `/home/toncompte/monpetitproducteurlocal/media` |
 
 > ⚠️ Les fichiers media (logos, photos) ne survivent pas à un redéploiement
 > git : prévoir à terme un stockage objet (S3-compatible) ou des sauvegardes.
@@ -105,7 +105,7 @@ Toujours dans **Web > Sites**, ajouter deux « Collections » (routes) :
 ## 5. Mise à jour
 
 ```bash
-cd ~/monpetitmaraicher && git pull
+cd ~/monpetitproducteurlocal && git pull
 venv/bin/pip install -r requirements.txt
 venv/bin/python manage.py makemigrations portal
 venv/bin/python manage.py migrate

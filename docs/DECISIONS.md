@@ -1,6 +1,6 @@
 # Décisions techniques
 
-Choix actés pour MonPetitMaraicher. Ce document garde la trace des décisions et de leur raison d'être — le modifier quand une décision évolue.
+Choix actés pour MonPetitProducteurLocal. Ce document garde la trace des décisions et de leur raison d'être — le modifier quand une décision évolue.
 
 ## Licence : GNU AGPL-3.0
 
