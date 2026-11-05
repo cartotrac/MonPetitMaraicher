@@ -97,17 +97,20 @@
       {% endif %}
       <p class="muted vignette-localite"><span>{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% elif exploitant.departement %} ({{ exploitant.departement }}){% endif %}</span>
         <a class="btn btn-sm btn-commander" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a></p>
-      <div class="vignette-corps">
+      <div class="vignette-reste">
         {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
+        <div class="vignette-horaires" role="note">
+          <strong>📍 Boutique / points de livraison :</strong>
+          {% for h in exploitant.horaires %}
+            <span>🗓️ {{ h }}</span>
+          {% endfor %}
+          {% if not exploitant.horaires %}<span class="muted">Horaires non renseignés — voir la fiche de la ferme.</span>{% endif %}
+        </div>
       </div>
-      <div class="vignette-horaires" role="note">
-        <strong>📍 Boutique / points de livraison :</strong>
-        {% for h in exploitant.horaires %}
-          <span>🗓️ {{ h }}</span>
-        {% endfor %}
-        {% if not exploitant.horaires %}<span class="muted">Horaires non renseignés — voir la fiche de la ferme.</span>{% endif %}
-      </div>
-      {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
+      <p class="vignette-pied">
+        <span class="vignette-activite-libelle">{{ exploitant.get_activite_display }}{% if exploitant.siret_valide %} <strong>certifié</strong>{% endif %}</span>
+        {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
+      </p>
     </div>
   {% empty %}
     <p>Aucun producteur ne correspond à votre recherche.</p>
