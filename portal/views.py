@@ -3,6 +3,7 @@ import datetime
 import io
 import re
 from decimal import Decimal, InvalidOperation
+from urllib.parse import parse_qsl
 
 import django.core.mail
 from django.conf import settings
@@ -27,8 +28,9 @@ from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
                     Exploitant, Favori, LigneCommande, LignePanier,
                     LigneRecolte, MembreExploitation, Panier,
                     ParametresVitrine, PointLivraison, PreferenceContact,
-                    Produit, ProduitStandard, ProfilClient, SemaineRecolte,
-                    Visiteur, exploitant_pour)
+                    Produit, ProduitStandard, ProfilClient,
+                    SemaineRecolte, StatistiqueQuotidienne, Visiteur,
+                    exploitant_pour)
 from .notifications import envoyer_sms, notifier_client
 from .management.commands.charger_catalogues_activites import (
     emoji_pour_nom)
@@ -62,14 +64,10 @@ def home(request):
     return render(request, "portal/home.html", {"exploitants": exploitants})
 
 
-def producer_search(request):
-    """Recherche multi-critères : exploitant, produit, ville, département
-    (ou code postal), mode de production — plus la CARTE des résultats."""
-    exploitants = Exploitant.objects.filter(visible=True).order_by("nom_ferme")
-    q = request.GET.get("q", "").strip()
-    dept = request.GET.get("dept", "").strip()
-    mode = request.GET.get("mode", "").strip()
-    activite = request.GET.get("activite", "").strip()
+def _recherche_producteurs(q, dept, mode, activite):
+    """Jeu de critères -> queryset d'exploitants visibles (partagé par
+    la recherche simple et par les filtres combinés enregistrés)."""
+    exploitants = Exploitant.objects.filter(visible=True)
     if q:
         exploitants = exploitants.filter(
             Q(nom_ferme__icontains=q) | Q(ville__icontains=q)
@@ -88,13 +86,72 @@ def producer_search(request):
         exploitants = exploitants.filter(mode_production=mode)
     if activite:
         exploitants = exploitants.filter(activite=activite)
-    exploitants = list(exploitants)
+    return exploitants
+
+
+def _serie_stats(champ, lignes):
+    """Série prête à dessiner (barres en %) + tendance sur ~7 jours,
+    pour les mini-graphes des badges de la page de recherche."""
+    valeurs = [getattr(s, champ) for s in lignes]
+    if not valeurs:
+        return {"points": [], "tendance": 0, "dernier": 0}
+    maximum = max(valeurs, default=0) or 1
+    points = []
+    for ligne, valeur in zip(lignes, valeurs):
+        points.append({
+            "hauteur": round(100 * valeur / maximum),
+            "valeur": valeur,
+            "titre": f"{ligne.date.strftime('%d/%m')} : {valeur}",
+        })
+    reference = valeurs[0] if len(valeurs) < 8 else valeurs[-8]
+    return {"points": points, "tendance": valeurs[-1] - reference,
+            "dernier": valeurs[-1] if valeurs else 0}
+
+
+def producer_search(request):
+    """Recherche multi-critères : exploitant, produit, ville, département
+    (ou code postal), mode de production — plus la CARTE des résultats.
+    Plusieurs combinaisons enregistrées (?comb=qs&comb=qs…) sont
+    cumulées (union des résultats)."""
+    combinaisons = request.GET.getlist("comb")
+    if combinaisons:
+        # Cumul / agrégat de plusieurs filtres enregistrés
+        cumul = None
+        for qs_comb in combinaisons[:10]:
+            params = dict(parse_qsl(qs_comb, keep_blank_values=True))
+            jeu = _recherche_producteurs(
+                params.get("q", ""), params.get("dept", ""),
+                params.get("mode", ""), params.get("activite", ""))
+            cumul = jeu if cumul is None else (cumul | jeu)
+        exploitants = (cumul or Exploitant.objects.none()).distinct()
+        q = dept = mode = activite = ""
+    else:
+        q = request.GET.get("q", "").strip()
+        dept = request.GET.get("dept", "").strip()
+        mode = request.GET.get("mode", "").strip()
+        activite = request.GET.get("activite", "").strip()
+        exploitants = _recherche_producteurs(q, dept, mode, activite)
+    exploitants = list(exploitants.order_by("nom_ferme"))
     # Dénombrements affichés à côté du titre : producteurs visibles,
-    # clients inscrits (comptes non pro), visiteurs (sessions anonymes).
+    # clients inscrits (comptes non pro), visiteurs (sessions anonymes),
+    # + photo quotidienne pour l'historique / tendance des badges.
+    nb_producteurs = Exploitant.objects.filter(visible=True).count()
     nb_clients = (User.objects
                   .filter(exploitant__isnull=True,
                           membre_exploitation__isnull=True).count())
     nb_visiteurs = Visiteur.objects.count()
+    aujourdhui = timezone.localdate()
+    StatistiqueQuotidienne.objects.update_or_create(
+        date=aujourdhui,
+        defaults={"nb_producteurs": nb_producteurs,
+                  "nb_clients": nb_clients,
+                  "nb_visiteurs": nb_visiteurs})
+    lignes_stats = list(StatistiqueQuotidienne.objects.filter(
+        date__gte=aujourdhui - datetime.timedelta(days=29))
+        .order_by("date"))
+    graphs = {"producteurs": _serie_stats("nb_producteurs", lignes_stats),
+              "clients": _serie_stats("nb_clients", lignes_stats),
+              "visiteurs": _serie_stats("nb_visiteurs", lignes_stats)}
     # Horaires de retrait / boutique : créneaux récurrents par ferme,
     # affichés au survol des vignettes.
     horaires = {}
@@ -125,9 +182,12 @@ def producer_search(request):
         "exploitants": exploitants,
         "carte_data": carte_data,
         "activites": Exploitant.Activite.choices,
-        "nb_producteurs": Exploitant.objects.filter(visible=True).count(),
+        "nb_producteurs": nb_producteurs,
         "nb_clients": nb_clients,
         "nb_visiteurs": nb_visiteurs,
+        "graph_producteurs": graphs["producteurs"],
+        "graph_clients": graphs["clients"],
+        "graph_visiteurs": graphs["visiteurs"],
         "q": q, "dept": dept, "mode": mode, "activite": activite,
     })
 

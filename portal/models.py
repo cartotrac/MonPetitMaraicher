@@ -884,6 +884,26 @@ class Visiteur(models.Model):
         return f"👀 Visiteur {self.session_key[:8]}…"
 
 
+class StatistiqueQuotidienne(models.Model):
+    """Photo quotidienne des dénombrements du portail (producteurs
+    visibles, clients inscrits, visiteurs) : alimente les mini-graphes
+    de tendance de la page de recherche. Aucune donnée personnelle."""
+
+    date = models.DateField("Jour", unique=True)
+    nb_producteurs = models.PositiveIntegerField("Producteurs", default=0)
+    nb_clients = models.PositiveIntegerField("Clients", default=0)
+    nb_visiteurs = models.PositiveIntegerField("Visiteurs", default=0)
+
+    class Meta:
+        verbose_name = "Statistique quotidienne"
+        verbose_name_plural = "Statistiques quotidiennes"
+        ordering = ["date"]
+
+    def __str__(self):
+        return f"📊 {self.date} : {self.nb_producteurs} / " \
+               f"{self.nb_clients} / {self.nb_visiteurs}"
+
+
 def exploitant_pour(user):
     """L'exploitation gérée par ce compte, ou None : soit le compte
     propriétaire (Exploitant.user), soit un membre rattaché."""

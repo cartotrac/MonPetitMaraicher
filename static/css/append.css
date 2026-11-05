@@ -441,3 +441,114 @@ details.panier-bloc > summary::-webkit-details-marker { display: none; }
 .site-footer a { color: #38551f; opacity: 1; }
 .site-footer .footer-plan a:hover,
 .site-footer a:hover { color: #1b3a00; text-decoration: underline; }
+
+/* ===== Titre + badges de dénombrement sur la même ligne ===== */
+.entete-chercher { display: flex; justify-content: space-between;
+  align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.entete-chercher h1 { margin: 0; }
+@media (max-width: 720px) {
+  .entete-chercher { flex-direction: column; align-items: flex-start; }
+}
+.stats-portail { margin: 0; }
+.stats-item { position: relative; display: inline-block; }
+.stats-item > button { cursor: pointer; border: 0; font: inherit; }
+.stats-pop {
+  display: none; position: absolute; right: 0; top: calc(100% + 6px);
+  z-index: 1300; min-width: 260px; padding: 0.7rem 0.9rem;
+  background: #fff; border: 1px solid #dcdcdc; border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+}
+.stats-pop.ouvert { display: block; }
+.stats-pop strong { display: block; margin-bottom: 0.2rem; }
+.stats-tendance { font-weight: 700; margin-left: 0.3rem; }
+.stats-tendance.hausse { color: #2e7d32; }
+.stats-tendance.baisse { color: #c62828; }
+.stats-tendance.stable { color: #757575; }
+.stats-chart {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 70px; margin-top: 0.5rem;
+  border-bottom: 1px solid #eee; padding-bottom: 2px;
+}
+.stats-bar {
+  flex: 1; min-width: 4px; max-width: 14px;
+  background: linear-gradient(180deg, #7cb342, #33691e);
+  border-radius: 2px 2px 0 0;
+}
+.stats-pop .muted { margin: 0.4rem 0 0; font-size: 0.8rem; }
+
+/* ===== Filtres enregistrés (puces) ===== */
+.filtres-sauvegardes { display: flex; flex-wrap: wrap; gap: 0.4rem;
+  margin: 0.5rem 0 0; align-items: center; }
+.puce-filtre {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  background: #f1f4ec; border: 1px solid #c5d3b4;
+  border-radius: 999px; padding: 0.2rem 0.6rem; font-size: 0.88rem;
+}
+.puce-filtre a { text-decoration: none; color: #33511c; font-weight: 600; }
+.puce-filtre a:hover { text-decoration: underline; }
+.puce-filtre-suppr {
+  border: 0; background: transparent; cursor: pointer;
+  color: #a0a0a0; font-size: 0.85rem; padding: 0;
+}
+.puce-filtre-suppr:hover { color: #c62828; }
+
+/* ===== Titre de la carte superposé au canvas (centre haut) ===== */
+.map-canvas-wrap { position: relative; }
+.map-canvas-wrap .map-titre {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  z-index: 900; margin: 0; font-size: 1.15rem;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0.25rem 0.9rem; border-radius: 999px;
+  border: 1px solid #e0e0e0;
+  pointer-events: none; white-space: nowrap;
+}
+
+/* ===== Vignettes : dimensions stables, encart superposé ===== */
+.vignette-titre { display: flex; align-items: center; gap: 0.5rem;
+  flex-wrap: wrap; margin-bottom: 0.35rem; }
+.vignette-titre h2 { margin: 0; font-size: 1.15rem; }
+.vignette-corps { position: relative; margin-top: 0.4rem;
+  min-height: 64px; }
+.vignette-horaires {
+  display: none; position: absolute; inset: 0;
+  background: #fffdf3; border: 1px dashed #bdb76b; border-radius: 8px;
+  padding: 0.5rem 0.7rem; font-size: 0.88rem; overflow: auto;
+  margin: 0;
+}
+.vignette-producteur:hover .vignette-horaires { display: block; }
+
+/* ===== Boutons de scroll haut/bas ===== */
+.scroll-nav {
+  position: fixed; right: 14px; bottom: 110px; z-index: 1150;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.scroll-btn {
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 0; cursor: pointer; font-size: 1.05rem;
+  background: #4e7a3a; color: #fff;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.scroll-btn:hover { transform: scale(1.08); background: #3d612d; }
+
+/* ===== Bandeau : survol moderne (soulignement animé, pas d'aplats) */
+.nav-links a, .nav-links .btn-link, .nav-gestion-titre {
+  position: relative;
+  transition: color 0.15s ease;
+}
+.nav-links a::after, .nav-links .btn-link::after,
+.nav-gestion-titre::after {
+  content: ""; position: absolute;
+  left: 0.6rem; right: 0.6rem; bottom: 0.1rem;
+  height: 2px; border-radius: 2px;
+  background: #7cb342;
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.18s ease;
+}
+.nav-links a:hover, .nav-links .btn-link:hover,
+.nav-gestion-titre:hover {
+  background: transparent !important;
+  color: #2c4a1a;
+}
+.nav-links a:hover::after, .nav-links .btn-link:hover::after,
+.nav-gestion-titre:hover::after { transform: scaleX(1); }

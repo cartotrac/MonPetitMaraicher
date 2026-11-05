@@ -107,6 +107,23 @@
   </div>
 </footer>
 {% block extrajs %}{% endblock %}
+<div class="scroll-nav" aria-label="Navigation rapide dans la page">
+  <button class="scroll-btn" type="button" id="btn-scroll-haut" title="Revenir au bandeau" aria-label="Revenir au bandeau">⬆️</button>
+  <button class="scroll-btn" type="button" id="btn-scroll-bas" title="Aller au pied de page" aria-label="Aller au pied de page">⬇️</button>
+</div>
+<script>
+/* Navigation rapide : remonter au bandeau / descendre au pied de page. */
+(function () {
+  var haut = document.getElementById("btn-scroll-haut");
+  var bas = document.getElementById("btn-scroll-bas");
+  if (haut) haut.addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  if (bas) bas.addEventListener("click", function () {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  });
+})();
+</script>
 <script>
 /* Navigation mobile : bouton burger qui déplie/replie les liens. */
 (function () {
