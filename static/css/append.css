@@ -260,3 +260,13 @@ form.ajust-form {
   border: 1px dashed var(--bord, #ccc); border-radius: 8px;
 }
 form.ajust-form .btn { margin-top: 0.4rem; }
+
+/* Filtre « À traiter » : pastille orange, même inactif (repère visuel
+   des commandes à traiter, cohérent avec le badge NOUVELLE). */
+.btn.btn-filtre-atrier {
+  background: #fb8c00; border-color: #e65100; color: #fff;
+}
+.btn.btn-filtre-atrier.btn-active {
+  background: #e65100; border-color: #bf360c;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}

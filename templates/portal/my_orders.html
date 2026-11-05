@@ -76,18 +76,6 @@
       </ul>
       {% if panier.note %}<p class="muted">💬 {{ panier.note }}</p>{% endif %}
     {% endif %}
-      <p><strong>🧺 Panier n°{{ panier.numero }}</strong> —
-         <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
-         — 💰 {{ panier.total }} €</p>
-      <p class="muted">Contenu livré :</p>
-      <ul>
-        {% for row in resultat.lignes_panier %}
-          <li>{{ row.ligne.produit.nom }} × {{ row.ligne.quantite|qte }} {{ row.ligne.quantite|unite:row.ligne.produit }}
-              {% if row.ajuste %} <em>(souhaité : {{ row.souhaite }})</em> ⚠️ ajusté{% elif row.souhaite is None %} <em>(ajout du producteur)</em>{% endif %}</li>
-        {% endfor %}
-      </ul>
-      {% if panier.note %}<p class="muted">💬 {{ panier.note }}</p>{% endif %}
-    {% endif %}
     {% if commande.statut == 'ANNULEE' %}
       <a class="btn" href="{% url 'portal:order_create' commande.exploitant.slug %}?reprise={{ commande.pk }}">🔁 Recommander (quantités, date et point repris)</a>
     {% endif %}
