@@ -279,3 +279,16 @@ li.ligne-exces {
 .badge-exces { background: #fb8c00; color: #fff; font-weight: 600; }
 .badge-ANNULE { background: #c62828; color: #fff; font-weight: 600; }
 .order-card.statut-ANNULE { border-left: 4px solid #c62828; }
+
+/* Vignettes producteur unifiées (Chercher / Mes producteurs) */
+.vignette-producteur { position: relative; }
+.badge-conventionnelle { background: #546e7a; color: #fff; }
+.medaille-siret {
+  position: absolute; bottom: 8px; right: 8px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+  color: #4e342e; font-weight: 700; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  cursor: default;
+}

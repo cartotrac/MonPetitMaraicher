@@ -42,21 +42,24 @@
 
 <div class="grid producers">
   {% for exploitant in exploitants %}
-    <a class="card" href="{% url 'portal:producer_detail' exploitant.slug %}">
+    <div class="card vignette-producteur">
       {% if exploitant.logo %}
         <img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">
       {% endif %}
-      <h2>{{ exploitant.nom_ferme }}</h2>
+      <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
       <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
       {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
       {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
       {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
       {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
       {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
+      {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
       {% endif %}
       <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% elif exploitant.departement %} ({{ exploitant.departement }}){% endif %}</p>
       {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
-    </a>
+      <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
+      {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
+    </div>
   {% empty %}
     <p>Aucun producteur ne correspond à votre recherche.</p>
   {% endfor %}

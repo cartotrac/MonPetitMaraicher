@@ -15,12 +15,21 @@
     <h2>🚜 Favoris fournisseurs</h2>
     <div class="grid producers">
       {% for exploitant in favoris_fournisseurs %}
-        <div class="card">
+        <div class="card vignette-producteur">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
           <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
+          {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
+          {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
+          {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
+          {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
+          {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
+          {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
+          {% endif %}
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
+          {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
+          {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
         </div>
       {% empty %}
         <p class="muted">Aucun fournisseur favori : ajoutez vos fermes
@@ -34,12 +43,21 @@
     <h2>🤝 Favoris clients pro</h2>
     <div class="grid producers">
       {% for exploitant in favoris_clients %}
-        <div class="card">
+        <div class="card vignette-producteur">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
           <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
+          {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
+          {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
+          {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
+          {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
+          {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
+          {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
+          {% endif %}
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
+          {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
+          {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
         </div>
       {% empty %}
         <p class="muted">Aucun client pro en favori.</p>
@@ -51,12 +69,21 @@
     <h2>🔁 Fermes déjà commandées</h2>
     <div class="grid producers">
       {% for exploitant in deja_commandes %}
-        <div class="card">
+        <div class="card vignette-producteur">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
           <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
+          {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
+          {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
+          {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
+          {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
+          {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
+          {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
+          {% endif %}
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
+          {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
+          {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
         </div>
       {% empty %}
         <p class="muted">Vous n'avez pas encore commandé chez d'autres
@@ -72,12 +99,21 @@
     <h2>⭐ Mes favoris</h2>
     <div class="grid producers">
       {% for exploitant in favoris %}
-        <div class="card">
+        <div class="card vignette-producteur">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
           <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
+          {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
+          {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
+          {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
+          {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
+          {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
+          {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
+          {% endif %}
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
+          {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
+          {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
         </div>
       {% empty %}
         <p class="muted">Aucun favori pour l'instant : ajoutez vos producteurs
@@ -90,12 +126,21 @@
     <h2>🔁 Producteurs déjà commandés</h2>
     <div class="grid producers">
       {% for exploitant in deja_commandes %}
-        <div class="card">
+        <div class="card vignette-producteur">
           {% if exploitant.logo %}<img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">{% endif %}
           <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
           <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
+          {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
+          {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
+          {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
+          {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
+          {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
+          {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
+          {% endif %}
           <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% endif %}</p>
+          {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
           <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
+          {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
         </div>
       {% empty %}
         <p class="muted">Vous n'avez pas encore commandé.

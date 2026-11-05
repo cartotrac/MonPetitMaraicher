@@ -13,7 +13,7 @@ import unicodedata
 
 from django.core.management.base import BaseCommand
 
-from portal.models import Exploitant, ProduitStandard
+from portal.models import Exploitant, Produit, ProduitStandard
 
 # (nom, categorie, unite, emoji, saisons)
 CATALOGUES = {
@@ -218,6 +218,33 @@ class Command(BaseCommand):
             std.save(update_fields=["emoji"])
             remplaces += 1
         self.stdout.write(f"Emojis complétés : {remplaces} produit(s).")
+
+        # 4. Emojis des produits des FERMES (Produit) : hérités du
+        #    produit type d'origine, sinon devinés par mot-clé, sinon
+        #    symbole de l'activité de la ferme — chaque produit finit
+        #    avec son symbole dans toutes les listes (commandes,
+        #    paniers, vitrine, commander).
+        par_activite = {
+            Exploitant.Activite.MARAICHER: "🥬",
+            Exploitant.Activite.ARBORICULTEUR: "🍎",
+            Exploitant.Activite.ELEVEUR: "🐄",
+            Exploitant.Activite.FROMAGER: "🧀",
+            Exploitant.Activite.APICULTEUR: "🍯",
+            Exploitant.Activite.MICRO_BRASSEUR: "🍺",
+            Exploitant.Activite.AUTRE: "🌾",
+        }
+        majs = 0
+        for produit in (Produit.objects.filter(emoji="")
+                        .select_related("origine_standard", "exploitant")):
+            emoji = ""
+            if produit.origine_standard_id and produit.origine_standard:
+                emoji = produit.origine_standard.emoji or ""
+            emoji = (emoji or emoji_pour_nom(produit.nom)
+                     or par_activite.get(produit.exploitant.activite, "🌾"))
+            produit.emoji = emoji
+            produit.save(update_fields=["emoji"])
+            majs += 1
+        self.stdout.write(f"Emojis produits des fermes : {majs} complété(s).")
 
         self.stdout.write(self.style.SUCCESS(
             "Catalogues par activité chargés."))

@@ -30,6 +30,8 @@ from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
                     Produit, ProduitStandard, ProfilClient, SemaineRecolte,
                     exploitant_pour)
 from .notifications import envoyer_sms, notifier_client
+from .management.commands.charger_catalogues_activites import (
+    emoji_pour_nom)
 
 # Unités vendues à la pièce : quantités entières uniquement.
 UNITES_ENTIERES = ("PC", "BO", "BQ")
@@ -453,6 +455,7 @@ def produit_creer(request):
         if form.is_valid():
             produit = form.save(commit=False)
             produit.exploitant = exploitant
+            produit.emoji = produit.emoji or emoji_pour_nom(produit.nom)
             _enregistrer_image_externe(produit,
                                         request.POST.get("image_externe", ""))
             produit.save()
@@ -714,7 +717,8 @@ def produit_edition_rapide(request):
                     default=0) + 1)
                 produit = Produit.objects.create(
                     exploitant=exploitant, nom=nom[:150], categorie=categorie,
-                    unite_vente=unite, prix=prix, position=position)
+                    unite_vente=unite, prix=prix, position=position,
+                    emoji=emoji_pour_nom(nom[:150]))
                 messages.success(request, f"Produit « {produit.nom} » "
                                  "ajouté.")
             return redirect(destination)
@@ -1837,7 +1841,8 @@ def catalogue_copier(request):
                 exploitant=exploitant, nom=std.nom, categorie=cat,
                 description="", unite_vente=std.unite_vente,
                 attributs={"saisons": std.saisons},
-                origine_standard=std, prix=prix, actif=True)
+                origine_standard=std, prix=prix, actif=True,
+                emoji=std.emoji or emoji_pour_nom(std.nom))
             copies += 1
         if copies:
             messages.success(request, f"{copies} produit(s) copié(s) dans "
@@ -2247,10 +2252,18 @@ def my_orders(request):
     """Commandes du client ; les paniers validés montrent le contenu
     livré côte à côte du souhaité, avec le commentaire du producteur.
     Tant que la commande n'est pas validée, le client peut ajuster ses
-    quantités dans la marge des disponibilités restantes."""
+    quantités dans la marge des disponibilités restantes. Filtres :
+    statut de la commande, ou paniers prêts à récupérer."""
+    filtre = request.GET.get("filtre", "").strip()
     commandes = (request.user.commandes.select_related("exploitant")
                  .prefetch_related("lignes__produit")
                  .order_by("-date_livraison", "-creee_le"))
+    if filtre in Commande.Statut.values:
+        commandes = commandes.filter(statut=filtre)
+    elif filtre == "panier_pret":
+        commandes = commandes.filter(
+            paniers__statut=Panier.Statut.PRET).distinct()
+    commandes = list(commandes)
     resultats = []
     for commande in commandes:
         panier = (Panier.objects.filter(commande=commande)
@@ -2268,11 +2281,38 @@ def my_orders(request):
                 })
         marges = (_marges_ajustement(commande)
                   if commande.statut == Commande.Statut.NOUVELLE else {})
+        commande.groupes_lignes = _groupes_lignes(
+            list(commande.lignes.all()))
+        if panier:
+            panier.groupes_lignes = _groupes_lignes(list(panier.lignes.all()))
+            # Mêmes lignes que groupes_lignes, mais enrichies des
+            # quantités souhaitées / ajustées pour l'affichage client.
+            par_cat = {}
+            for row in lignes_panier:
+                cat = (row["ligne"].produit.categorie.nom
+                       if row["ligne"].produit.categorie
+                       else "Sans catégorie")
+                par_cat.setdefault(cat, []).append(row)
+            ordre = [nom for nom, _ in panier.groupes_lignes]
+            panier.groupes_contenu = [(nom, par_cat.get(nom, []))
+                                      for nom in ordre]
+            panier.groupes_contenu += [(nom, rows)
+                                       for nom, rows in par_cat.items()
+                                       if nom not in ordre]
         resultats.append({"commande": commande, "panier": panier,
                           "lignes_panier": lignes_panier,
                           "marges": marges})
-    return render(request, "portal/my_orders.html",
-                  {"resultats": resultats, "today": timezone.localdate()})
+    # En-têtes de jour : comptage par statut (« à traiter » plutôt que
+    # « nouvelle » côté client) — même habillage que l'espace pro.
+    statuts_client = [
+        (code, "à traiter" if code == Commande.Statut.NOUVELLE
+         else libelle.lower())
+        for code, libelle in Commande.Statut.choices]
+    return render(request, "portal/my_orders.html", {
+        "resultats": resultats, "filtre": filtre,
+        "today": timezone.localdate(),
+        "jours_badges": _badges_par_jour(commandes, "statut", statuts_client),
+    })
 
 
 @login_required

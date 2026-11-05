@@ -309,6 +309,11 @@ class Produit(models.Model):
     # Ordre d'affichage au sein de la catégorie (mode édition du
     # dashboard : boutons ▲▼ pour reclasser les produits).
     position = models.PositiveSmallIntegerField("Position", default=0)
+    emoji = models.CharField(
+        "Emoji", max_length=8, blank=True,
+        help_text="Symbole affiché dans toutes les listes : hérité du "
+                  "produit type d'origine, ou deviné par mot-clé "
+                  "(commande charger_catalogues_activites).")
 
     class Meta:
         verbose_name = "Produit"
@@ -318,14 +323,6 @@ class Produit(models.Model):
 
     def __str__(self):
         return f"{self.nom} ({self.exploitant.nom_ferme})"
-
-    @property
-    def emoji(self):
-        """Emoji du produit type d'origine (🥕, 🍅…), affiché côté
-        client comme dans les listes maraîcher."""
-        if self.origine_standard_id and self.origine_standard:
-            return self.origine_standard.emoji or ""
-        return ""
 
     def save(self, *args, **kwargs):
         from django.utils.text import slugify
