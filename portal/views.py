@@ -366,6 +366,8 @@ def _calendrier_recoltes(exploitant):
     return calendrier
 
 
+@login_required
+@exploitant_requis
 def dashboard(request):
     """Page centrale du maraîcher : rubriques à gauche, aperçu de la
     vitrine publique en direct à droite, hero météo et bandeau des
@@ -2150,7 +2152,6 @@ def _dates_livraison(exploitant, today):
     return dates
 
 
-@login_required
 def _marges_ajustement(commande):
     """Marge de manœuvre du client sur SA commande non validée :
     pour chaque ligne, dispo restante de la semaine + sa propre
@@ -2171,6 +2172,7 @@ def _marges_ajustement(commande):
             for ligne in commande.lignes.all()}
 
 
+@login_required
 def my_orders(request):
     """Commandes du client ; les paniers validés montrent le contenu
     livré côte à côte du souhaité, avec le commentaire du producteur.
