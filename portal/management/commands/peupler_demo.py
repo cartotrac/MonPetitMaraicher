@@ -21,9 +21,18 @@ Usage :
     python manage.py peupler_demo            # crée si absent (idempotent)
     python manage.py peupler_demo --purge   # supprime les comptes de démo
     python manage.py peupler_demo --reset-commandes
-                                           # efface TOUTES les commandes
-                                           # et paniers (tous comptes)
-                                           # puis régénère le jeu de démo
+                                           # PONCTUEL : efface TOUTES
+                                           # les commandes/paniers
+                                           # (comptes réels inclus)
+    python manage.py peupler_demo --reset-commandes-demo
+                                           # courant : efface les
+                                           # commandes/paniers des
+                                           # SEULES fermes de démo et
+                                           # régénère le jeu
+
+Comptes d'essai « sans engagement » (mot de passe demo1234!) :
+    demo.pro     : espace producteur (La Ferme Découverte)
+    demo.public  : espace client (Camille Public)
 
 La purge efface TOUS les comptes de démo : ceux du jeu actuel, tout
 compte en « demo.* » et toute exploitation marquée « démo » dans la
@@ -241,6 +250,28 @@ FERMES = [
         "Soupes d'hiver, choucroute et haricots verts en bocal, "
         "terrine de campagne de la semaine : tout est au marché de "
         "Bain dès 9 h."),
+    # ── Comptes d'essai « sans engagement » ────────────────────────
+    # Fermes à communiquer aux personnes qui veulent tester l'espace
+    # pro sans créer leur compte : demo.pro (producteur) et
+    # demo.public (client, dans CLIENTS ci-dessous).
+    _ferme_spec(
+        "demo.pro", "La Ferme Découverte", A.MARAICHER,
+        M.AB, "81500", "Route de Sor, lieu-dit Larérou",
+        "Lavaur", 43.700, 1.905, "05 63 00 00 30",
+        "Ferme d'essai du portail : espace pro de démonstration à "
+        "communiquer aux producteurs qui veulent tester sans créer "
+        "leur compte. Maraîchage bio, paniers hebdomadaires.",
+        Decimal("2.50"),
+        [{"activite": A.MARAICHER, "limite": 20},
+         {"activite": A.ELEVEUR, "categorie": "Œufs", "limite": 3},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché de Lavaur", "Place de la Halle",
+          "Lavaur", "81500", 43.700, 1.900)],
+        [(6, "08:00", "12:00", 0), (3, "17:00", "19:00", 0)],
+        "Semaine d'essai : salades, radis et premières courges.",
+        "Paniers de la semaine à la Ferme Découverte",
+        "L'espace pro de cette ferme est un compte d'essai : "
+        "expérimentez librement les produits, récoltes et commandes."),
     # ── Aveyron (2) ──────────────────────────────────────────────
     _ferme_spec(
         "demo.aveyron.eleveur", "Ferme de l'Aubrac", A.ELEVEUR, M.PAYSAN,
@@ -581,6 +612,11 @@ CLIENTS = [
     {"utilisateur": "demo.client", "prenom": "Paul", "nom": "Martin",
      "email": "paul.martin@example.fr", "tel": "06 98 76 54 32",
      "ville": "Castres", "cp": "81100"},
+    # Compte client « sans engagement » : à communiquer aux personnes
+    # qui veulent essayer le portail sans créer leur propre compte.
+    {"utilisateur": "demo.public", "prenom": "Camille", "nom": "Public",
+     "email": "camille.public@example.fr", "tel": "06 11 22 33 44",
+     "ville": "Lavaur", "cp": "81500"},
 ]
 
 
@@ -598,7 +634,13 @@ class Command(BaseCommand):
             "--reset-commandes", action="store_true",
             help=("Efface TOUTES les commandes et paniers de la base "
                   "(comptes réels inclus) puis régénère les commandes "
-                  "et paniers du jeu de démo pour toutes les fermes."))
+                  "et paniers du jeu de démo pour toutes les fermes. "
+                  "Usage ponctuel uniquement."))
+        parser.add_argument(
+            "--reset-commandes-demo", action="store_true",
+            help=("Efface UNIQUEMENT les commandes et paniers des "
+                  "fermes de démonstration (les commandes réelles "
+                  "sont conservées) puis régénère le jeu de démo."))
 
     def _lundi(self):
         today = timezone.localdate()
@@ -829,9 +871,11 @@ class Command(BaseCommand):
                     f"{', '.join(sorted(purges))} ({n} objet(s))."))
             return
 
-        recree = bool(options.get("reset_commandes"))
-        if recree:
-            # Nettoyage demandé : on efface TOUTES les commandes et
+        reset_total = bool(options.get("reset_commandes"))
+        reset_demo = bool(options.get("reset_commandes_demo"))
+        recree = reset_total or reset_demo
+        if reset_total:
+            # Nettoyage PONCTUEL : on efface TOUTES les commandes et
             # paniers de la base (comptes réels inclus), puis le
             # peuplement ci-dessous régénère les commandes du jeu de
             # démo pour chaque ferme. Panier d'abord (FK SET_NULL),
@@ -843,6 +887,20 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(
                 f"Commandes et paniers effacés : {nb_commandes} "
                 f"commande(s), {nb_paniers} panier(s) supprimé(s)."))
+        elif reset_demo:
+            # Nettoyage courant : seules les commandes et paniers des
+            # fermes de DÉMONSTRATION sont effacés — les commandes
+            # réelles des vrais comptes sont conservées.
+            nb_paniers = Panier.objects.filter(
+                exploitant__est_demo=True).count()
+            nb_commandes = Commande.objects.filter(
+                exploitant__est_demo=True).count()
+            Panier.objects.filter(exploitant__est_demo=True).delete()
+            Commande.objects.filter(exploitant__est_demo=True).delete()
+            self.stdout.write(self.style.SUCCESS(
+                f"Commandes et paniers de DÉMO effacés : {nb_commandes} "
+                f"commande(s), {nb_paniers} panier(s) — les commandes "
+                "réelles sont conservées."))
 
         clients = self._clients()
         for spec in FERMES:
