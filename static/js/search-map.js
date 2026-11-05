@@ -241,11 +241,9 @@ exploitants.forEach(function (e) {
 function majEmprise() {
   var bornes = carte.getBounds();
   var comptes = {};
-  var visibles = 0, total = 0;
   markers.forEach(function (m) {
     if (bornes.contains(m.getLatLng())) {
       comptes[m._activite] = (comptes[m._activite] || 0) + 1;
-      visibles += 1;
     }
   });
   Object.keys(ACTIVITES).forEach(function (cle) {
@@ -258,20 +256,11 @@ function majEmprise() {
   var cartes = document.querySelectorAll(
     ".vignette-producteur[data-lat]");
   cartes.forEach(function (card) {
-    total += 1;
     var lat = parseFloat(card.getAttribute("data-lat"));
     var lng = parseFloat(card.getAttribute("data-lng"));
     card.classList.toggle(
       "hors-carte", !bornes.contains(L.latLng(lat, lng)));
   });
-  var compteur = document.getElementById("compteur-vignettes");
-  if (compteur) {
-    compteur.textContent =
-      visibles + " ferme" + (visibles > 1 ? "s" : "") +
-      " dans l'emprise de la carte" +
-      (visibles < markers.length
-       ? " — déplacez ou zoomez la carte pour les voir toutes." : ".");
-  }
 }
 carte.on("moveend zoomend", majEmprise);
 

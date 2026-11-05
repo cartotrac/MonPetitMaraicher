@@ -433,7 +433,7 @@ details.panier-bloc > summary::-webkit-details-marker { display: none; }
 }
 .vignette-horaires span { display: block; }
 .vignette-producteur:hover .vignette-horaires { display: block; }
-.btn-commander { margin: 0.25rem 0 0.4rem; }
+.btn-commander { margin: 0; }
 
 /* ===== Footer : lisibilité du plan du site (texte foncé sur fond clair) */
 .site-footer, .site-footer p { color: #33281a; }
@@ -552,3 +552,11 @@ details.panier-bloc > summary::-webkit-details-marker { display: none; }
 }
 .nav-links a:hover::after, .nav-links .btn-link:hover::after,
 .nav-gestion-titre:hover::after { transform: scaleX(1); }
+
+/* ===== Vignettes : localité + Commander sur la même ligne ===== */
+.vignette-localite {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 0.5rem; margin: 0.25rem 0 0.2rem;
+}
+.vignette-localite .btn-commander { margin: 0; flex-shrink: 0; }
+.vignette-corps { min-height: 52px; }
