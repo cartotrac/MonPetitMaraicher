@@ -231,3 +231,24 @@ section.cal-courante { background: #e8f5e9; border-radius: 0.6rem;
   outline-offset: 2px;
   background: rgba(249, 162, 37, 0.08);
 }
+
+/* --------------------------------------- dashboard Produits (catégories repliées) */
+summary.summary-avec-actions {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+}
+summary.summary-avec-actions h2 { flex: 1 1 auto; display: inline; }
+details.cat-bloc {
+  border: 1px solid var(--bord, #ddd); border-radius: 8px;
+  margin: 0.4rem 0; padding: 0.2rem 0.6rem;
+}
+details.cat-bloc > summary { cursor: pointer; }
+details.cat-bloc > summary h3 {
+  display: inline-block; margin: 0.3rem 0; border-radius: 6px;
+  padding: 2px 6px;
+}
+details.cat-bloc .cat-outils { margin-left: 0.8rem; }
+
+/* Validation de commande : case de quantité à côté de chaque ligne */
+.ligne-ajustable input[type="number"] {
+  margin: 0 0.35rem; width: 5.5em; text-align: right;
+}

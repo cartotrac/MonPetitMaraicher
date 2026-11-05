@@ -388,6 +388,7 @@ def dashboard(request):
         "exploitant": exploitant,
         "est_proprietaire": hasattr(request.user, "exploitant"),
         "paires": paires,
+        "nb_produits": len(produits),
         "categories": list(Categorie.objects.filter(exploitant=exploitant)
                            .order_by("position", "nom")),
         "unite_choices": Produit.Unite.choices,

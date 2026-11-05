@@ -35,37 +35,23 @@
          — 💰 {{ commande.total }} €</p>
       <p class="muted">✉️ {{ commande.email_client }}{% if commande.telephone_client %} · 📞 {{ commande.telephone_client }}{% endif %}{% if commande.tel_client %} · 📞 {{ commande.tel_client }}{% endif %}
          {% if commande.canal_pref %} · 💬 contact préféré : {{ commande.canal_pref }}{% endif %}</p>
-      {% for nom_cat, lignes in commande.groupes_lignes %}
-        <p class="cat-lignes">{{ nom_cat }}</p>
-        <ul>
-          {% for ligne in lignes %}
-            <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)
-              {% if commande.ajustements %}
-                {% with aj=commande.ajustements|get_item:ligne.produit_id %}
-                  {% if aj == '' %}<span class="badge badge-off">retiré à la validation</span>
-                  {% elif aj != ligne.quantite %}<span class="badge badge-ok">ajusté : {{ aj|qte }} {{ aj|unite:ligne.produit }}</span>
-                  {% endif %}
-                {% endwith %}
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      {% endfor %}
-      {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}
       {% if commande.statut == 'NOUVELLE' %}
         <form method="post" action="{% url 'portal:order_validate' commande.pk %}" class="inline-form">
           {% csrf_token %}
-          <p class="muted">Ajustez si besoin les quantités (0 = retirer la ligne, vide = conserver la quantité commandée) :</p>
+          <p class="muted">Quantités ajustables en place, à côté de chaque
+             produit (0 = retirer la ligne) :</p>
           {% for nom_cat, lignes in commande.groupes_lignes %}
             <p class="cat-lignes">{{ nom_cat }}</p>
             <ul>
               {% for ligne in lignes %}
-                <li>
-                  <label>
-                    <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0"
-                           name="qty_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}">
-                    × {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} ({{ ligne.prix_unitaire }} €/u)
-                  </label>
+                <li class="ligne-ajustable">
+                  {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}<strong>{{ ligne.produit.nom }}</strong>
+                  — demandé : {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}
+                  <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" size="5"
+                         name="qty_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}"
+                         title="Quantité à retenir (0 = retirer la ligne)"
+                         aria-label="Quantité retenue pour {{ ligne.produit.nom }}">
+                  ({{ ligne.prix_unitaire }} €/u)
                 </li>
               {% endfor %}
             </ul>
@@ -91,7 +77,25 @@
           <button class="btn" name="action" value="validate" type="submit">✅ Valider</button>
           <button class="btn btn-outline" name="action" value="refuse" type="submit">❌ Refuser</button>
         </form>
+      {% else %}
+        {% for nom_cat, lignes in commande.groupes_lignes %}
+          <p class="cat-lignes">{{ nom_cat }}</p>
+          <ul>
+            {% for ligne in lignes %}
+              <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)
+                {% if commande.ajustements %}
+                  {% with aj=commande.ajustements|get_item:ligne.produit_id %}
+                    {% if aj == '' %}<span class="badge badge-off">retiré à la validation</span>
+                    {% elif aj != ligne.quantite %}<span class="badge badge-ok">ajusté : {{ aj|qte }} {{ aj|unite:ligne.produit }}</span>
+                    {% endif %}
+                  {% endwith %}
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endfor %}
       {% endif %}
+      {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}
     </div>
     {% endfor %}
   </details>

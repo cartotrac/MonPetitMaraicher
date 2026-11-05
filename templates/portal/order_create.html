@@ -28,13 +28,13 @@
         <tbody>
         {% for offre in offres_groupe %}
           <tr>
-            <td>{{ offre.produit.nom }}</td>
+            <td>{% if offre.produit.emoji %}{{ offre.produit.emoji }} {% endif %}{{ offre.produit.nom }}</td>
             {% if mode == 'recolte' %}
               <td class="muted">~ {{ offre.estime }} {{ offre.estime|unite:offre.produit }}</td>
               <td>{% if offre.reste > 0 %}<strong>~ {{ offre.reste|qte }} {{ offre.reste|unite:offre.produit }}</strong>{% else %}<span class="muted">complet</span>{% endif %}</td>
             {% endif %}
             <td>{{ offre.prix }} €</td>
-            <td><input type="number" step="{% if offre.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="{{ offre.cle }}" placeholder="0" value="{{ valeurs|get_item:offre.cle|default:'' }}" data-nom="{{ offre.produit.nom }}" data-prix="{{ offre.prix }}" data-unite="{{ offre.produit.unite_courte }}" {% if offre.reste is not None %}data-reste="{{ offre.reste }}"{% endif %} {% if offre.reste is not None and offre.reste <= 0 %}disabled title="Complet : déjà commandé cette semaine"{% endif %}></td>
+            <td><input type="number" step="{% if offre.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" name="{{ offre.cle }}" placeholder="0" value="{{ valeurs|get_item:offre.cle|default:'' }}" data-nom="{{ offre.produit.nom }}" data-emoji="{{ offre.produit.emoji }}" data-prix="{{ offre.prix }}" data-unite="{{ offre.produit.unite_courte }}" {% if offre.reste is not None %}data-reste="{{ offre.reste }}"{% endif %} {% if offre.reste is not None and offre.reste <= 0 %}disabled title="Complet : déjà commandé cette semaine"{% endif %}></td>
           </tr>
         {% endfor %}
         </tbody>
@@ -155,7 +155,8 @@
         var prix = parseFloat(champ.dataset.prix) || 0;
         totalNum += qte * prix;
         lignesChoisies.push(
-          "• " + champ.dataset.nom + " × " + qte + " "
+          "• " + (champ.dataset.emoji ? champ.dataset.emoji + " " : "")
+          + champ.dataset.nom + " × " + qte + " "
           + champ.dataset.unite + " (" + prix.toFixed(2).replace(".", ",")
           + " €/" + champ.dataset.unite + ")");
       });

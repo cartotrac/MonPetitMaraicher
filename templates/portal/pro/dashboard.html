@@ -77,11 +77,10 @@
      <a href="{% url 'portal:panier_list' %}">gérer les paniers</a></p>
 </details>
 
-<details id="produits" class="bloc-replie">
-  <summary><h2>🥕 Mes produits <span class="muted aide-replier">(cliquez pour déplier la liste)</span></h2></summary>
-  <p class="retour-edition">
-      <a class="btn btn-outline btn-sm" href="{% url 'portal:product_list' %}">✏️ Éditer les produits (libellé, prix, ajout…)</a>
-  </p>
+<details id="produits" class="bloc-replie" open>
+  <summary class="summary-avec-actions"><h2>🥕 Mes produits <span class="muted aide-replier">({{ nb_produits }})</span></h2>
+    <a class="btn btn-outline btn-sm" href="{% url 'portal:product_list' %}" title="Libellés, prix, unités, ajout de produits">✏️ Activer l'édition</a>
+  </summary>
   {% if not paires %}
     <p class="muted">Aucun produit pour l'instant — créez vos catégories
        ci-dessous puis <a href="{% url 'portal:product_list' %}">ajoutez vos
@@ -92,9 +91,11 @@
       {% csrf_token %}
       <div id="bloc-produits" class="edition">
         {% for cat, liste in paires %}
-          <h3 class="cat-titre" data-cat="{{ cat.pk }}" data-nom="{{ cat.nom|default:'Sans catégorie' }}">{{ cat.nom|default:"Sans catégorie" }}
+          <details class="cat-bloc">
+            <summary><h3 class="cat-titre" data-cat="{{ cat.pk }}" data-nom="{{ cat.nom|default:'Sans catégorie' }}">{{ cat.nom|default:"Sans catégorie" }}
+              <span class="muted">— {{ liste|length }} article{{ liste|length|pluralize }}</span></h3></summary>
             {% if cat.pk %}
-              <span class="edit">
+              <span class="edit cat-outils">
                 <input type="text" name="nom_cat_{{ cat.pk }}" value="{{ cat.nom }}" maxlength="80" size="16">
                 <button type="submit" name="action" value="categorie_renommer:{{ cat.pk }}" class="btn btn-sm" title="Renommer la catégorie">✏️</button>
                 <button type="submit" name="mouvement" value="categorie:{{ cat.pk }}:haut" class="btn btn-sm" title="Catégorie vers le haut">▲</button>
@@ -104,7 +105,6 @@
                         class="btn btn-sm btn-danger" title="Supprimer la catégorie (les produits sont conservés)">🗑</button>
               </span>
             {% endif %}
-          </h3>
           <table class="table table-produits">
             <thead><tr><th>Produit</th><th>Catégorie</th></tr></thead>
             <tbody>
@@ -124,6 +124,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </details>
         {% endfor %}
         <div class="edit card">
           <h3>➕ Ajouter une catégorie</h3>

@@ -42,6 +42,7 @@
               <tr>
                 <td>
                   <span class="view">{% if produit.emoji %}{{ produit.emoji }} {% endif %}{{ produit.nom }}</span>
+                  {% if produit.emoji %}<span class="edit">{{ produit.emoji }} </span>{% endif %}
                   <input class="edit" type="text" name="nom_{{ produit.pk }}" value="{{ produit.nom }}" maxlength="150">
                 </td>
                 <td>
