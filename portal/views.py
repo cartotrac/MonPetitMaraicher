@@ -2151,9 +2151,31 @@ def _dates_livraison(exploitant, today):
 
 
 @login_required
+def _marges_ajustement(commande):
+    """Marge de manœuvre du client sur SA commande non validée :
+    pour chaque ligne, dispo restante de la semaine + sa propre
+    quantité (elle se libère en baissant sa commande). None = pas de
+    récolte publiée (pas de contrainte de disponibilité)."""
+    lundi = (commande.date_livraison
+             - datetime.timedelta(days=commande.date_livraison.weekday()))
+    semaine = (SemaineRecolte.objects.filter(
+        exploitant=commande.exploitant, publiee=True, lundi=lundi).first())
+    restes = {}
+    if semaine:
+        offres, mode = _offres_commande(commande.exploitant, semaine)
+        if mode == "recolte":
+            restes = {o["produit"].pk: o["reste"] for o in offres
+                      if o["reste"] is not None}
+    return {ligne.pk: (restes[ligne.produit_id] + ligne.quantite
+                      if ligne.produit_id in restes else None)
+            for ligne in commande.lignes.all()}
+
+
 def my_orders(request):
     """Commandes du client ; les paniers validés montrent le contenu
-    livré côte à côte du souhaité, avec le commentaire du producteur."""
+    livré côte à côte du souhaité, avec le commentaire du producteur.
+    Tant que la commande n'est pas validée, le client peut ajuster ses
+    quantités dans la marge des disponibilités restantes."""
     commandes = (request.user.commandes.select_related("exploitant")
                  .prefetch_related("lignes__produit")
                  .order_by("-date_livraison", "-creee_le"))
@@ -2172,10 +2194,13 @@ def my_orders(request):
                     "souhaite": souh,
                     "ajuste": souh is not None and souh != lp.quantite,
                 })
+        marges = (_marges_ajustement(commande)
+                  if commande.statut == Commande.Statut.NOUVELLE else {})
         resultats.append({"commande": commande, "panier": panier,
-                          "lignes_panier": lignes_panier})
+                          "lignes_panier": lignes_panier,
+                          "marges": marges})
     return render(request, "portal/my_orders.html",
-                  {"resultats": resultats})
+                  {"resultats": resultats, "today": timezone.localdate()})
 
 
 @login_required
@@ -2186,6 +2211,80 @@ def order_cancel(request, commande_id):
         commande.statut = Commande.Statut.ANNULEE
         commande.save()
         messages.info(request, f"Commande #{commande.pk} annulée.")
+    return redirect("portal:my_orders")
+
+
+@login_required
+def order_ajuster(request, commande_id):
+    """Le client ajuste les quantités de SA commande tant que le
+    producteur ne l'a pas validée (statut NOUVELLE) : dans la marge des
+    disponibilités restantes (dispo de la semaine + sa quantité
+    actuelle, qui se libère en baissant). Dès la validation, la
+    commande devient un panier et n'est plus modifiable ici."""
+    commande = get_object_or_404(Commande, pk=commande_id,
+                                  client=request.user)
+    if commande.statut != Commande.Statut.NOUVELLE:
+        messages.error(
+            request, "Cette commande a déjà été traitée par le "
+            "producteur : elle n'est plus modifiable. Utilisez "
+            "« 🔁 Recommander » si besoin.")
+        return redirect("portal:my_orders")
+    marges = _marges_ajustement(commande)
+    if request.method == "POST":
+        lignes = list(commande.lignes.select_related("produit"))
+        ajustees, total, erreurs = [], Decimal("0"), []
+        for ligne in lignes:
+            brut = request.POST.get(f"qaj_{ligne.pk}", "").strip()
+            if not brut:
+                qty = ligne.quantite  # champ vide = quantité inchangée
+            else:
+                try:
+                    qty = Decimal(brut)
+                except InvalidOperation:
+                    erreurs.append(
+                        f"« {ligne.produit.nom} » : quantité invalide.")
+                    continue
+                if qty < 0:
+                    qty = Decimal("0")
+                if (ligne.produit.unite_vente in UNITES_ENTIERES
+                        and qty != qty.to_integral_value()):
+                    erreurs.append(
+                        f"« {ligne.produit.nom} » se vend à la pièce : "
+                        "nombre entier attendu.")
+                    continue
+                marge = marges.get(ligne.pk)
+                if marge is not None and qty > marge:
+                    erreurs.append(
+                        f"« {ligne.produit.nom} » : disponibilité "
+                        f"limitée à {marge} "
+                        f"{ligne.produit.unite_courte} pour cette "
+                        "semaine (votre commande incluse).")
+                    continue
+            if qty > 0:
+                ajustees.append((ligne, qty))
+                total += qty * ligne.prix_unitaire
+        if erreurs:
+            messages.error(request, " ".join(erreurs))
+            return redirect("portal:my_orders")
+        if not ajustees:
+            messages.error(
+                request, "Impossible : toutes les lignes seraient "
+                "supprimées (utilisez plutôt « Annuler »).")
+            return redirect("portal:my_orders")
+        with transaction.atomic():
+            conservees = {ligne.pk: qty for ligne, qty in ajustees}
+            for ligne in lignes:
+                if ligne.pk not in conservees:
+                    ligne.delete()
+                elif conservees[ligne.pk] != ligne.quantite:
+                    ligne.quantite = conservees[ligne.pk]
+                    ligne.save()
+            commande.total = total
+            commande.save()
+        messages.success(request,
+                         f"Commande #{commande.pk} mise à jour : le "
+                         "producteur validera les quantités finales.")
+        return redirect("portal:my_orders")
     return redirect("portal:my_orders")
 
 

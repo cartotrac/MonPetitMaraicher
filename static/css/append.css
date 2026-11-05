@@ -252,3 +252,11 @@ details.cat-bloc .cat-outils { margin-left: 0.8rem; }
 .ligne-ajustable input[type="number"] {
   margin: 0 0.35rem; width: 5.5em; text-align: right;
 }
+
+/* Formulaire d'ajustement (client) et de validation (pro) : bloc net,
+   même rendu que la liste simple des commandes traitées. */
+form.ajust-form {
+  display: block; margin: 0.6rem 0; padding: 0.6rem 0.8rem;
+  border: 1px dashed var(--bord, #ccc); border-radius: 8px;
+}
+form.ajust-form .btn { margin-top: 0.4rem; }

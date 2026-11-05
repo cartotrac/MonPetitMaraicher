@@ -5,7 +5,7 @@
 <h1>📥 Commandes reçues</h1>
 <div class="quick-actions">
   <a class="btn {% if not filtre_statut %}btn-active{% endif %}" href="{% url 'portal:order_list' %}">Toutes</a>
-  <a class="btn {% if filtre_statut == 'NOUVELLE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'NOUVELLE' %}">À valider</a>
+  <a class="btn {% if filtre_statut == 'NOUVELLE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'NOUVELLE' %}">À traiter</a>
   <a class="btn {% if filtre_statut == 'VALIDEE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'VALIDEE' %}">Validées</a>
 </div>
 <p class="muted">Les commandes sont regroupées par jour de livraison, du plus
@@ -36,7 +36,7 @@
       <p class="muted">✉️ {{ commande.email_client }}{% if commande.telephone_client %} · 📞 {{ commande.telephone_client }}{% endif %}{% if commande.tel_client %} · 📞 {{ commande.tel_client }}{% endif %}
          {% if commande.canal_pref %} · 💬 contact préféré : {{ commande.canal_pref }}{% endif %}</p>
       {% if commande.statut == 'NOUVELLE' %}
-        <form method="post" action="{% url 'portal:order_validate' commande.pk %}" class="inline-form">
+        <form method="post" action="{% url 'portal:order_validate' commande.pk %}" class="ajust-form">
           {% csrf_token %}
           <p class="muted">Quantités ajustables en place, à côté de chaque
              produit (0 = retirer la ligne) :</p>

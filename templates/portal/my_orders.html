@@ -1,34 +1,81 @@
 {% extends "base.html" %}
-{% load unites %}
+{% load unites %}{% load l10n %}
 {% block title %}Mes commandes — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>🧾 Mes commandes</h1>
 <p class="muted">Vos commandes sont regroupées par jour de livraison, du plus
-   récent au plus ancien. Le dernier jour est déplié ; cliquez sur un jour
-   pour déplier/replier ses commandes.</p>
+   récent au plus ancien — l'en-tête de chaque jour compte vos commandes
+   (code couleur). Tant qu'une commande est <strong>à traiter</strong>,
+   vous pouvez encore ajuster vos quantités dans la marge des
+   disponibilités ; dès que le producteur la valide, elle devient un
+   panier et ne bouge plus.</p>
 {% regroup resultats by commande.date_livraison as jours %}
 {% for jour in jours %}
-  <details class="groupe-jour" {% if forloop.first %}open{% endif %}>
+  <details class="groupe-jour {% if jour.grouper < today %}cal-passe{% elif jour.grouper == today %}cal-courante{% else %}cal-avenir{% endif %}" {% if forloop.first %}open{% endif %}>
     <summary>📅 {{ jour.grouper|date:"l d F Y" }}
       <span class="badge">{{ jour.list|length }} commande{{ jour.list|length|pluralize }}</span></summary>
     {% for resultat in jour.list %}
     {% with commande=resultat.commande panier=resultat.panier %}
-    <div class="card order-card">
+    <div class="card order-card statut-{{ commande.statut }}">
       <div class="order-head">
         <strong>Commandé à {{ commande.exploitant.nom_ferme }}</strong>
         {% if commande.statut == 'NOUVELLE' %}
-          <span class="badge badge-encours">En cours de traitement</span>
+          <span class="badge badge-NOUVELLE">À traiter</span>
         {% else %}
           <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
         {% endif %}
       </div>
-    <p>📅 {{ commande.date_livraison|date:"d/m/Y" }} — 💰 {{ commande.total }} €</p>
-    <ul>
-      {% for ligne in commande.lignes.all %}
-        <li>{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}</li>
-      {% endfor %}
-    </ul>
+    <p>📅 Livraison : {{ commande.date_livraison|date:"d/m/Y" }}
+       {% if commande.point_livraison %}à {{ commande.point_livraison.nom }}{% endif %}
+       — 💰 {{ commande.total }} €</p>
+    {% if commande.statut == 'NOUVELLE' %}
+      <form method="post" action="{% url 'portal:order_ajuster' commande.pk %}" class="ajust-form">
+        {% csrf_token %}
+        <p class="muted">Quantités ajustables tant que le producteur n'a
+           pas validé (0 = retirer la ligne, vide = inchangé) :</p>
+        <ul>
+          {% for ligne in commande.lignes.all %}
+            <li class="ligne-ajustable">
+              {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}<strong>{{ ligne.produit.nom }}</strong>
+              — demandé : {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}
+              <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" size="5"
+                     name="qaj_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}"
+                     aria-label="Quantité pour {{ ligne.produit.nom }}"
+                     {% with marge=resultat.marges|get_item:ligne.pk %}
+                       {% if marge is not None %}max="{{ marge|unlocalize }}"{% endif %}
+                     {% endwith %}>
+              ({{ ligne.prix_unitaire }} €/u)
+              {% with marge=resultat.marges|get_item:ligne.pk %}
+                {% if marge is not None %}<span class="muted">— dispo max : {{ marge|qte }} {{ marge|unite:ligne.produit }}</span>{% endif %}
+              {% endwith %}
+            </li>
+          {% endfor %}
+        </ul>
+        <button class="btn" type="submit">💾 Mettre à jour</button>
+      </form>
+      <form method="post" action="{% url 'portal:order_cancel' commande.pk %}" class="inline">
+        {% csrf_token %}<button class="btn btn-outline" type="submit">Annuler la commande</button>
+      </form>
+    {% else %}
+      <ul>
+        {% for ligne in commande.lignes.all %}
+          <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
     {% if panier %}
+      <p><strong>🧺 Panier n°{{ panier.numero }}</strong> —
+         <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
+         — 💰 {{ panier.total }} €</p>
+      <p class="muted">Contenu livré :</p>
+      <ul>
+        {% for row in resultat.lignes_panier %}
+          <li>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }} × {{ row.ligne.quantite|qte }} {{ row.ligne.quantite|unite:row.ligne.produit }}
+              {% if row.ajuste %} <em>(souhaité : {{ row.souhaite }})</em> ⚠️ ajusté{% elif row.souhaite is None %} <em>(ajout du producteur)</em>{% endif %}</li>
+        {% endfor %}
+      </ul>
+      {% if panier.note %}<p class="muted">💬 {{ panier.note }}</p>{% endif %}
+    {% endif %}
       <p><strong>🧺 Panier n°{{ panier.numero }}</strong> —
          <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
          — 💰 {{ panier.total }} €</p>
@@ -40,12 +87,6 @@
         {% endfor %}
       </ul>
       {% if panier.note %}<p class="muted">💬 {{ panier.note }}</p>{% endif %}
-    {% endif %}
-    {% if commande.statut == 'NOUVELLE' %}
-      <form method="post" action="{% url 'portal:order_cancel' commande.pk %}">
-        {% csrf_token %}
-        <button class="btn btn-outline" type="submit">Annuler</button>
-      </form>
     {% endif %}
     {% if commande.statut == 'ANNULEE' %}
       <a class="btn" href="{% url 'portal:order_create' commande.exploitant.slug %}?reprise={{ commande.pk }}">🔁 Recommander (quantités, date et point repris)</a>
@@ -63,7 +104,9 @@
     {% endfor %}
   </details>
 {% empty %}
-  <p class="muted">Vous n'avez pas encore de commande.
-     <a href="{% url 'portal:home' %}">Trouvez un producteur !</a></p>
+  <p class="card etat-vide"><span class="etat-vide-emoji">🧾</span>
+     Vous n'avez pas encore de commande. Trouvez un producteur près de
+     chez vous et commandez sa récolte de la semaine !
+     <a class="btn" href="{% url 'portal:producer_search' %}">🔎 Trouver un producteur</a></p>
 {% endfor %}
 {% endblock %}

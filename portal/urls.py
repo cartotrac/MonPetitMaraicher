@@ -71,4 +71,6 @@ urlpatterns = [
     path("mes-commandes/", views.my_orders, name="my_orders"),
     path("mes-commandes/<int:commande_id>/annuler/", views.order_cancel,
          name="order_cancel"),
+    path("mes-commandes/<int:commande_id>/ajuster/", views.order_ajuster,
+         name="order_ajuster"),
 ]
