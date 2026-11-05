@@ -41,7 +41,10 @@
           <p class="cat-lignes">{{ nom_cat }}</p>
           <ul>
             {% for ligne in lignes %}
-              <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}</li>
+              <li{% with d=panier.dispos|get_item:ligne.pk %}{% if d.depasse %} class="ligne-exces"{% endif %}{% endwith %}>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}
+                {% with d=panier.dispos|get_item:ligne.pk %}
+                  {% if d %}<span class="muted">— dispo estimée : {{ d.dispo|qte }} {{ d.dispo|unite:ligne.produit }}</span>{% endif %}
+                {% endwith %}</li>
             {% endfor %}
           </ul>
         {% endfor %}

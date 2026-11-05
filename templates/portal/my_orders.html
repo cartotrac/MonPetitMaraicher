@@ -67,7 +67,11 @@
       <p><strong>🧺 Panier n°{{ panier.numero }}</strong> —
          <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
          — 💰 {{ panier.total }} €</p>
-      <p class="muted">Contenu livré :</p>
+      {% if panier.statut == 'ANNULE' %}
+      <p class="flash warning">❌ Ce panier a été annulé par le producteur{% if panier.motif_annulation %} — motif : {{ panier.motif_annulation }}{% endif %}.
+         {% if commande.statut == 'ANNULEE' %}Vous pouvez le recommander ci-dessous en repartant de vos quantités, de la date et du point de livraison — tout reste modifiable.{% endif %}</p>
+      {% endif %}
+      {% if panier.statut == 'ANNULE' %}<p class="muted">Contenu prévu :</p>{% else %}<p class="muted">Contenu livré :</p>{% endif %}
       <ul>
         {% for row in resultat.lignes_panier %}
           <li>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }} × {{ row.ligne.quantite|qte }} {{ row.ligne.quantite|unite:row.ligne.produit }}

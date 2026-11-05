@@ -44,7 +44,7 @@
             <p class="cat-lignes">{{ nom_cat }}</p>
             <ul>
               {% for ligne in lignes %}
-                <li class="ligne-ajustable">
+                <li class="ligne-ajustable{% with d=commande.dispos|get_item:ligne.pk %}{% if d.depasse %} ligne-exces{% endif %}{% endwith %}">
                   {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}<strong>{{ ligne.produit.nom }}</strong>
                   — demandé : {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}
                   <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" size="5"
@@ -52,6 +52,11 @@
                          title="Quantité à retenir (0 = retirer la ligne)"
                          aria-label="Quantité retenue pour {{ ligne.produit.nom }}">
                   ({{ ligne.prix_unitaire }} €/u)
+                  {% with d=commande.dispos|get_item:ligne.pk %}
+                    {% if d %}<span class="muted">— dispo estimée : {{ d.dispo|qte }} {{ d.dispo|unite:ligne.produit }}</span>
+                    {% if d.depasse %}<span class="badge badge-exces">⚠️ sur-commandé cette semaine</span>{% endif %}
+                    {% endif %}
+                  {% endwith %}
                 </li>
               {% endfor %}
             </ul>

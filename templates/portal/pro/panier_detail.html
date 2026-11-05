@@ -33,8 +33,8 @@
       </thead>
       <tbody>
         {% for row in rows %}
-          <tr>
-            <td>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }}{% if row.ajuste %} ⚠️ ajusté{% endif %}</td>
+          <tr{% if row.depasse %} class="ligne-exces"{% endif %}>
+            <td>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }}{% if row.ajuste %} ⚠️ ajusté{% endif %}{% if row.dispo is not None %} <span class="muted">— dispo estimée : {{ row.dispo|qte }} {{ row.dispo|unite:row.ligne.produit }}</span>{% endif %}{% if row.depasse %} <span class="badge badge-exces">⚠️ sur-commandé</span>{% endif %}</td>
             <td>{{ row.ligne.produit.get_unite_vente_display }}</td>
             <td>{% if row.souhaite is not None %}{{ row.souhaite }}{% else %}— (ajout){% endif %}</td>
             <td>{{ row.ligne.quantite|qte }}</td>
@@ -64,8 +64,8 @@
       </thead>
       <tbody>
         {% for row in rows %}
-          <tr>
-            <td>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }}{% if row.ajuste %} ⚠️ ajusté{% endif %}</td>
+          <tr{% if row.depasse %} class="ligne-exces"{% endif %}>
+            <td>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }}{% if row.ajuste %} ⚠️ ajusté{% endif %}{% if row.dispo is not None %} <span class="muted">— dispo estimée : {{ row.dispo|qte }} {{ row.dispo|unite:row.ligne.produit }}</span>{% endif %}{% if row.depasse %} <span class="badge badge-exces">⚠️ sur-commandé</span>{% endif %}</td>
             <td>{{ row.ligne.produit.get_unite_vente_display }}</td>
             <td>{% if row.souhaite is not None %}{{ row.souhaite }}{% else %}— (ajout){% endif %}</td>
             <td><input type="number" step="{{ row.step }}" min="0"
@@ -104,6 +104,7 @@
   <h2>Statut du panier</h2>
   <div class="quick-actions">
     {% for valeur, libelle in panier.Statut.choices %}
+      {% if valeur != 'ANNULE' %}
       <form method="post" action="{% url 'portal:panier_detail' panier.pk %}" class="inline">
         {% csrf_token %}
         <input type="hidden" name="action" value="statut">
@@ -111,8 +112,25 @@
         <button class="btn {% if panier.statut == valeur %}btn-active{% else %}btn-outline{% endif %}"
                 type="submit">{{ libelle }}</button>
       </form>
+      {% endif %}
     {% endfor %}
   </div>
+  {% if panier.statut == 'PREPARATION' %}
+  <form method="post" action="{% url 'portal:panier_detail' panier.pk %}" class="ajust-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="annuler">
+    <label>❌ Annuler ce panier (motif visible par le client — la commande
+      repasse « Annulée » et le client peut la recommander en repartant
+      de ses quantités, date et point de livraison) :
+      <input type="text" name="motif" placeholder="Ex : récolte insuffisante, créneau impossible…" maxlength="300" required>
+    </label>
+    <button class="btn btn-danger" type="submit"
+            onclick="if(!confirm('Annuler le panier n°{{ panier.numero }} ? La commande d\\'origine repasse « Annulée » : le client pourra la recommander.'))event.preventDefault();">❌ Annuler le panier</button>
+  </form>
+  {% elif panier.statut == 'ANNULE' %}
+  <p class="flash warning">❌ Panier annulé{% if panier.motif_annulation %} — motif : {{ panier.motif_annulation }}{% endif %}.
+     {% if panier.commande %}La commande d'origine est repassée « Annulée » : le client peut la recommander.{% endif %}</p>
+  {% endif %}
 </section>
 
 <p><a href="{% url 'portal:panier_list' %}">← Retour aux paniers</a></p>

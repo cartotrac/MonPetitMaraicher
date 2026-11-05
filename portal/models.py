@@ -566,6 +566,7 @@ class Panier(models.Model):
         PRET = "PRET", "Prêt"
         LIVRE = "LIVRE", "Livré"
         RECU = "RECU", "Reçu / retiré"
+        ANNULE = "ANNULE", "Annulé"
 
     exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
                                    related_name="paniers")
@@ -593,6 +594,11 @@ class Panier(models.Model):
     note = models.TextField("Commentaire du producteur", blank=True,
                             help_text="Visible par le client (ajustements, "
                                       "remplacements éventuels)")
+    motif_annulation = models.TextField(
+        "Motif d'annulation", blank=True, default="",
+        help_text="Raison visible par le client quand un panier en "
+                  "préparation est annulé ; la commande repasse alors "
+                  "« Annulée » et peut être recommandée.")
 
     class Meta:
         verbose_name = "Panier"

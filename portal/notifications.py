@@ -49,12 +49,23 @@ EMAILS_PAR_DEFAUT = {
                   "Merci de votre confiance !\n\n"
                   "{ferme}"),
     },
+    "PANIER_ANNULE": {
+        "objet": "Panier annulé — {ferme}",
+        "corps": ("Bonjour {client},\n\n"
+                  "Votre panier n°{numero} du {date} a été annulé : "
+                  "{motif}\n\n"
+                  "Vous pouvez recommander depuis la page « Mes "
+                  "commandes » (quantités, date et point de livraison "
+                  "repris, tout reste modifiable).\n\n"
+                  "{ferme}"),
+    },
 }
 
 SMS_PAR_DEFAUT = {
     "CONFIRMATION_COMMANDE": "Commande confirmee : panier n°{numero} pour le {date} — {ferme}",
     "PANIER_PRET": "Panier n°{numero} pret a recuperer le {date} — {ferme}",
     "LIVRAISON_FAITE": "Panier n°{numero} livre le {date} — merci ! {ferme}",
+    "PANIER_ANNULE": "Panier n°{numero} du {date} annule : {motif} — {ferme}",
 }
 
 
@@ -67,6 +78,7 @@ def _contexte(panier):
         "total": str(panier.total).replace(".", ","),
         "creneau": str(panier.creneau) if panier.creneau else "",
         "point": panier.point_livraison.nom if panier.point_livraison else "",
+        "motif": panier.motif_annulation or "annulé par le producteur",
     }
 
 
@@ -149,14 +161,18 @@ def notifier_client(request, panier, type_msg):
                 .filter(exploitant=panier.exploitant, client=panier.client)
                 .first())
     canal = pref.canal if pref else PreferenceContact.Canal.EMAIL
-    objet_modele, corps_modele = _modele(panier.exploitant, type_msg, canal)
-    ctx = _contexte(panier)
     try:
+        objet_modele, corps_modele = _modele(panier.exploitant, type_msg,
+                                             canal)
+        ctx = _contexte(panier)
         objet = objet_modele.format(**ctx)
         corps = corps_modele.format(**ctx)
     except (KeyError, IndexError, ValueError):
         objet, corps = type_msg, ("(Modèle de message personnalisé "
                                   "invalide — corrigez-le dans l'admin.)")
+    except Exception as err:  # jamais bloquant pour la commande/le panier
+        objet, corps = type_msg, ("(Erreur interne de notification : "
+                                  + str(err) + ")")
 
     if canal == PreferenceContact.Canal.SMS:
         if not panier.telephone_client:

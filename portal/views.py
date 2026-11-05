@@ -996,6 +996,20 @@ def _badges_par_jour(objets, champ_statut, statuts):
             for jour, par in comptes.items()}
 
 
+def _notifier_sans_echec(request, panier, type_msg):
+    """Notification client qui ne peut JAMAIS faire échouer l'action en
+    cours (validation, changement de statut, annulation) : tout échec
+    devient un simple message informatif — la commande/le panier sont
+    déjà créés à ce stade."""
+    try:
+        return notifier_client(request, panier, type_msg)
+    except Exception as err:
+        messages.info(request, "ℹ️ Notification client non envoyée ("
+                      + str(err) + "). L'action, elle, est bien "
+                      "enregistrée — rien n'est perdu.")
+        return False
+
+
 @login_required
 @exploitant_requis
 def order_list(request, statut=None):
@@ -1026,6 +1040,8 @@ def order_list(request, statut=None):
         c.tel_client = telephones.get(c.client_id, "")
         c.groupes_lignes = _groupes_lignes(list(c.lignes.all()))
         c.ajustements = ajustements.get(c.pk)
+        if c.statut == Commande.Statut.NOUVELLE:
+            c.dispos = _dispos_lignes(c, c.lignes.all())
     return render(request, "portal/pro/orders.html", {
         "commandes": commandes, "filtre_statut": statut,
         "points": exploitant.points_livraison.all(),
@@ -1195,7 +1211,7 @@ def order_direct_create(request):
             messages.success(request, "Commande de " + nom_client
                              + " enregistrée → panier n°"
                              + str(panier.numero) + " créé.")
-            notifier_client(request, panier, "CONFIRMATION_COMMANDE")
+            _notifier_sans_echec(request, panier, "CONFIRMATION_COMMANDE")
             return redirect("portal:panier_detail", panier.pk)
 
     return render(request, "portal/pro/order_direct.html", {
@@ -1292,7 +1308,7 @@ def order_validate(request, commande_id):
                 request, f"Commande #{commande.pk} validée → "
                 f"panier n°{panier.numero} créé pour "
                 f"{panier.nom_client}.")
-            notifier_client(request, panier, "CONFIRMATION_COMMANDE")
+            _notifier_sans_echec(request, panier, "CONFIRMATION_COMMANDE")
         elif action == "refuse":
             commande.statut = Commande.Statut.REFUSEE
             commande.save()
@@ -1317,6 +1333,7 @@ def panier_list(request):
         panier.photo_client = photos.get(panier.client_id, "")
         panier.tel_client = telephones.get(panier.client_id, "")
         panier.groupes_lignes = _groupes_lignes(list(panier.lignes.all()))
+        panier.dispos = _dispos_lignes(panier, panier.lignes.all())
     return render(request, "portal/pro/paniers.html", {
         "paniers": paniers,
         "today": timezone.localdate(),
@@ -1423,7 +1440,8 @@ def panier_detail(request, panier_id):
     exploitant = exploitant_pour(request.user)
     panier = get_object_or_404(Panier, pk=panier_id, exploitant=exploitant)
     verrouille = panier.statut in (Panier.Statut.LIVRE,
-                                   Panier.Statut.RECU)
+                                   Panier.Statut.RECU,
+                                   Panier.Statut.ANNULE)
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -1508,10 +1526,34 @@ def panier_detail(request, panier_id):
                     request, f"Panier n°{panier.numero} : "
                     f"{panier.get_statut_display()}.")
                 if panier.statut == Panier.Statut.PRET:
-                    notifier_client(request, panier, "PANIER_PRET")
+                    _notifier_sans_echec(request, panier, "PANIER_PRET")
                 elif panier.statut in (Panier.Statut.LIVRE,
                                        Panier.Statut.RECU):
-                    notifier_client(request, panier, "LIVRAISON_FAITE")
+                    _notifier_sans_echec(request, panier, "LIVRAISON_FAITE")
+
+        elif action == "annuler":
+            if panier.statut != Panier.Statut.PREPARATION:
+                messages.error(
+                    request, "Seul un panier en préparation peut être "
+                    "annulé.")
+            else:
+                panier.statut = Panier.Statut.ANNULE
+                panier.motif_annulation = (request.POST.get(
+                    "motif", "").strip() or "Annulé par le producteur.")
+                panier.save()
+                if panier.commande_id:
+                    panier.commande.statut = Commande.Statut.ANNULEE
+                    panier.commande.save()
+                    messages.info(
+                        request, f"Panier n°{panier.numero} annulé : la "
+                        "commande repasse « Annulée » — le client peut la "
+                        "recommander depuis « Mes commandes » (quantités, "
+                        "date et point de livraison repris).")
+                else:
+                    messages.info(
+                        request, f"Panier n°{panier.numero} annulé "
+                        "(commande saisie directement, sans compte client).")
+                _notifier_sans_echec(request, panier, "PANIER_ANNULE")
 
         return redirect("portal:panier_detail", panier.pk)
 
@@ -1528,13 +1570,17 @@ def panier_detail(request, panier_id):
         l.produit.categorie.nom if l.produit.categorie else "zz",
         l.produit.nom))
     rows = []
+    dispos = _dispos_lignes(panier, lignes)
     for ligne in lignes:
         souh = souhaitees.get(ligne.produit_id)
+        dispo = dispos.get(ligne.pk)
         rows.append({
             "ligne": ligne,
             "souhaite": souh,
             "ajuste": souh is not None and souh != ligne.quantite,
             "step": "0.01" if ligne.produit.unite_vente == "KG" else "1",
+            "dispo": dispo["dispo"] if dispo else None,
+            "depasse": bool(dispo and dispo["depasse"]),
         })
     if panier.client_id:
         photos, telephones = _profils_clients([panier.client_id])
@@ -2152,24 +2198,48 @@ def _dates_livraison(exploitant, today):
     return dates
 
 
+def _restes_semaine(objet):
+    """Disponibilités restantes de la semaine de livraison d'une
+    commande OU d'un panier (par produit) : estimation de la récolte
+    publiée − quantités déjà commandées sur la semaine. Dict vide si
+    aucune récolte publiée ne couvre cette semaine."""
+    lundi = (objet.date_livraison
+             - datetime.timedelta(days=objet.date_livraison.weekday()))
+    semaine = (SemaineRecolte.objects.filter(
+        exploitant=objet.exploitant, publiee=True, lundi=lundi).first())
+    if not semaine:
+        return {}
+    offres, mode = _offres_commande(objet.exploitant, semaine)
+    if mode != "recolte":
+        return {}
+    return {o["produit"].pk: o["reste"] for o in offres
+            if o["reste"] is not None}
+
+
 def _marges_ajustement(commande):
     """Marge de manœuvre du client sur SA commande non validée :
     pour chaque ligne, dispo restante de la semaine + sa propre
     quantité (elle se libère en baissant sa commande). None = pas de
     récolte publiée (pas de contrainte de disponibilité)."""
-    lundi = (commande.date_livraison
-             - datetime.timedelta(days=commande.date_livraison.weekday()))
-    semaine = (SemaineRecolte.objects.filter(
-        exploitant=commande.exploitant, publiee=True, lundi=lundi).first())
-    restes = {}
-    if semaine:
-        offres, mode = _offres_commande(commande.exploitant, semaine)
-        if mode == "recolte":
-            restes = {o["produit"].pk: o["reste"] for o in offres
-                      if o["reste"] is not None}
+    restes = _restes_semaine(commande)
     return {ligne.pk: (restes[ligne.produit_id] + ligne.quantite
                       if ligne.produit_id in restes else None)
             for ligne in commande.lignes.all()}
+
+
+def _dispos_lignes(objet, lignes):
+    """Pour l'affichage pro (validation, paniers) : dispo estimée à côté
+    de chaque ligne — la marge incluant la quantité de la ligne elle-
+    même — et drapeau « dépassé » quand la semaine est sur-commandée
+    (reste < 0 : toutes commandes confondues, on dépasse l'estimé)."""
+    restes = _restes_semaine(objet)
+    dispos = {}
+    for ligne in lignes:
+        reste = restes.get(ligne.produit_id)
+        if reste is not None:
+            dispos[ligne.pk] = {"dispo": reste + ligne.quantite,
+                                 "depasse": reste < 0}
+    return dispos
 
 
 @login_required

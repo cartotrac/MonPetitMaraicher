@@ -270,3 +270,12 @@ form.ajust-form .btn { margin-top: 0.4rem; }
   background: #e65100; border-color: #bf360c;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
+
+/* Dispo estimées + lignes en excès (validation, paniers) */
+li.ligne-exces {
+  background: #ffe9d6; border-left: 3px solid #e0862d;
+  padding-left: 0.4rem; border-radius: 4px;
+}
+.badge-exces { background: #fb8c00; color: #fff; font-weight: 600; }
+.badge-ANNULE { background: #c62828; color: #fff; font-weight: 600; }
+.order-card.statut-ANNULE { border-left: 4px solid #c62828; }
