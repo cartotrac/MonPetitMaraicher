@@ -2693,6 +2693,7 @@ def equipe_manage(request):
                                "l'exploitation.")
         return redirect("portal:equipe_manage")
     return render(request, "portal/pro/equipe.html", {
+        "exploitant": exploitant,
         "membres": exploitant.membres.select_related("user"),
         "est_proprietaire": True,
     })

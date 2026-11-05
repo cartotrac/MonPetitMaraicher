@@ -1,4 +1,4 @@
-{# Vignette producteur unifiée (pages Chercher et Mes favoris).
+{% load l10n %}{# Vignette producteur unifiée (pages Chercher et Mes favoris).
    Attend la variable « exploitant ». #}
 <div class="card vignette-producteur"{% if exploitant.latitude and exploitant.longitude %} data-lat="{{ exploitant.latitude|unlocalize }}" data-lng="{{ exploitant.longitude|unlocalize }}"{% endif %}>
   {% if exploitant.logo %}
