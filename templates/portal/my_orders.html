@@ -4,72 +4,26 @@
 {% block content %}
 <h1>🧾 Mes commandes</h1>
 <div class="quick-actions">
-  <a class="btn {% if not filtre %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}">Toutes</a>
-  <a class="btn btn-filtre-atrier {% if filtre == 'NOUVELLE' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?filtre=NOUVELLE">À traiter</a>
-  <a class="btn {% if filtre == 'VALIDEE' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?filtre=VALIDEE">Validées</a>
+  <a class="btn {% if not filtre %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}{% if vue == 'calendrier' %}?vue=calendrier{% endif %}">Toutes</a>
+  <a class="btn btn-filtre-atrier {% if filtre == 'NOUVELLE' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?filtre=NOUVELLE{% if vue == 'calendrier' %}&amp;vue=calendrier{% endif %}">À traiter</a>
+  <a class="btn {% if filtre == 'VALIDEE' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?filtre=VALIDEE{% if vue == 'calendrier' %}&amp;vue=calendrier{% endif %}">Validées</a>
+  <a class="btn btn-filtre-refus {% if filtre == 'cloturees' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?filtre=cloturees{% if vue == 'calendrier' %}&amp;vue=calendrier{% endif %}">❌ Refusées / Annulées</a>
   <a class="btn {% if filtre == 'panier_pret' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?filtre=panier_pret">🧺 Paniers prêts</a>
-  <a class="btn {% if filtre == 'ANNULEE' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?filtre=ANNULEE">Annulées</a>
+  <a class="btn btn-filtre-annule {% if filtre == 'panier_recu' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?filtre=panier_recu">📦 Paniers retirés</a>
+  {% if mode != 'paniers' %}
+  <a class="btn btn-outline {% if mode == 'calendrier' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}?{% if filtre %}filtre={{ filtre }}&amp;{% endif %}vue=calendrier">🗓️ Calendrier</a>
+  <a class="btn btn-outline {% if mode != 'calendrier' %}btn-active{% endif %}" href="{% url 'portal:my_orders' %}{% if filtre %}?filtre={{ filtre }}{% endif %}">📋 Liste</a>
+  {% endif %}
 </div>
-<p class="muted">Vos commandes sont regroupées par jour de livraison, du plus
-   récent au plus ancien — l'en-tête de chaque jour compte vos commandes
-   <strong>par statut</strong> (code couleur). Produits rangés par catégorie.
-   Tant qu'une commande est <strong>à traiter</strong>, vous pouvez encore
-   ajuster vos quantités dans la marge des disponibilités ; dès que le
-   producteur la valide, elle devient un panier et ne bouge plus.</p>
-{% regroup resultats by commande.date_livraison as jours %}
-{% for jour in jours %}
-  <details class="groupe-jour {% if jour.grouper < today %}cal-passe{% elif jour.grouper == today %}cal-courante{% else %}cal-avenir{% endif %}" {% if forloop.first %}open{% endif %}>
-    <summary>📅 {{ jour.grouper|date:"l d F Y" }}
-      {% for statut, nb, libelle in jours_badges|get_item:jour.grouper %}
-        <span class="badge badge-{{ statut }}">{{ nb }} {{ libelle }}</span>
-      {% endfor %}</summary>
-    {% for resultat in jour.list %}
-    {% with commande=resultat.commande panier=resultat.panier %}
-    <div class="card order-card statut-{{ commande.statut }}">
-      <div class="order-head">
-        <strong>Commandé à {{ commande.exploitant.nom_ferme }}</strong>
-        {% if commande.statut == 'NOUVELLE' %}
-          <span class="badge badge-NOUVELLE">À traiter</span>
-        {% else %}
-          <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
-        {% endif %}
-      </div>
-    <p>📅 Livraison : {{ commande.date_livraison|date:"d/m/Y" }}
-       {% if commande.point_livraison %}à {{ commande.point_livraison.nom }}{% endif %}
-       — 💰 {{ commande.total }} €</p>
-    {% if commande.statut == 'NOUVELLE' %}
-      <form method="post" action="{% url 'portal:order_ajuster' commande.pk %}" class="ajust-form">
-        {% csrf_token %}
-        <p class="muted">Quantités ajustables tant que le producteur n'a
-           pas validé (0 = retirer la ligne, vide = inchangé) :</p>
-        {% for nom_cat, lignes in commande.groupes_lignes %}
-          <p class="cat-lignes">{{ nom_cat }}</p>
-          <ul>
-            {% for ligne in lignes %}
-            <li class="ligne-ajustable">
-              {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}<strong>{{ ligne.produit.nom }}</strong>
-              — demandé : {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}
-              <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" size="5"
-                     name="qaj_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}"
-                     aria-label="Quantité pour {{ ligne.produit.nom }}"
-                     {% with marge=resultat.marges|get_item:ligne.pk %}
-                       {% if marge is not None %}max="{{ marge|unlocalize }}"{% endif %}
-                     {% endwith %}>
-              ({{ ligne.prix_unitaire }} €/u)
-              {% with marge=resultat.marges|get_item:ligne.pk %}
-                {% if marge is not None %}<span class="muted">— dispo max : {{ marge|qte }} {{ marge|unite:ligne.produit }}</span>{% endif %}
-              {% endwith %}
-            </li>
-            {% endfor %}
-          </ul>
-        {% endfor %}
-        <button class="btn" type="submit">💾 Mettre à jour</button>
-      </form>
-      <form method="post" action="{% url 'portal:order_cancel' commande.pk %}" class="inline">
-        {% csrf_token %}<button class="btn btn-outline" type="submit">Annuler la commande</button>
-      </form>
-    {% else %}
-      {% for nom_cat, lignes in commande.groupes_lignes %}
+
+{% if mode == 'paniers' %}
+  <p class="muted">{% if filtre == 'panier_pret' %}Vos paniers sont <strong>prêts</strong> : retrouvez le contenu préparé par le producteur et confirmez le retrait quand vous l'avez récupéré.{% else %}Vos paniers <strong>retirés</strong> : dernière étape du processus, le producteur les a archivés en lecture seule.{% endif %}</p>
+  {% for panier in paniers %}
+    <details class="card order-card statut-{{ panier.statut }} panier-client" open>
+      <summary>🧺 Panier n°{{ panier.numero }} — {{ panier.exploitant.nom_ferme }}
+        <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
+        — 📅 {{ panier.date_livraison|date:"d/m/Y" }} — 💰 {{ panier.total }} €</summary>
+      {% for nom_cat, lignes in panier.groupes_lignes %}
         <p class="cat-lignes">{{ nom_cat }}</p>
         <ul>
           {% for ligne in lignes %}
@@ -77,46 +31,170 @@
           {% endfor %}
         </ul>
       {% endfor %}
-    {% endif %}
-    {% if panier %}
-      <p><strong>🧺 Panier n°{{ panier.numero }}</strong> —
-         <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
-         — 💰 {{ panier.total }} €</p>
-      {% if panier.statut == 'ANNULE' %}
-      <p class="flash warning">❌ Ce panier a été annulé par le producteur{% if panier.motif_annulation %} — motif : {{ panier.motif_annulation }}{% endif %}.
-         {% if commande.statut == 'ANNULEE' %}Vous pouvez le recommander ci-dessous en repartant de vos quantités, de la date et du point de livraison — tout reste modifiable.{% endif %}</p>
-      {% endif %}
-      {% if panier.statut == 'ANNULE' %}<p class="muted">Contenu prévu :</p>{% else %}<p class="muted">Contenu livré :</p>{% endif %}
-      {% for nom_cat, rows in panier.groupes_contenu %}
-        <p class="cat-lignes">{{ nom_cat }}</p>
-        <ul>
-          {% for row in rows %}
-          <li>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }} × {{ row.ligne.quantite|qte }} {{ row.ligne.quantite|unite:row.ligne.produit }}
-              {% if row.ajuste %} <em>(souhaité : {{ row.souhaite }})</em> ⚠️ ajusté{% elif row.souhaite is None %} <em>(ajout du producteur)</em>{% endif %}</li>
-          {% endfor %}
-        </ul>
-      {% endfor %}
       {% if panier.note %}<p class="muted">💬 {{ panier.note }}</p>{% endif %}
-    {% endif %}
-    {% if commande.statut == 'ANNULEE' %}
-      <a class="btn" href="{% url 'portal:order_create' commande.exploitant.slug %}?reprise={{ commande.pk }}">🔁 Recommander (quantités, date et point repris)</a>
-    {% endif %}
-    {% if panier and panier.statut != 'PREPARATION' and panier.point_livraison %}
-      <p class="muted">📍 Retrait / livraison : <strong>{{ panier.point_livraison.nom }}</strong>
-         — {{ panier.point_livraison.adresse }}{% if panier.point_livraison.code_postal %}, {{ panier.point_livraison.code_postal }}{% endif %} {{ panier.point_livraison.ville }}
-         {% if panier.point_livraison.note %}({{ panier.point_livraison.note }}){% endif %}
-         {% if panier.point_livraison.latitude %}
-           — <a href="https://www.openstreetmap.org/?mlat={{ panier.point_livraison.latitude|floatformat:'6' }}&mlon={{ panier.point_livraison.longitude|floatformat:'6' }}#map=17/{{ panier.point_livraison.latitude|floatformat:'6' }}/{{ panier.point_livraison.longitude|floatformat:'6' }}" target="_blank" rel="noopener">🗺️ voir sur la carte</a>
-         {% endif %}</p>
-    {% endif %}
-    </div>
-    {% endwith %}
+      {% if panier.point_livraison %}
+        <p class="muted">📍 Retrait / livraison : <strong>{{ panier.point_livraison.nom }}</strong>
+           — {{ panier.point_livraison.adresse }}{% if panier.point_livraison.code_postal %}, {{ panier.point_livraison.code_postal }}{% endif %} {{ panier.point_livraison.ville }}
+           {% if panier.point_livraison.latitude %}
+             — <a href="https://www.openstreetmap.org/?mlat={{ panier.point_livraison.latitude|floatformat:'6' }}&mlon={{ panier.point_livraison.longitude|floatformat:'6' }}#map=17/{{ panier.point_livraison.latitude|floatformat:'6' }}/{{ panier.point_livraison.longitude|floatformat:'6' }}" target="_blank" rel="noopener">🗺️ voir sur la carte</a>
+           {% endif %}</p>
+      {% endif %}
+      {% if panier.statut == 'PRET' %}
+        <form method="post" action="{% url 'portal:panier_recu' panier.pk %}" class="inline">
+          {% csrf_token %}<button class="btn" type="submit">✅ Valider la réception</button>
+        </form>
+      {% endif %}
+    </details>
+  {% empty %}
+    <p class="card etat-vide"><span class="etat-vide-emoji">{% if filtre == 'panier_pret' %}🧺{% else %}📦{% endif %}</span>
+       {% if filtre == 'panier_pret' %}Aucun panier prêt pour l'instant : dès que le producteur met votre panier à disposition, il apparaît ici.{% else %}Aucun panier retiré pour l'instant.{% endif %}
+       <a class="btn" href="{% url 'portal:my_orders' %}">Voir toutes mes commandes</a></p>
+  {% endfor %}
+
+{% elif mode == 'calendrier' %}
+  <div class="cal-nav quick-actions">
+    <a class="btn btn-outline" href="{% url 'portal:my_orders' %}?{% if filtre %}filtre={{ filtre }}&amp;{% endif %}sem={{ sem_prec|unlocalize }}&amp;vue=calendrier">⬅️ Semaine précédente</a>
+    <strong>du {{ semaine_debut|date:"d/m/Y" }} au {{ semaine_fin|date:"d/m/Y" }}</strong>
+    <a class="btn btn-outline" href="{% url 'portal:my_orders' %}?{% if filtre %}filtre={{ filtre }}&amp;{% endif %}sem={{ sem_suiv|unlocalize }}&amp;vue=calendrier">Semaine suivante ➡️</a>
+  </div>
+  <div class="cal-semaine">
+    {% for jour in jours_cal %}
+      <div class="cal-jour {% if jour.date < today %}cal-passe{% elif jour.date == today %}cal-courante{% else %}cal-avenir{% endif %}">
+        <h3>{{ jour.date|date:"l d/m" }}</h3>
+        {% for commande in jour.commandes %}
+          <div class="cal-evt statut-{{ commande.statut }}">
+            <a href="{% url 'portal:my_orders' %}{% if commande.statut == 'NOUVELLE' %}?filtre=NOUVELLE{% endif %}">
+              {% if commande.statut == 'NOUVELLE' %}🧾{% elif commande.statut == 'VALIDEE' %}🧺{% elif commande.statut == 'REFUSEE' %}❌{% else %}🚫{% endif %}
+              {{ commande.exploitant.nom_ferme|truncatewords:3 }}</a>
+            <span class="badge badge-{{ commande.statut }}">{% if commande.statut == 'NOUVELLE' %}À traiter{% else %}{{ commande.get_statut_display }}{% endif %}</span>
+            <p class="muted">💰 {{ commande.total }} €</p>
+          </div>
+        {% empty %}
+          <p class="muted">—</p>
+        {% endfor %}
+      </div>
     {% endfor %}
-  </details>
-{% empty %}
-  <p class="card etat-vide"><span class="etat-vide-emoji">🧾</span>
-     Vous n'avez pas encore de commande{% if filtre %} avec ce filtre{% endif %}.
-     Trouvez un producteur près de chez vous et commandez sa récolte de la semaine !
-     <a class="btn" href="{% url 'portal:producer_search' %}">🔎 Trouver un producteur</a></p>
-{% endfor %}
+  </div>
+
+{% else %}
+  <p class="muted">Vos commandes sont regroupées par jour de livraison, du plus
+     récent au plus ancien — chaque commande se <strong>déplie</strong> pour
+     voir le détail et ajuster vos quantités tant que le producteur ne l'a
+     pas validée. Refus du producteur et annulation client sont regroupées
+     dans le filtre rouge.</p>
+  {% regroup resultats by commande.date_livraison as jours %}
+  {% for jour in jours %}
+    <details class="groupe-jour {% if jour.grouper < today %}cal-passe{% elif jour.grouper == today %}cal-courante{% else %}cal-avenir{% endif %}" {% if forloop.first %}open{% endif %}>
+      <summary>📅 {{ jour.grouper|date:"l d F Y" }}
+        {% for statut, nb, libelle in jours_badges|get_item:jour.grouper %}
+          <span class="badge badge-{{ statut }}">{{ nb }} {{ libelle }}</span>
+        {% endfor %}</summary>
+      {% for resultat in jour.list %}
+      {% with commande=resultat.commande panier=resultat.panier %}
+      <details class="card order-card statut-{{ commande.statut }} commande-client">
+        <summary>🧾 Commandé à {{ commande.exploitant.nom_ferme }}
+          {% if commande.statut == 'NOUVELLE' %}
+            <span class="badge badge-NOUVELLE">À traiter — modifiable</span>
+          {% else %}
+            <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
+          {% endif %}
+          — 💰 {{ commande.total }} €</summary>
+        <p>📅 Livraison : {{ commande.date_livraison|date:"d/m/Y" }}
+           {% if commande.point_livraison %}à {{ commande.point_livraison.nom }}{% endif %}
+           — 💰 {{ commande.total }} €</p>
+        {% if commande.statut == 'REFUSEE' and commande.motif_refus %}
+          <p class="flash warning">❌ Commande refusée par le producteur — motif : {{ commande.motif_refus }}.
+             Vous pouvez recomposer une commande pour une autre date ou un autre producteur.</p>
+        {% endif %}
+        {% if commande.statut == 'NOUVELLE' %}
+          <form method="post" action="{% url 'portal:order_ajuster' commande.pk %}" class="ajust-form">
+            {% csrf_token %}
+            <p class="muted">Quantités estimées et ajustables tant que le
+               producteur n'a pas validé (0 = retirer la ligne, vide = inchangé) :</p>
+            {% for nom_cat, lignes in commande.groupes_lignes %}
+              <p class="cat-lignes">{{ nom_cat }}</p>
+              <ul>
+                {% for ligne in lignes %}
+                <li class="ligne-ajustable">
+                  {% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}<strong>{{ ligne.produit.nom }}</strong>
+                  — demandé : {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}
+                  <input type="number" step="{% if ligne.produit.unite_vente == 'KG' %}0.01{% else %}1{% endif %}" min="0" size="5"
+                         name="qaj_{{ ligne.pk }}" value="{{ ligne.quantite|unlocalize }}"
+                         aria-label="Quantité pour {{ ligne.produit.nom }}"
+                         {% with marge=resultat.marges|get_item:ligne.pk %}
+                           {% if marge is not None %}max="{{ marge|unlocalize }}"{% endif %}
+                         {% endwith %}>
+                  ({{ ligne.prix_unitaire }} €/u)
+                  {% with marge=resultat.marges|get_item:ligne.pk %}
+                    {% if marge is not None %}<span class="muted">— dispo estimée : {{ marge|qte }} {{ marge|unite:ligne.produit }}</span>{% endif %}
+                  {% endwith %}
+                </li>
+                {% endfor %}
+              </ul>
+            {% endfor %}
+            <button class="btn" type="submit">💾 Mettre à jour</button>
+          </form>
+          <form method="post" action="{% url 'portal:order_cancel' commande.pk %}" class="inline">
+            {% csrf_token %}<button class="btn btn-outline" type="submit">Annuler la commande</button>
+          </form>
+        {% else %}
+          {% for nom_cat, lignes in commande.groupes_lignes %}
+            <p class="cat-lignes">{{ nom_cat }}</p>
+            <ul>
+              {% for ligne in lignes %}
+              <li>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }} ({{ ligne.prix_unitaire }} €/u)</li>
+              {% endfor %}
+            </ul>
+          {% endfor %}
+        {% endif %}
+        {% if panier %}
+          <details class="panier-bloc statut-{{ panier.statut }}">
+            <summary>🧺 Panier n°{{ panier.numero }}
+              <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
+              — 💰 {{ panier.total }} €</summary>
+            {% if panier.statut == 'ANNULE' %}
+            <p class="flash warning">❌ Ce panier a été annulé par le producteur{% if panier.motif_annulation %} — motif : {{ panier.motif_annulation }}{% endif %}.
+               {% if commande.statut == 'ANNULEE' %}Vous pouvez le recommander ci-dessous en repartant de vos quantités, de la date et du point de livraison — tout reste modifiable.{% endif %}</p>
+            {% endif %}
+            {% if panier.statut == 'ANNULE' %}<p class="muted">Contenu prévu :</p>{% else %}<p class="muted">Contenu livré :</p>{% endif %}
+            {% for nom_cat, rows in panier.groupes_contenu %}
+              <p class="cat-lignes">{{ nom_cat }}</p>
+              <ul>
+                {% for row in rows %}
+                <li>{% if row.ligne.produit.emoji %}{{ row.ligne.produit.emoji }} {% endif %}{{ row.ligne.produit.nom }} × {{ row.ligne.quantite|qte }} {{ row.ligne.quantite|unite:row.ligne.produit }}
+                    {% if row.ajuste %} <em>(souhaité : {{ row.souhaite }})</em> ⚠️ ajusté{% elif row.souhaite is None %} <em>(ajout du producteur)</em>{% endif %}</li>
+                {% endfor %}
+              </ul>
+            {% endfor %}
+            {% if panier.note %}<p class="muted">💬 {{ panier.note }}</p>{% endif %}
+            {% if panier.statut == 'PRET' %}
+              <p class="flash ok">🧺 Votre panier est <strong>prêt</strong> ! Il vous attend au point de livraison ci-dessous.</p>
+              <form method="post" action="{% url 'portal:panier_recu' panier.pk %}" class="inline">
+                {% csrf_token %}<button class="btn" type="submit">✅ Valider la réception</button>
+              </form>
+            {% endif %}
+          </details>
+        {% endif %}
+        {% if commande.statut == 'ANNULEE' %}
+          <a class="btn" href="{% url 'portal:order_create' commande.exploitant.slug %}?reprise={{ commande.pk }}">🔁 Recommander (quantités, date et point repris)</a>
+        {% endif %}
+        {% if panier and panier.statut != 'PREPARATION' and panier.point_livraison %}
+          <p class="muted">📍 Retrait / livraison : <strong>{{ panier.point_livraison.nom }}</strong>
+             — {{ panier.point_livraison.adresse }}{% if panier.point_livraison.code_postal %}, {{ panier.point_livraison.code_postal }}{% endif %} {{ panier.point_livraison.ville }}
+             {% if panier.point_livraison.note %}({{ panier.point_livraison.note }}){% endif %}
+             {% if panier.point_livraison.latitude %}
+               — <a href="https://www.openstreetmap.org/?mlat={{ panier.point_livraison.latitude|floatformat:'6' }}&mlon={{ panier.point_livraison.longitude|floatformat:'6' }}#map=17/{{ panier.point_livraison.latitude|floatformat:'6' }}/{{ panier.point_livraison.longitude|floatformat:'6' }}" target="_blank" rel="noopener">🗺️ voir sur la carte</a>
+             {% endif %}</p>
+        {% endif %}
+      </details>
+      {% endwith %}
+      {% endfor %}
+    </details>
+  {% empty %}
+    <p class="card etat-vide"><span class="etat-vide-emoji">🧾</span>
+       Vous n'avez pas encore de commande{% if filtre %} avec ce filtre{% endif %}.
+       Trouvez un producteur près de chez vous et commandez sa récolte de la semaine !
+       <a class="btn" href="{% url 'portal:producer_search' %}">🔎 Trouver un producteur</a></p>
+  {% endfor %}
+{% endif %}
 {% endblock %}

@@ -1314,7 +1314,22 @@ def order_validate(request, commande_id):
                 f"{panier.nom_client}.")
             _notifier_sans_echec(request, panier, "CONFIRMATION_COMMANDE")
         elif action == "refuse":
+            # Motif de refus proposé à l'exploitant (phrase au choix ou
+            # motif libre) : visible par le client, il l'incite à
+            # recomposer sa commande pour une autre semaine.
+            motif = request.POST.get("motif_refus", "").strip()
+            libre = request.POST.get("motif_refus_libre", "").strip()
+            if motif == "__libre__":
+                motif = libre
+            if not motif and libre:
+                motif = libre
+            if not motif:
+                messages.error(
+                    request, "Indiquez un motif de refus (phrase proposée "
+                    "ou motif libre) : il est visible par le client.")
+                return redirect("portal:order_list")
             commande.statut = Commande.Statut.REFUSEE
+            commande.motif_refus = motif
             commande.save()
             messages.info(request, f"Commande #{commande.pk} refusée.")
     return redirect("portal:order_list")
@@ -1326,11 +1341,18 @@ def panier_list(request):
     """Liste des paniers, regroupés visuellement par jour de livraison
     (en-tête du jour : comptage par statut, code couleur associé)."""
     exploitant = exploitant_pour(request.user)
-    paniers = list((exploitant.paniers
-                    .select_related("client", "point_livraison")
-                    .prefetch_related("lignes__produit__categorie",
-                                      "lignes__produit__origine_standard")
-                    .order_by("-date_livraison", "numero")))
+    statut = request.GET.get("statut", "").strip()
+    point_id = request.GET.get("point", "").strip()
+    paniers = (exploitant.paniers
+               .select_related("client", "point_livraison")
+               .prefetch_related("lignes__produit__categorie",
+                                 "lignes__produit__origine_standard"))
+    if statut in Panier.Statut.values:
+        paniers = paniers.filter(statut=statut)
+    if point_id:
+        paniers = paniers.filter(point_livraison_id=point_id)
+    paniers = paniers.order_by("-date_livraison", "numero")
+    paniers = list(paniers)
     photos, telephones = _profils_clients(
         {p.client_id for p in paniers if p.client_id})
     for panier in paniers:
@@ -1340,6 +1362,9 @@ def panier_list(request):
         panier.dispos = _dispos_lignes(panier, panier.lignes.all())
     return render(request, "portal/pro/paniers.html", {
         "paniers": paniers,
+        "filtre_statut": statut,
+        "filtre_point": point_id,
+        "points": exploitant.points_livraison.all(),
         "today": timezone.localdate(),
         "jours_badges": _badges_par_jour(paniers, "statut",
                                          Panier.Statut.choices),
@@ -2253,17 +2278,64 @@ def my_orders(request):
     livré côte à côte du souhaité, avec le commentaire du producteur.
     Tant que la commande n'est pas validée, le client peut ajuster ses
     quantités dans la marge des disponibilités restantes. Filtres :
-    statut de la commande, ou paniers prêts à récupérer."""
+    statut de la commande (refusées et annulées regroupées en rouge),
+    paniers prêts / retirés, et vue alternative « calendrier » de la
+    semaine."""
     filtre = request.GET.get("filtre", "").strip()
+    vue = request.GET.get("vue", "liste").strip()
+
+    # Modes « paniers » : ne montrer QUE les paniers, dépliés, avec
+    # validation de la réception quand le panier est prêt.
+    if filtre in ("panier_pret", "panier_recu"):
+        statut_panier = (Panier.Statut.PRET if filtre == "panier_pret"
+                         else Panier.Statut.RECU)
+        paniers = list((request.user.paniers
+                        .select_related("exploitant", "point_livraison")
+                        .filter(statut=statut_panier)
+                        .prefetch_related("lignes__produit")
+                        .order_by("-date_livraison", "numero")))
+        for panier in paniers:
+            panier.groupes_lignes = _groupes_lignes(list(panier.lignes.all()))
+        return render(request, "portal/my_orders.html", {
+            "mode": "paniers", "filtre": filtre,
+            "today": timezone.localdate(), "paniers": paniers})
+
     commandes = (request.user.commandes.select_related("exploitant")
                  .prefetch_related("lignes__produit")
                  .order_by("-date_livraison", "-creee_le"))
-    if filtre in Commande.Statut.values:
+    if filtre in (Commande.Statut.NOUVELLE, Commande.Statut.VALIDEE):
         commandes = commandes.filter(statut=filtre)
-    elif filtre == "panier_pret":
+    elif filtre == "cloturees":
+        # Refus producteur et annulation client regroupés (rouge).
         commandes = commandes.filter(
-            paniers__statut=Panier.Statut.PRET).distinct()
+            statut__in=[Commande.Statut.REFUSEE, Commande.Statut.ANNULEE])
     commandes = list(commandes)
+
+    if vue == "calendrier":
+        try:
+            ref = datetime.date.fromisoformat(
+                request.GET.get("sem", "").strip())
+        except ValueError:
+            ref = timezone.localdate()
+        lundi = ref - datetime.timedelta(days=ref.weekday())
+        jours_cal = []
+        for i in range(7):
+            jour = lundi + datetime.timedelta(days=i)
+            jours_cal.append({
+                "date": jour,
+                "commandes": [c for c in commandes
+                              if c.date_livraison == jour],
+            })
+        return render(request, "portal/my_orders.html", {
+            "mode": "calendrier", "filtre": filtre, "vue": "calendrier",
+            "today": timezone.localdate(),
+            "jours_cal": jours_cal,
+            "semaine_debut": lundi,
+            "semaine_fin": lundi + datetime.timedelta(days=6),
+            "sem_prec": (lundi - datetime.timedelta(days=7)).isoformat(),
+            "sem_suiv": (lundi + datetime.timedelta(days=7)).isoformat(),
+        })
+
     resultats = []
     for commande in commandes:
         panier = (Panier.objects.filter(commande=commande)
@@ -2309,7 +2381,7 @@ def my_orders(request):
          else libelle.lower())
         for code, libelle in Commande.Statut.choices]
     return render(request, "portal/my_orders.html", {
-        "resultats": resultats, "filtre": filtre,
+        "mode": "liste", "filtre": filtre,
         "today": timezone.localdate(),
         "jours_badges": _badges_par_jour(commandes, "statut", statuts_client),
     })
@@ -2323,6 +2395,21 @@ def order_cancel(request, commande_id):
         commande.statut = Commande.Statut.ANNULEE
         commande.save()
         messages.info(request, f"Commande #{commande.pk} annulée.")
+    return redirect("portal:my_orders")
+
+
+@login_required
+def panier_recu(request, panier_id):
+    """Le client confirme avoir retiré son panier « Prêt » : dernier
+    statut du processus (Reçu / retiré), verrouillé en lecture seule
+    côté producteur et compté dans l'export production."""
+    panier = get_object_or_404(Panier, pk=panier_id, client=request.user)
+    if request.method == "POST" and panier.statut == Panier.Statut.PRET:
+        panier.statut = Panier.Statut.RECU
+        panier.save()
+        messages.success(
+            request, f"Panier n°{panier.numero} marqué comme reçu — "
+            f"merci, et bon appétit ! 🧺")
     return redirect("portal:my_orders")
 
 

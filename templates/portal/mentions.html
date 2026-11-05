@@ -7,17 +7,19 @@
   <h2>Application</h2>
   <p><strong>MonPetitProducteurLocal</strong> est une application web libre
      sous licence <strong>GNU AGPL-3.0</strong>, développée dans le dépôt
-     public <a href="https://github.com/cartotrac/MonPetitMaraicher" target="_blank" rel="noopener">github.com/cartotrac/MonPetitMaraicher</a>
+     public <a href="https://github.com/cartotrac/MonPetitProducteurLocal" target="_blank" rel="noopener">github.com/cartotrac/MonPetitProducteurLocal</a>
      — le code source peut être consulté, réutilisé et adapté ; toute
      instance publique modifiée doit partager ses modifications.</p>
 </section>
 
 <section class="harvest-bloc">
   <h2>Instance et éditeur</h2>
-  <p>Cette instance du portail est exploitée par <strong>CartoTrac</strong>,
+  <p>Cette instance du portail est exploitée par
+     {% if instance_admin_url %}<a href="{{ instance_admin_url }}" target="_blank" rel="noopener"><strong>{{ instance_admin_nom|default:"l'admin de l'instance" }}</strong></a>
+     {% if instance_admin_logo %}<img class="footer-admin-logo" src="{{ instance_admin_logo }}" alt="Logo {{ instance_admin_nom }}">{% endif %}
+     {% else %}<strong>{{ instance_admin_nom|default:"l'admin de l'instance" }}</strong>{% endif %},
      responsable de son contenu et de l'animation des producteurs et
-     clients qui y sont référencés. Contact : via la page de contact de
-     l'exploitant ou à l'adresse indiquée sur le dépôt GitHub.</p>
+     clients qui y sont référencés.</p>
   <p>Les informations publiées sur les vitrines (productions, prix,
      disponibilités, points de livraison) relèvent de la responsabilité
      de chaque producteur.</p>
@@ -32,15 +34,44 @@
 </section>
 
 <section class="harvest-bloc">
-  <h2>Données personnelles</h2>
-  <p>Seuls les éléments strictement nécessaires à la mise en relation
-     producteur / client sont enregistrés : identité, coordonnées de
-     contact et historique des commandes pour les comptes ; pour les
-     commandes sans compte, l'identité de contact saisie au moment de la
-     commande. Les photos et visuels sont hébergés par les producteurs
-     eux-mêmes (liens externes) : le portail n'héberge aucun fichier
-     envoyé par les clients. Aucune donnée n'est cédée à des tiers ;
-     pour l'exercice de vos droits (accès, rectification, suppression),
-     contactez l'exploitant de l'instance.</p>
+  <h2>🔒 Conformité RGPD</h2>
+  <p>Le portail applique les principes du Règlement (UE) 2016/679
+     (RGPD) : <strong>minimisation</strong> — seuls les éléments
+     strictement nécessaires à la mise en relation producteur / client
+     sont enregistrés (identité, coordonnées de contact, historique des
+     commandes pour les comptes ; identité de contact saisie au moment
+     de la commande pour les commandes sans compte) ;
+     <strong>finalité déterminée</strong> — ces données servent
+     exclusivement à traiter les commandes et la communication
+     producteur ↔ client (confirmations, annonces de paniers prêts) ;
+     <strong>pas de cession à des tiers</strong> ni de revente, pas de
+     profilage ni de publicité.</p>
+  <p>Les photos et visuels sont hébergés par les producteurs eux-mêmes
+     (liens externes) : le portail n'héberge aucun fichier envoyé par
+     les clients. Les paramètres de messagerie (SMTP, passerelle SMS)
+     appartiennent à chaque exploitation : l'admin de l'instance n'a
+     pas accès à ces secrets.</p>
+  <p><strong>Vos droits</strong> (accès, rectification, effacement,
+     limitation, portabilité, opposition) s'exercent auprès de
+     l'exploitant de l'instance — via la page de contact de votre
+     producteur ou l'adresse indiquée sur le dépôt GitHub — et auprès
+     de chaque producteur pour les données de commande le concernant.
+     Les commandes non validées puis livrées sont purgées : la durée
+     de conservation se limite à l'activité du service et aux
+     obligations comptables des producteurs.</p>
+</section>
+
+<section class="harvest-bloc">
+  <h2>🌱 Philosophie et gouvernance</h2>
+  <p>MonPetitProducteurLocal est un <strong>bien commun numérique</strong> :
+     un outil libre, décentralisé et réplicable, pensé pour renforcer
+     les circuits courts et l'indépendance des petits producteurs — pas
+     pour intermédiaire les capter. Chaque collectivité, AMAP ou
+     association peut déployer sa propre instance sur son territoire.</p>
+  <p>La gouvernance est <strong>ouverte et contributive</strong> : le code
+     et les décisions de conception sont publics (dépôt GitHub), les
+     contributions et retours terrain sont bienvenus, et chaque
+     instance reste sous le contrôle de son admin local — les données
+     de production et de clientèle appartiennent aux producteurs.</p>
 </section>
 {% endblock %}

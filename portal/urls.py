@@ -73,4 +73,6 @@ urlpatterns = [
          name="order_cancel"),
     path("mes-commandes/<int:commande_id>/ajuster/", views.order_ajuster,
          name="order_ajuster"),
+    path("mes-paniers/<int:panier_id>/recu/", views.panier_recu,
+         name="panier_recu"),
 ]

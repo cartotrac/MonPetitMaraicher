@@ -68,6 +68,7 @@ TEMPLATES = [
                 # Exploitation gérée par le compte courant (propriétaire ou
                 # membre de l'équipe) : naviguation et menus partagés.
                 "portal.context.exploitant_contexte",
+                "portal.context.instance_contexte",
             ],
         },
     },
@@ -107,6 +108,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Europe/Paris"
+
+# Admin de l'instance : affiché en pied de page (logo distant + nom
+# cliquable) et sur la page des mentions légales.
+INSTANCE_ADMIN = {
+    "nom": "CartoTrac",
+    "url": "https://www.cartotrac.fr",
+    "logo": "https://www.cartotrac.fr/assets/img/porteurs/logos/CartOtraC.png",
+}
 USE_I18N = True
 USE_TZ = True
 

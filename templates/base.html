@@ -67,7 +67,19 @@
 
 <footer class="site-footer">
   <div class="container">
-    <p>MonPetitProducteurLocal — producteurs locaux, récoltes fraîches, circuits courts.</p>
+    <div class="footer-brand">
+      <p class="footer-baseline">MonPetitProducteurLocal — producteurs locaux,
+         récoltes fraîches, circuits courts.</p>
+      {% if instance_admin_nom %}
+        <p class="footer-admin">
+          <span class="muted">Instance animée par</span>
+          {% if instance_admin_url %}<a href="{{ instance_admin_url }}" target="_blank" rel="noopener" class="footer-admin-lien">{% endif %}
+            {% if instance_admin_logo %}<img class="footer-admin-logo" src="{{ instance_admin_logo }}" alt="Logo {{ instance_admin_nom }}">{% endif %}
+            <strong>{{ instance_admin_nom }}</strong>
+          {% if instance_admin_url %}</a>{% endif %}
+        </p>
+      {% endif %}
+    </div>
     <nav class="footer-plan" aria-label="Plan du site">
       <a href="{% url 'portal:home' %}">Accueil</a>
       <a href="{% url 'portal:producer_search' %}">Chercher un producteur</a>

@@ -7,6 +7,8 @@
   <a class="btn {% if not filtre_statut %}btn-active{% endif %}" href="{% url 'portal:order_list' %}">Toutes</a>
   <a class="btn btn-filtre-atrier {% if filtre_statut == 'NOUVELLE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'NOUVELLE' %}">À traiter</a>
   <a class="btn {% if filtre_statut == 'VALIDEE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'VALIDEE' %}">Validées</a>
+  <a class="btn btn-filtre-refus {% if filtre_statut == 'REFUSEE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'REFUSEE' %}">Refusées</a>
+  <a class="btn btn-filtre-annule {% if filtre_statut == 'ANNULEE' %}btn-active{% endif %}" href="{% url 'portal:order_list_filtered' 'ANNULEE' %}">Annulées client</a>
 </div>
 <p class="muted">Les commandes sont regroupées par jour de livraison, du plus
    récent au plus ancien — l'en-tête de chaque jour compte les commandes
@@ -80,7 +82,19 @@
             <textarea name="note" rows="2"></textarea>
           </label>
           <button class="btn" name="action" value="validate" type="submit">✅ Valider</button>
-          <button class="btn btn-outline" name="action" value="refuse" type="submit">❌ Refuser</button>
+          <details class="refus-bloc">
+            <summary class="btn btn-outline">❌ Refuser…</summary>
+            <div class="refus-motifs">
+              <p class="muted">Indiquez le motif du refus (visible par le client) :</p>
+              <label><input type="radio" name="motif_refus" value="Récolte insuffisante cette semaine pour cette commande."> Récolte insuffisante cette semaine</label>
+              <label><input type="radio" name="motif_refus" value="Produit(s) indisponible(s) à la date demandée."> Produit(s) indisponible(s) à cette date</label>
+              <label><input type="radio" name="motif_refus" value="Créneau ou point de livraison complet pour ce jour-là."> Créneau / point de livraison complet</label>
+              <label><input type="radio" name="motif_refus" value="Commande reçue trop tard pour la livraison demandée."> Commande reçue trop tard</label>
+              <label><input type="radio" name="motif_refus" value="__libre__" checked> Autre (motif personnel) :
+                <input type="text" name="motif_refus_libre" placeholder="Ex. gros événement à la ferme ce jour-là…"></label>
+              <button class="btn btn-filtre-refus" name="action" value="refuse" type="submit">❌ Confirmer le refus</button>
+            </div>
+          </details>
         </form>
       {% else %}
         {% for nom_cat, lignes in commande.groupes_lignes %}
@@ -99,6 +113,9 @@
             {% endfor %}
           </ul>
         {% endfor %}
+      {% endif %}
+      {% if commande.statut == 'REFUSEE' and commande.motif_refus %}
+        <p class="flash warning">❌ Refusée — motif : {{ commande.motif_refus }}</p>
       {% endif %}
       {% if commande.note %}<p class="muted">💬 {{ commande.note }}</p>{% endif %}
     </div>

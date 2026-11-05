@@ -514,6 +514,10 @@ class Commande(models.Model):
     total = models.DecimalField("Total (€)", max_digits=8, decimal_places=2,
                                 default=0)
     note = models.TextField("Message du client", blank=True)
+    motif_refus = models.TextField(
+        "Motif du refus", blank=True, default="",
+        help_text="Raison visible par le client quand le producteur "
+                  "refuse la commande.")
     saisie_exploitant = models.BooleanField("Saisie directe de l'exploitant",
                                            default=False)
     creee_le = models.DateTimeField(auto_now_add=True)
