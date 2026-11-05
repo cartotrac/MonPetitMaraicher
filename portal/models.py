@@ -40,6 +40,7 @@ class Exploitant(models.Model):
         FROMAGER = "FROMAGER", "Fromager·ère"
         APICULTEUR = "APICULTEUR", "Apiculteur·rice"
         MICRO_BRASSEUR = "MICRO_BRASSEUR", "Micro-brasseur·euse"
+        CONSERVERIE = "CONSERVERIE", "Conserverie"
         AUTRE = "AUTRE", "Autre production locale"
 
     class ModeFonctionnement(models.TextChoices):
@@ -50,7 +51,7 @@ class Exploitant(models.Model):
     ACTIVITE_EMOJIS = {"MARAICHER": "🥬", "ARBORICULTEUR": "🍎",
                        "ELEVEUR": "🐄", "FROMAGER": "🧀",
                        "APICULTEUR": "🍯", "MICRO_BRASSEUR": "🍺",
-                       "AUTRE": "🌾"}
+                       "CONSERVERIE": "🥫", "AUTRE": "🌾"}
 
     user = models.OneToOneField(User, on_delete=models.CASCADE,
                                 related_name="exploitant")

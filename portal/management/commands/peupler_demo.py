@@ -20,6 +20,10 @@ entreprise réelle.
 Usage :
     python manage.py peupler_demo            # crée si absent (idempotent)
     python manage.py peupler_demo --purge   # supprime les comptes de démo
+    python manage.py peupler_demo --reset-commandes
+                                           # efface TOUTES les commandes
+                                           # et paniers (tous comptes)
+                                           # puis régénère le jeu de démo
 
 La purge efface TOUS les comptes de démo : ceux du jeu actuel, tout
 compte en « demo.* » et toute exploitation marquée « démo » dans la
@@ -194,6 +198,49 @@ FERMES = [
                      "Fromage frais du vendredi et caillé à emporter "
                      "directement au marché."),
     },
+    # ── Conserveries (nouvelle activité 🥫) ────────────────────────
+    _ferme_spec(
+        "demo.conserverie.sor", "Conserverie du Sor", A.CONSERVERIE,
+        M.AB, "81500", "Le Bourg, lieu-dit Las Garrigues",
+        "Giroussens", 43.832, 1.696, "05 63 00 00 21",
+        "Atelier de transformation en agriculture biologique dans la "
+        "vallée du Sor : confitures cuites au chaudron, bocaux de "
+        "légumes, terrines et coulis, tout est fait à la ferme.",
+        Decimal("4.20"),
+        [{"activite": A.CONSERVERIE, "limite": 24},
+         {"activite": A.ARBORICULTEUR, "categorie": "Fruits",
+          "limite": 4},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché de Giroussens", "Place de la Halle",
+          "Giroussens", "81500", 43.835, 1.690),
+         ("Marché de Lavaur", "Place de la Halle",
+          "Lavaur", "81500", 43.700, 1.900)],
+        [(6, "08:30", "12:30", 0), (5, "16:00", "19:00", 1)],
+        "Nouvelle fournée : ratatouille et confiture de figue !",
+        "Bocaux de la semaine à la Conserverie du Sor",
+        "Terrine de campagne, ratatouille et coulis de tomate "
+        "sortent de l'atelier ; la confiture de figue part vite, "
+        "pensez à réserver vos bocaux."),
+    _ferme_spec(
+        "demo.bretagne.conserverie", "Conserves de la Villaine",
+        A.CONSERVERIE, M.PAYSAN, "35310",
+        "Route de Bain, lieu-dit Le Boël",
+        "Bain-de-Bretagne", 47.842, -1.682, "02 99 00 00 22",
+        "Conserverie paysanne en Ille-et-Vilaine : soupes et veloutés "
+        "du jardin, conserves de légumes bretons, terrines et sauces "
+        " maison, cuissons de saison.",
+        Decimal("4.00"),
+        [{"activite": A.CONSERVERIE, "limite": 24},
+         {"activite": A.MARAICHER, "limite": 5},
+         {"activite": A.APICULTEUR, "limite": 2}],
+        [("Marché de Bain", "Place du Champ de Foire",
+          "Bain-de-Bretagne", "35310", 47.840, -1.680)],
+        [(6, "09:00", "12:30", 0)],
+        "Velouté de potimarron de retour en bocal 750 g.",
+        "Bocaux de la semaine aux Conserves de la Villaine",
+        "Soupes d'hiver, choucroute et haricots verts en bocal, "
+        "terrine de campagne de la semaine : tout est au marché de "
+        "Bain dès 9 h."),
     # ── Aveyron (2) ──────────────────────────────────────────────
     _ferme_spec(
         "demo.aveyron.eleveur", "Ferme de l'Aubrac", A.ELEVEUR, M.PAYSAN,
@@ -547,24 +594,45 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--purge", action="store_true",
                             help="Supprime les comptes et données de démo")
+        parser.add_argument(
+            "--reset-commandes", action="store_true",
+            help=("Efface TOUTES les commandes et paniers de la base "
+                  "(comptes réels inclus) puis régénère les commandes "
+                  "et paniers du jeu de démo pour toutes les fermes."))
 
     def _lundi(self):
         today = timezone.localdate()
         return today - datetime.timedelta(days=today.weekday())
 
-    def _ferme(self, spec):
+    def _ferme(self, spec, recree_commandes=False):
         """Exploitation de démo : compte, fiche, catalogue, points,
         créneaux, récolte de la semaine, bulletin."""
         if User.objects.filter(username=spec["utilisateur"]).exists():
             # Compte déjà présent : on s'assure au minimum qu'il porte
-            # le badge démo, puis on passe (idempotence).
+            # le badge démo, puis on passe (idempotence) — sauf avec
+            # --reset-commandes, où l'on récupère catalogue et points
+            # pour régénérer les commandes et paniers de démo.
             Exploitant.objects.filter(
                 user__username=spec["utilisateur"]
             ).update(est_demo=True)
+            if not recree_commandes:
+                self.stdout.write(self.style.NOTICE(
+                    f"Compte {spec['utilisateur']} déjà présent : ferme "
+                    "ignorée (badge démo réappliqué)."))
+                return None
+            exploitant = Exploitant.objects.get(
+                user__username=spec["utilisateur"])
+            produits = list(exploitant.produits.filter(actif=True))
+            points = list(exploitant.points_livraison.all())
+            if not produits or not points:
+                self.stdout.write(self.style.NOTICE(
+                    f"Compte {spec['utilisateur']} : catalogue ou "
+                    "point de livraison vide, commandes non régénérées."))
+                return None
             self.stdout.write(self.style.NOTICE(
                 f"Compte {spec['utilisateur']} déjà présent : ferme "
-                "ignorée (badge démo réappliqué)."))
-            return None
+                "conservée, commandes de démo régénérées."))
+            return exploitant, produits, points
         user = User.objects.create_user(
             username=spec["utilisateur"], password=MOT_DE_PASSE_DEMO,
             first_name="Famille", last_name=spec["ferme"],
@@ -761,9 +829,24 @@ class Command(BaseCommand):
                     f"{', '.join(sorted(purges))} ({n} objet(s))."))
             return
 
+        recree = bool(options.get("reset_commandes"))
+        if recree:
+            # Nettoyage demandé : on efface TOUTES les commandes et
+            # paniers de la base (comptes réels inclus), puis le
+            # peuplement ci-dessous régénère les commandes du jeu de
+            # démo pour chaque ferme. Panier d'abord (FK SET_NULL),
+            # commandes ensuite.
+            nb_paniers = Panier.objects.count()
+            nb_commandes = Commande.objects.count()
+            Panier.objects.all().delete()
+            Commande.objects.all().delete()
+            self.stdout.write(self.style.SUCCESS(
+                f"Commandes et paniers effacés : {nb_commandes} "
+                f"commande(s), {nb_paniers} panier(s) supprimé(s)."))
+
         clients = self._clients()
         for spec in FERMES:
-            resultat = self._ferme(spec)
+            resultat = self._ferme(spec, recree_commandes=recree)
             if resultat is None:
                 continue
             exploitant, produits, points = resultat
@@ -796,7 +879,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Démonstration prête : {len(FERMES)} fermes fictives "
             "(Tarn et départements limitrophes, Bretagne, Loire, Corse, "
-            "Réunion, Martinique + 2 micro-brasseries en boutique) avec "
+            "Réunion, Martinique + 2 micro-brasseries et 2 conserveries "
+            "en boutique) avec "
             f"{len(CLIENTS)} clients, commandes à valider, paniers en "
             "préparation, prêts et livrés (lecture seule)."))
         self.stdout.write("Connexion producteur : demo.maraicher, "

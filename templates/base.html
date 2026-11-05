@@ -31,7 +31,8 @@
               <a href="{% url 'portal:product_list' %}">🥕 Produits</a>
               <a href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
               <a href="{% url 'portal:order_list' %}">⏳ Commandes</a>
-              <a href="{% url 'portal:panier_list' %}">🧺 Paniers</a>
+              <a href="{% url 'portal:panier_list' %}">🧺 Paniers/Livraisons</a>
+              <a href="{% url 'portal:points_manage' %}">📍 Points &amp; créneaux</a>
               <a href="{% url 'portal:mes_producteurs' %}">⭐ Mes favoris</a>
             </div>
           </div>
@@ -58,12 +59,12 @@
           <a href="{% url 'portal:profil_client' %}" class="{% if request.path == '/profil/' %}nav-actif{% endif %}">Mon profil</a>
         {% endif %}
         <form class="inline" method="post" action="{% url 'logout' %}">
-          {% csrf_token %}<button class="btn" type="submit" title="Se déconnecter" aria-label="Se déconnecter"><span class="pastille-session pastille-verte" aria-hidden="true"></span>Logout</button>
+          {% csrf_token %}<button class="btn btn-session btn-session-verte" type="submit" title="Se déconnecter" aria-label="Se déconnecter"><span class="pastille-session pastille-verte" aria-hidden="true"></span>Logout</button>
         </form>
       {% else %}
         <a href="{% url 'portal:register_client' %}" class="nav-compte">Devenir client</a>
         <a class="btn btn-outline" href="{% url 'portal:register_producer' %}">Je suis producteur</a>
-        <a class="btn" href="{% url 'login' %}" title="Se connecter"><span class="pastille-session pastille-rouge" aria-hidden="true"></span>Login</a>
+        <a class="btn btn-session btn-session-rouge" href="{% url 'login' %}" title="Se connecter"><span class="pastille-session pastille-rouge" aria-hidden="true"></span>Login</a>
       {% endif %}
     </div>
   </nav>
@@ -74,9 +75,7 @@
     <div class="flash {{ message.tags }}">{{ message }}</div>
   {% endfor %}
   {% if exploitant_courant %}
-    {% block retour_dashboard %}
-      <p class="retour-dashboard"><a class="btn btn-outline btn-sm" href="{% url 'portal:dashboard' %}">⬅ Retour au dashboard</a></p>
-    {% endblock %}
+    {% block retour_dashboard %}{% endblock %}
   {% endif %}
   {% block content %}{% endblock %}
 </main>
@@ -128,8 +127,8 @@
 </footer>
 {% block extrajs %}{% endblock %}
 <div class="scroll-nav" aria-label="Navigation rapide dans la page">
-  <button class="scroll-btn" type="button" id="btn-scroll-haut" title="Revenir au bandeau" aria-label="Revenir au bandeau">⬆️</button>
-  <button class="scroll-btn" type="button" id="btn-scroll-bas" title="Aller au pied de page" aria-label="Aller au pied de page">⬇️</button>
+  <button class="scroll-btn" type="button" id="btn-scroll-haut" title="Revenir au bandeau" aria-label="Revenir au bandeau">↑</button>
+  <button class="scroll-btn" type="button" id="btn-scroll-bas" title="Aller au pied de page" aria-label="Aller au pied de page">↓</button>
 </div>
 <script>
 /* Navigation rapide : remonter au bandeau / descendre au pied de page. */

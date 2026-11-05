@@ -1,5 +1,7 @@
-{% load l10n %}{# Vignette producteur unifiée (pages Chercher et Mes favoris).
-   Attend la variable « exploitant ». #}
+{% load l10n %}{% comment %}
+Vignette producteur unifiée (pages Chercher et Mes favoris).
+Attend la variable « exploitant ».
+{% endcomment %}
 <div class="card vignette-producteur"{% if exploitant.latitude and exploitant.longitude %} data-lat="{{ exploitant.latitude|unlocalize }}" data-lng="{{ exploitant.longitude|unlocalize }}"{% endif %}>
   {% if exploitant.logo %}
     <img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">

@@ -99,6 +99,32 @@ CATALOGUES = {
         ("Fût 20 L", "Fûts", "PC", "🛢️", []),
         ("Fût 30 L", "Fûts", "PC", "🛢️", []),
     ],
+    Exploitant.Activite.CONSERVERIE: [
+        ("Confiture de fraise", "Confitures & gelées", "PC", "🍯", ["été"]),
+        ("Confiture d'abricot", "Confitures & gelées", "PC", "🍯", ["été"]),
+        ("Confiture de figue", "Confitures & gelées", "PC", "🍯", ["automne"]),
+        ("Confiture de myrtille", "Confitures & gelées", "PC", "🍯", ["été"]),
+        ("Gelée de coing", "Confitures & gelées", "PC", "🍯", ["automne"]),
+        ("Gelée de groseille", "Confitures & gelées", "PC", "🍯", []),
+        ("Miel & gelée royale (pot)", "Confitures & gelées", "PC", "🍯", []),
+        ("Tomates séchées", "Conserves de légumes", "PC", "🍅", []),
+        ("Coulis de tomate", "Conserves de légumes", "PC", "🍅", []),
+        ("Ratatouille en bocal", "Conserves de légumes", "PC", "🥫", []),
+        ("Haricots verts en bocal", "Conserves de légumes", "PC", "🥫", []),
+        ("Petits pois carotte en bocal", "Conserves de légumes", "PC", "🥫", []),
+        ("Choucroute en bocal", "Conserves de légumes", "PC", "🥫", ["hiver"]),
+        ("Soupe de légumes (bocal)", "Soupes & coulis", "PC", "🍲", []),
+        ("Velouté de potimarron", "Soupes & coulis", "PC", "🍲", ["automne"]),
+        ("Coulis de framboise", "Soupes & coulis", "PC", "🥫", ["été"]),
+        ("Terrine de campagne", "Terrines & pâtés", "PC", "🥫", []),
+        ("Terrine de lapin", "Terrines & pâtés", "PC", "🥫", []),
+        ("Pâté de foie", "Terrines & pâtés", "PC", "🥫", []),
+        ("Rillettes d'oie", "Terrines & pâtés", "PC", "🥫", []),
+        ("Sauce tomate basique", "Sauces & condiments", "PC", "🍅", []),
+        ("Tapenade d'olives", "Sauces & condiments", "PC", "🫒", []),
+        ("Câpres au vinaigre", "Sauces & condiments", "PC", "🌿", []),
+        ("Cornichons au vinaigre", "Sauces & condiments", "PC", "🥒", []),
+    ],
 }
 
 
@@ -158,6 +184,11 @@ EMOJIS_PAR_MOTCLE = [
     ("sauge", "🌿"), ("girolle", "🍄"), ("pleurote", "🍄"),
     ("cèpe", "🍄"), ("cepe", "🍄"), ("cidre", "🍹"),
     ("perry", "🍹"), ("poiré", "🍹"),
+    ("terrine", "🥫"), ("pâté", "🥫"), ("pate", "🥫"),
+    ("rillettes", "🥫"), ("bocal", "🥫"), ("conserve", "🥫"),
+    ("vinaigre", "🫙"), ("tapenade", "🫒"), ("câpre", "🌿"),
+    ("soupe", "🍲"), ("velouté", "🍲"), ("veloute", "🍲"),
+    ("ratatouille", "🥫"), ("sauce", "🍅"), ("coulis", "🥫"),
 ]
 
 
@@ -231,6 +262,7 @@ class Command(BaseCommand):
             Exploitant.Activite.FROMAGER: "🧀",
             Exploitant.Activite.APICULTEUR: "🍯",
             Exploitant.Activite.MICRO_BRASSEUR: "🍺",
+            Exploitant.Activite.CONSERVERIE: "🥫",
             Exploitant.Activite.AUTRE: "🌾",
         }
         majs = 0

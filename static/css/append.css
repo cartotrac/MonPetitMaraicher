@@ -727,3 +727,56 @@ html.dark .nav-gestion-menu a:hover { background: #33402a; color: #ffffff; }
   .nav-gestion-menu a { color: inherit; }
   html.dark .nav-gestion-menu a { color: #e6e4da; }
 }
+
+/* ===== Boutons de session Login/Logout : fond teinté distinct ===== */
+.nav-links .btn-session { display: inline-flex; align-items: center; }
+.nav-links .btn-session-verte { background: #e9f4e4; border-color: #2e7d32; color: #245d18; }
+.nav-links .btn-session-verte:hover { background: #d9ecd0; }
+.nav-links .btn-session-rouge { background: #fdeceb; border-color: #c62828; color: #8f1d16; }
+.nav-links .btn-session-rouge:hover { background: #f8dad7; }
+html.dark .btn-session-verte { background: #20361c; border-color: #4c9a3f; color: #bfe3b0; }
+html.dark .btn-session-verte:hover { background: #2b4723; }
+html.dark .btn-session-rouge { background: #3a1d1a; border-color: #b0463d; color: #f0c1bb; }
+html.dark .btn-session-rouge:hover { background: #4a251f; }
+
+/* ===== Bouton Chercher : panier en arrière-plan, loupe agrandie
+       en superposition devant ===== */
+.nav-chercher { position: relative !important; display: inline-flex !important;
+                min-width: 2.4em; justify-content: center; }
+.nav-chercher-colis { font-size: 1.35em !important; line-height: 1; }
+.nav-chercher-loupe { position: absolute; right: -0.15em; bottom: -0.25em;
+                      font-size: 1.15em !important; line-height: 1;
+                      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.45)); }
+
+/* ===== Boutons de scroll : haut-droite sous le bandeau, symbole simple ===== */
+.scroll-nav { top: 78px !important; bottom: auto !important;
+              right: 10px !important; gap: 6px !important; }
+.scroll-btn { background: rgba(62, 92, 44, 0.88) !important; color: #fff !important;
+              border-radius: 8px !important; width: 34px !important;
+              height: 34px !important; font-size: 1.15rem !important;
+              line-height: 1 !important;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important; }
+.scroll-btn:hover { background: #3e5c2c !important; }
+html.dark .scroll-btn { background: rgba(38, 48, 31, 0.9) !important;
+                       color: #e6e4da !important; }
+html.dark .scroll-btn:hover { background: #33402a !important; }
+
+/* ===== Dark mode : tableaux, saisies et libellés lisibles ===== */
+html.dark .table, html.dark table { background: #26301f; color: #e6e4da;
+                                    border-color: #3f4d34; }
+html.dark .table th, html.dark .table td,
+html.dark th, html.dark td { background: #26301f !important;
+                             color: #e6e4da !important;
+                             border-color: #3f4d34 !important; }
+html.dark .table tr:nth-child(even) td,
+html.dark tr:nth-child(even) td { background: #2b3523 !important; }
+html.dark input, html.dark select, html.dark textarea {
+  background: #2e3826 !important; color: #e6e4da !important;
+  border-color: #55624a !important;
+}
+html.dark input::placeholder, html.dark textarea::placeholder { color: #aab599; }
+html.dark label, html.dark legend { color: #e6e4da; }
+html.dark input[type="checkbox"], html.dark input[type="radio"] {
+  accent-color: #9ccc65;
+}
+html.dark select option { background: #2e3826; color: #e6e4da; }
