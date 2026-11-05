@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Messagerie — MonPetitProducteurLocal{% endblock %}
+{% block content %}
+<h1>✉️ Messagerie (e-mails &amp; SMS)</h1>
+<p class="muted">Serveur SMTP d'envoi de vos publications (newsletters,
+   annonces, notifications de panier) : renseignez-le ici pour que vos
+   e-mails partent au nom de votre ferme, sans dépendre de la
+   configuration du serveur. Champs vides = paramètre retiré.</p>
+
+<section class="harvest-bloc">
+  <div class="card">
+  <form method="post" class="form">
+    {% csrf_token %}
+    <input type="hidden" name="section" value="messagerie">
+    {{ form_messagerie.as_p }}
+    <div class="save-bar">
+      <button class="btn" type="submit">💾 Enregistrer la messagerie</button>
+    </div>
+  </form>
+  <div class="quick-actions">
+    <form method="post" class="inline">{% csrf_token %}
+      <input type="hidden" name="section" value="test_email">
+      <button class="btn btn-outline btn-sm" type="submit">✉️ M'envoyer un e-mail de test</button>
+    </form>
+    <form method="post" class="inline">{% csrf_token %}
+      <input type="hidden" name="section" value="test_sms">
+      <button class="btn btn-outline btn-sm" type="submit">📱 M'envoyer un SMS de test</button>
+    </form>
+  </div>
+  <p class="muted">L'e-mail de test part vers l'adresse de « Mon profil ».
+     Le SMS de test part vers votre numéro Free Mobile configuré dans
+     l'admin (passerelle V1).</p>
+  <details class="aide-smtp">
+    <summary class="btn btn-outline btn-sm">💡 Exemples de configuration SMTP</summary>
+    <ul class="muted">
+      <li><strong>AlwaysData</strong> (le plus simple) : hôte
+        <code>localhost</code>, port <code>25</code>, sans identifiant —
+        si votre offre inclut le service e-mail.</li>
+      <li><strong>Gmail</strong> : hôte <code>smtp.gmail.com</code>,
+        port <code>587</code>, TLS ✅, identifiant = votre adresse Gmail,
+        mot de passe = <em>mot de passe d'application</em> (à créer dans
+        votre compte Google, pas votre mot de passe habituel).</li>
+      <li><strong>OVH</strong> : hôte <code>ssl0.ovh.net</code>,
+        port <code>587</code>, TLS ✅, identifiants de votre adresse
+        e-mail OVH.</li>
+    </ul>
+    <p class="muted">Après chaque modification : 💾 enregistrez, puis
+       testez avec le bouton ✉️ — le résultat s'affiche en haut de la
+       page.</p>
+  </details>
+  </div>
+</section>
+
+<p><a class="btn btn-outline btn-sm" href="{% url 'portal:dashboard' %}">⬅ Retour au dashboard</a></p>
+{% endblock %}

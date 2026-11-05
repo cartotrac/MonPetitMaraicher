@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Annonces — MonPetitProducteurLocal{% endblock %}
+{% block content %}
+<h1>📌 Annonces</h1>
+<p class="muted">Vos annonces ponctuelles (ex : « paniers disponibles
+   samedi »). La diffusion part vers les {{ nb_destinataires }}
+   adresse(s) e-mail connues de vos clients.</p>
+
+<div class="dashboard-cols">
+<div class="dash-main">
+
+<section>
+  <h2>📌 Nouvelle annonce</h2>
+  <form method="post" class="form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="annonce">
+    {{ form_annonce.as_p }}
+    <button class="btn" type="submit">💾 Créer l'annonce</button>
+  </form>
+</section>
+
+<section>
+  <h2>📌 Mes annonces</h2>
+  {% for annonce in annonces %}
+    <div class="card">
+      <strong>{{ annonce.objet }}</strong>
+      {% if annonce.envoye_le %}
+        <span class="badge badge-ok">diffusée le {{ annonce.envoye_le|date:"d/m/Y H:i" }}</span>
+      {% else %}
+        <form class="inline" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="diffuser">
+          <input type="hidden" name="type" value="annonce">
+          <input type="hidden" name="publication_id" value="{{ annonce.pk }}">
+          <button class="btn btn-sm" type="submit">📤 Diffuser</button>
+        </form>
+        <form class="inline" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="supprimer">
+          <input type="hidden" name="publication_id" value="{{ annonce.pk }}">
+          <button class="btn-link" type="submit">✖ Supprimer</button>
+        </form>
+      {% endif %}
+      <p>{{ annonce.corps|linebreaksbr }}</p>
+    </div>
+  {% empty %}
+    <p class="muted">Aucune annonce pour l'instant.</p>
+  {% endfor %}
+</section>
+
+</div>
+<aside class="dash-side">
+  <h2>ℹ️ Diffusion</h2>
+  <p class="muted">Sans configuration e-mail (EMAIL_HOST), les messages
+     sont journalisés au lieu d'être envoyés. Sur AlwaysData, ajoutez
+     <code>EMAIL_HOST=localhost</code> et <code>EMAIL_PORT=25</code>
+     dans le .env pour un envoi réel. Configurez votre serveur SMTP
+     personnel depuis la page ✉️ Messagerie du menu Paramètres.</p>
+</aside>
+</div>
+{% endblock %}

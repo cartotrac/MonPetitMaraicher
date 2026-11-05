@@ -684,3 +684,46 @@ html.dark .scroll-btn { background: #33511c; }
 .vignette-demo-ligne .badge { border-radius: 999px; }
 .vignette-titre .badge { border-radius: 999px; flex-shrink: 0;
   white-space: nowrap; }
+
+/* ---------- Bandeau : Login/Logout avec pastille de session ---------- */
+.pastille-session {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin-right: 6px; vertical-align: middle;
+}
+.pastille-verte { background: #2e7d32; box-shadow: 0 0 0 2px rgba(46,125,50,.25); }
+.pastille-rouge { background: #c62828; box-shadow: 0 0 0 2px rgba(198,40,40,.25); }
+
+/* Aucun soulignement au survol des onglets du bandeau */
+.nav-links a, .nav-links a:hover, .nav-links a:focus,
+.nav-gestion-titre, .nav-gestion-titre:hover,
+.nav-gestion-menu a, .nav-gestion-menu a:hover,
+.nav-links .btn-link, .nav-links .btn-link:hover {
+  text-decoration: none !important;
+}
+
+/* Contraste du contour du bouton Login (mode clair) */
+.nav-links .btn-outline { border-color: #4e6b3a; color: #33502a; }
+html.dark .nav-links .btn-outline { border-color: #8fae76; color: #dbe8cd; }
+
+/* ---------- Sous-menus déroulants (Gestion, Publications,
+   Paramètres) : contraste clair et sombre ---------- */
+.nav-gestion-menu {
+  background: #f7f6f0; border: 1px solid #cfd8c3;
+  box-shadow: 0 6px 14px rgba(0,0,0,.12); border-radius: 8px;
+}
+.nav-gestion-menu a { color: #3c4a33; }
+.nav-gestion-menu a:hover { background: #e8f1dc; color: #2a4420; }
+html.dark .nav-gestion-menu { background: #26301f; border-color: #55624a; }
+html.dark .nav-gestion-menu a { color: #e6e4da; }
+html.dark .nav-gestion-menu a:hover { background: #33402a; color: #ffffff; }
+
+/* Menu burger (mobile) : les sous-menus restent intégrés au bandeau,
+   sans carte ni ombre (priorité sur les règles desktop ci-dessus). */
+@media (max-width: 820px) {
+  .nav-gestion-menu {
+    background: transparent !important; border: none !important;
+    box-shadow: none !important; border-radius: 0 !important;
+  }
+  .nav-gestion-menu a { color: inherit; }
+  html.dark .nav-gestion-menu a { color: #e6e4da; }
+}

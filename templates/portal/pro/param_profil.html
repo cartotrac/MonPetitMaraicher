@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Mon profil — MonPetitProducteurLocal{% endblock %}
+{% block content %}
+<h1>👤 Mon profil</h1>
+<p class="muted">Votre identité de compte individuel : prénom, nom,
+   e-mail, téléphone et photo (lien externe). Modifier votre nom met à
+   jour toutes vos commandes et paniers passés.</p>
+
+<section class="harvest-bloc">
+  <div class="card">
+  <form method="post" class="form">
+    {% csrf_token %}
+    <input type="hidden" name="section" value="profil">
+    {{ form_profil.as_p }}
+    <div class="save-bar">
+      <button class="btn" type="submit">💾 Enregistrer mon profil</button>
+    </div>
+  </form>
+  </div>
+</section>
+
+<p><a class="btn btn-outline btn-sm" href="{% url 'portal:dashboard' %}">⬅ Retour au dashboard</a></p>
+{% endblock %}

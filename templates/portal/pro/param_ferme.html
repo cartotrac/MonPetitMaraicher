@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Ma ferme — MonPetitProducteurLocal{% endblock %}
+{% block extra_style %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
+{% block content %}
+<h1>🚜 Ma ferme</h1>
+<p class="muted">Ces informations sont affichées sur votre vitrine
+   publique : activité, SIRET, logo (fichier ou lien externe), réseaux
+   sociaux, position. Le département est déduit du code postal si vous
+   le laissez vide.</p>
+
+<section class="harvest-bloc">
+  <div class="card">
+  <form method="post" enctype="multipart/form-data" class="form">
+    {% csrf_token %}
+    <input type="hidden" name="section" value="ferme">
+    <div id="carte-ferme" data-pick-map data-lat-input="id_latitude"
+         data-lon-input="id_longitude" style="height: 300px; border-radius: 8px; margin-bottom: 0.4rem;"></div>
+    <p class="muted">👆 Cliquez sur la carte pour positionner la ferme :
+       latitude/longitude sont renseignées automatiquement.</p>
+    {{ form_ferme.as_p }}
+    <div class="save-bar">
+      <button class="btn" type="submit">💾 Enregistrer ma fiche</button>
+    </div>
+  </form>
+  </div>
+</section>
+
+<p><a class="btn btn-outline btn-sm" href="{% url 'portal:dashboard' %}">⬅ Retour au dashboard</a></p>
+{% endblock %}
+{% block extrajs %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/pick-map.js' %}" defer></script>
+<script src="{% static 'js/image-picker.js' %}" defer></script>
+{% endblock %}

@@ -318,11 +318,31 @@ def favoris_toggle(request, slug):
     return redirect("portal:producer_detail", slug=slug)
 
 
+def _horaires_exploitants(exploitants):
+    """Créneaux récurrents de boutique / point de livraison par ferme,
+    pour l'encart horaires des vignettes (même présentation que la
+    page de recherche)."""
+    horaires = {}
+    for c in (CreneauLivraison.objects
+              .filter(exploitant__in=list(exploitants))
+              .select_related("point_livraison")
+              .order_by("jour", "heure_debut")):
+        horaires.setdefault(c.exploitant_id, []).append(
+            f"{c.get_jour_display()} "
+            f"{c.heure_debut.strftime('%H:%M')}–"
+            f"{c.heure_fin.strftime('%H:%M')}"
+            + (f" — {c.point_livraison.nom}" if c.point_livraison else ""))
+    for e in exploitants:
+        e.horaires = horaires.get(e.pk, [])
+
+
 @login_required
 def mes_producteurs(request):
     """Les favoris du compte : côté client, les producteurs suivis et
     les fermes déjà commandées ; côté pro, distinction Fournisseurs /
-    Clients pro (les fermes déjà commandées sont intégrées)."""
+    Clients pro (les fermes déjà commandées sont intégrées). Les
+    vignettes reprennent la présentation de la page de recherche
+    (horaires au survol inclus)."""
     favoris = list(Favori.objects.filter(user=request.user)
                    .select_related("exploitant"))
     exploitant_ids = [f.exploitant_id for f in favoris]
@@ -334,20 +354,24 @@ def mes_producteurs(request):
     if est_pro:
         # Les fermes déjà commandées sont classées « client pro »
         deja = list(deja_commandes)
+        fournisseurs = [f.exploitant for f in favoris
+                        if f.nature == Favori.Nature.FOURNISSEUR]
+        clients_pro = [f.exploitant for f in favoris
+                       if f.nature != Favori.Nature.FOURNISSEUR]
+        _horaires_exploitants(fournisseurs + clients_pro + deja)
         return render(request, "portal/mes_producteurs.html", {
             "est_pro": True,
-            "favoris_fournisseurs": [f.exploitant for f in favoris
-                                     if f.nature
-                                     == Favori.Nature.FOURNISSEUR],
-            "favoris_clients": [f.exploitant for f in favoris
-                                if f.nature
-                                != Favori.Nature.FOURNISSEUR],
+            "favoris_fournisseurs": fournisseurs,
+            "favoris_clients": clients_pro,
             "deja_commandes": deja,
         })
+    favoris_clients = [f.exploitant for f in favoris]
+    deja = list(deja_commandes)
+    _horaires_exploitants(favoris_clients + deja)
     return render(request, "portal/mes_producteurs.html", {
         "est_pro": False,
-        "favoris": [f.exploitant for f in favoris],
-        "deja_commandes": deja_commandes,
+        "favoris": favoris_clients,
+        "deja_commandes": deja,
     })
 
 
@@ -2572,7 +2596,7 @@ def order_ajuster(request, commande_id):
 
 # ----------------------------------------------------------- editions profil
 
-def _enregistrer_infos_perso(request, redirect_vers):
+def _enregistrer_infos_perso(request, redirect_vers, **redirect_kwargs):
     """Enregistre prenom / nom / e-mail du compte courant, et son
     telephone dans ProfilClient (commun clients et maraichers)."""
     profil, _cree = ProfilClient.objects.get_or_create(user=request.user)
@@ -2598,7 +2622,7 @@ def _enregistrer_infos_perso(request, redirect_vers):
         Panier.objects.filter(client=user).update(**maj)
         messages.success(request, "Vos informations personnelles ont été "
                          "mises à jour (commandes et paniers inclus).")
-        return redirect(redirect_vers)
+        return redirect(redirect_vers, **redirect_kwargs)
     return form
 
 
@@ -2677,22 +2701,33 @@ def equipe_manage(request):
 @login_required
 @exploitant_requis
 def parametres(request):
-    """Page unique de paramètres : Ma ferme (identité, logo, réseaux,
-    position), Mon profil (compte individuel), Équipe (propriétaire
-    seulement) et Messagerie (propriétaire seulement) — serveur SMTP
-    d'envoi des e-mails et passerelle SMS pour la disponibilité hebdo
-    des produits."""
+    """Ancienne page unique de paramètres : redirige vers la rubrique
+    « Mon profil » du menu déroulant Paramètres."""
+    return redirect("portal:param_rubrique", rubrique="profil")
+
+
+@login_required
+@exploitant_requis
+def param_rubrique(request, rubrique):
+    """Rubriques indépendantes du menu Paramètres : « Mon profil »
+    (compte individuel), « Ma ferme » (vitrine publique) et
+    « Messagerie » (propriétaire seulement — SMTP d'envoi des e-mails
+    et passerelle SMS). Chaque page s'enregistre séparément."""
+    if rubrique not in ("profil", "ferme", "messagerie"):
+        return redirect("portal:param_rubrique", rubrique="profil")
     exploitant = exploitant_pour(request.user)
     vitrine, _cree = ParametresVitrine.objects.get_or_create(
         exploitant=exploitant)
     est_proprietaire = (hasattr(request.user, "exploitant")
                         and request.user.exploitant.pk == exploitant.pk)
+    if rubrique == "messagerie" and not est_proprietaire:
+        return redirect("portal:param_rubrique", rubrique="profil")
     messagerie = vitrine.messagerie or {}
 
     if request.method == "POST":
         section = request.POST.get("section", "")
 
-        if section == "ferme":
+        if section == "ferme" and rubrique == "ferme":
             form_ferme = ProfilExploitantForm(request.POST, request.FILES,
                                              instance=exploitant)
             if form_ferme.is_valid():
@@ -2719,56 +2754,15 @@ def parametres(request):
                 else:
                     messages.success(request,
                                      "Votre fiche a été mise à jour.")
-                return redirect("portal:parametres")
+                return redirect("portal:param_rubrique", rubrique="ferme")
 
-        elif section == "profil":
-            resultat = _enregistrer_infos_perso(request,
-                                                 "portal:parametres")
+        elif section == "profil" and rubrique == "profil":
+            resultat = _enregistrer_infos_perso(
+                request, "portal:param_rubrique", rubrique="profil")
             if not hasattr(resultat, "is_valid"):
                 return resultat
 
-        elif section == "equipe" and est_proprietaire:
-            action = request.POST.get("action")
-            if action == "ajouter":
-                cle = request.POST.get("membre", "").strip()
-                if not cle:
-                    messages.error(request, "Renseignez l'e-mail ou "
-                                   "l'identifiant du compte à rattacher.")
-                else:
-                    user = (User.objects.filter(email__iexact=cle).first()
-                            or User.objects.filter(
-                                username__iexact=cle).first())
-                    if user is None:
-                        messages.error(
-                            request, f"Aucun compte « {cle} » : la personne "
-                            "doit d'abord créer un compte sur le portail.")
-                    elif hasattr(user, "exploitant"):
-                        messages.error(
-                            request, f"« {cle} » possède déjà sa propre "
-                            "exploitation : impossible de le rattacher.")
-                    elif hasattr(user, "membre_exploitation"):
-                        messages.error(request, f"« {cle} » est déjà membre "
-                                       "d'une exploitation.")
-                    else:
-                        MembreExploitation.objects.create(
-                            user=user, exploitant=exploitant,
-                            telephone=request.POST.get(
-                                "telephone", "").strip())
-                        messages.success(
-                            request, f"{user.get_full_name() or user.username} "
-                            "rattaché(e) à l'exploitation.")
-            elif action == "retirer":
-                membre = exploitant.membres.filter(
-                    pk=request.POST.get("membre_id")).first()
-                if membre:
-                    nom = (membre.user.get_full_name()
-                           or membre.user.username)
-                    membre.delete()
-                    messages.info(request, f"{nom} n'est plus membre de "
-                                   "l'exploitation.")
-            return redirect("portal:parametres")
-
-        elif section == "messagerie" and est_proprietaire:
+        elif section == "messagerie" and rubrique == "messagerie":
             form_messagerie = MessagerieForm(request.POST)
             if form_messagerie.is_valid():
                 # On ne conserve que les valeurs renseignées (les champs
@@ -2781,9 +2775,10 @@ def parametres(request):
                     request, "Paramètres de messagerie enregistrés."
                     if vitrine.messagerie.get("email_host")
                     else "Paramètres de messagerie effacés.")
-                return redirect("portal:parametres")
+                return redirect("portal:param_rubrique",
+                                rubrique="messagerie")
 
-        elif section == "test_email" and est_proprietaire:
+        elif section == "test_email" and rubrique == "messagerie":
             destinataire = request.user.email
             if not destinataire:
                 messages.error(request, "Votre compte n'a pas d'adresse "
@@ -2798,7 +2793,7 @@ def parametres(request):
                         "[Test] Votre messagerie — "
                         + exploitant.nom_ferme,
                         "Ceci est un e-mail de test envoyé depuis la page "
-                        "Paramètres. Si vous le lisez, votre configuration "
+                        "Messagerie. Si vous le lisez, votre configuration "
                         "SMTP fonctionne : newsletters et annonces "
                         "partiront au nom de votre ferme.",
                         expediteur, [destinataire],
@@ -2810,9 +2805,9 @@ def parametres(request):
                 except Exception as err:
                     messages.error(request, "❌ Échec de l'envoi de test : "
                                    + str(err))
-            return redirect("portal:parametres")
+            return redirect("portal:param_rubrique", rubrique="messagerie")
 
-        elif section == "test_sms" and est_proprietaire:
+        elif section == "test_sms" and rubrique == "messagerie":
             ok, info = envoyer_sms(
                 exploitant,
                 "Test SMS " + exploitant.nom_ferme
@@ -2824,31 +2819,44 @@ def parametres(request):
             else:
                 messages.error(request, "❌ SMS de test non envoyé (" + info
                                + ").")
-            return redirect("portal:parametres")
+            return redirect("portal:param_rubrique", rubrique="messagerie")
 
-    # Affichage de la page (ou re-affichage après erreur de formulaire)
-    reseaux = dict(vitrine.reseaux or {})
-    form_ferme = ProfilExploitantForm(
-        instance=exploitant,
-        initial={"logo_externe": reseaux.get("logo_url", ""),
-                 "site_web": reseaux.get("site_web", ""),
-                 "facebook": reseaux.get("facebook", ""),
-                 "instagram": reseaux.get("instagram", "")})
-    profil, _cree = ProfilClient.objects.get_or_create(user=request.user)
-    form_profil = ProfilPersonnelForm(initial={
-        "prenom": request.user.first_name,
-        "nom": request.user.last_name,
-        "email": request.user.email,
-        "telephone": profil.telephone,
-        "photo_externe": profil.photo_url,
-    })
+        return redirect("portal:param_rubrique", rubrique=rubrique)
+
+    # Affichage de la rubrique (ou re-affichage après erreur de
+    # formulaire : on reprend les valeurs initiales).
+    if rubrique == "profil":
+        profil, _cree = ProfilClient.objects.get_or_create(
+            user=request.user)
+        form_profil = ProfilPersonnelForm(initial={
+            "prenom": request.user.first_name,
+            "nom": request.user.last_name,
+            "email": request.user.email,
+            "telephone": profil.telephone,
+            "photo_externe": profil.photo_url,
+        })
+        return render(request, "portal/pro/param_profil.html", {
+            "exploitant": exploitant,
+            "form_profil": form_profil,
+        })
+
+    if rubrique == "ferme":
+        reseaux = dict(vitrine.reseaux or {})
+        form_ferme = ProfilExploitantForm(
+            instance=exploitant,
+            initial={"logo_externe": reseaux.get("logo_url", ""),
+                     "site_web": reseaux.get("site_web", ""),
+                     "facebook": reseaux.get("facebook", ""),
+                     "instagram": reseaux.get("instagram", "")})
+        return render(request, "portal/pro/param_ferme.html", {
+            "exploitant": exploitant,
+            "form_ferme": form_ferme,
+        })
+
     form_messagerie = MessagerieForm(initial=messagerie)
-    return render(request, "portal/pro/parametres.html", {
+    return render(request, "portal/pro/param_messagerie.html", {
         "exploitant": exploitant,
-        "form_ferme": form_ferme,
-        "form_profil": form_profil,
         "form_messagerie": form_messagerie,
-        "membres": exploitant.membres.select_related("user").all(),
         "est_proprietaire": est_proprietaire,
     })
 
@@ -2874,16 +2882,27 @@ def _connexion_email(vitrine):
 @login_required
 @exploitant_requis
 def publications_manage(request):
-    """Newsletters (bulletins) et annonces ponctuelles de l'exploitation :
-    création, suppression et diffusion aux clients (e-mail des comptes
-    clients ET des commandes sans compte qui en ont laissé un)."""
+    """Ancienne page unique : redirige vers la rubrique Newsletter du
+    menu déroulant Publications."""
+    return redirect("portal:pub_rubrique", rubrique="newsletter")
+
+
+@login_required
+@exploitant_requis
+def pub_rubrique(request, rubrique):
+    """Rubriques indépendantes du menu Publications : « Newsletter »
+    (bulletins de récolte) et « Annonces » ponctuelles — création,
+    suppression et diffusion aux clients (e-mail des comptes clients
+    ET des commandes sans compte qui en ont laissé un)."""
+    if rubrique not in ("newsletter", "annonces"):
+        return redirect("portal:pub_rubrique", rubrique="newsletter")
     exploitant = exploitant_pour(request.user)
-    form_b = BulletinForm(exploitant=exploitant)
-    form_a = AnnonceForm()
+    nb_destinataires = (exploitant.commandes.exclude(email_client="")
+                        .values("email_client").distinct().count())
 
     if request.method == "POST":
         action = request.POST.get("action")
-        if action == "bulletin":
+        if action == "bulletin" and rubrique == "newsletter":
             form_b = BulletinForm(request.POST, exploitant=exploitant)
             if form_b.is_valid():
                 bulletin = form_b.save(commit=False)
@@ -2891,8 +2910,9 @@ def publications_manage(request):
                 bulletin.save()
                 messages.success(request, "Newsletter « "
                                  + bulletin.objet + " » créée.")
-                return redirect("portal:publications_manage")
-        elif action == "annonce":
+                return redirect("portal:pub_rubrique",
+                                rubrique="newsletter")
+        elif action == "annonce" and rubrique == "annonces":
             form_a = AnnonceForm(request.POST)
             if form_a.is_valid():
                 annonce = form_a.save(commit=False)
@@ -2900,7 +2920,7 @@ def publications_manage(request):
                 annonce.save()
                 messages.success(request, "Annonce « " + annonce.objet
                                  + " » créée.")
-                return redirect("portal:publications_manage")
+                return redirect("portal:pub_rubrique", rubrique="annonces")
         elif action == "diffuser":
             modele = (Bulletin
                       if request.POST.get("type") == "bulletin"
@@ -2948,15 +2968,19 @@ def publications_manage(request):
                     objet.delete()
                     messages.info(request, "Publication supprimée.")
                     break
-        return redirect("portal:publications_manage")
+        return redirect("portal:pub_rubrique", rubrique=rubrique)
 
-    return render(request, "portal/pro/publications.html", {
+    if rubrique == "newsletter":
+        return render(request, "portal/pro/pub_newsletter.html", {
+            "exploitant": exploitant,
+            "bulletins": (exploitant.bulletins.order_by(
+                "-id").select_related("semaine")),
+            "form_bulletin": BulletinForm(exploitant=exploitant),
+            "nb_destinataires": nb_destinataires,
+        })
+    return render(request, "portal/pro/pub_annonces.html", {
         "exploitant": exploitant,
-        "bulletins": (exploitant.bulletins.order_by(
-            "-id").select_related("semaine")),
         "annonces": exploitant.annonces.order_by("-id"),
-        "form_bulletin": form_b,
-        "form_annonce": form_a,
-        "nb_destinataires": (exploitant.commandes.exclude(email_client="")
-                             .values("email_client").distinct().count()),
+        "form_annonce": AnnonceForm(),
+        "nb_destinataires": nb_destinataires,
     })

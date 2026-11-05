@@ -26,6 +26,8 @@ urlpatterns = [
     # Espace pro
     path("espace-pro/", views.dashboard, name="dashboard"),
     path("parametres/", views.parametres, name="parametres"),
+    path("parametres/<str:rubrique>/", views.param_rubrique,
+         name="param_rubrique"),
     path("equipe/", views.equipe_manage, name="equipe_manage"),
     path("espace-produits/", views.product_list, name="product_list"),
     path("espace-produits/ajouter/", views.produit_creer,
@@ -60,6 +62,8 @@ urlpatterns = [
     path("points-livraison/", views.points_manage, name="points_manage"),
     path("publications/", views.publications_manage,
          name="publications_manage"),
+    path("publications/<str:rubrique>/", views.pub_rubrique,
+         name="pub_rubrique"),
 
     # Espace client
     path("profil/", views.profil_client, name="profil_client"),

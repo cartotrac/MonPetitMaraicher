@@ -21,36 +21,49 @@
             aria-controls="nav-principal" aria-expanded="false"
             aria-label="Ouvrir le menu">☰</button>
     <div class="nav-links" id="nav-principal">
-      <a href="{% url 'portal:producer_search' %}" class="nav-chercher {% if request.path == '/recherche/' %}nav-actif{% endif %}" title="Chercher mon producteur local" aria-label="Chercher mon producteur local"><span class="nav-chercher-colis">🧺</span><span class="nav-chercher-loupe">🔍</span></a>
+      <a href="{% url 'portal:producer_search' %}" class="nav-chercher {% if request.path == '/recherche/' %}nav-actif{% endif %}" title="Trouver un producteur local" aria-label="Trouver un producteur local"><span class="nav-chercher-colis">🧺</span><span class="nav-chercher-loupe">🔍</span></a>
       {% if user.is_authenticated %}
         {% if exploitant_courant %}
           <a href="{% url 'portal:dashboard' %}" class="{% if request.path == '/espace-pro/' %}nav-actif{% endif %}">Dashboard</a>
           <div class="nav-gestion">
-            <a class="nav-gestion-titre" href="{% url 'portal:dashboard' %}#produits">Gestion ▾</a>
+            <a class="nav-gestion-titre" href="{% url 'portal:product_list' %}">Gestion ▾</a>
             <div class="nav-gestion-menu">
               <a href="{% url 'portal:product_list' %}">🥕 Produits</a>
-              <a href="{% url 'portal:harvest_list' %}">🧺 Récoltes</a>
               <a href="{% url 'portal:clients_suivi' %}">👤 Mes clients</a>
               <a href="{% url 'portal:order_list' %}">⏳ Commandes</a>
               <a href="{% url 'portal:panier_list' %}">🧺 Paniers</a>
-              {% if user.exploitant %}<a href="{% url 'portal:equipe_manage' %}">👥 Mon équipe</a>{% endif %}
               <a href="{% url 'portal:mes_producteurs' %}">⭐ Mes favoris</a>
             </div>
           </div>
-          <a href="{% url 'portal:publications_manage' %}" class="{% if request.path == '/publications/' %}nav-actif{% endif %}">Publications</a>
-          <a href="{% url 'portal:parametres' %}" class="{% if request.path == '/parametres/' %}nav-actif{% endif %}">⚙️ Paramètres</a>
+          <div class="nav-gestion">
+            <a class="nav-gestion-titre{% if '/recolte' in request.path or '/publications/' in request.path %} nav-actif{% endif %}" href="{% url 'portal:harvest_list' %}">Publications ▾</a>
+            <div class="nav-gestion-menu">
+              <a href="{% url 'portal:harvest_list' %}">🧺 Récoltes</a>
+              <a href="{% url 'portal:pub_rubrique' 'newsletter' %}">✉️ Newsletter</a>
+              <a href="{% url 'portal:pub_rubrique' 'annonces' %}">📌 Annonces</a>
+            </div>
+          </div>
+          <div class="nav-gestion">
+            <a class="nav-gestion-titre{% if '/parametres/' in request.path or '/equipe/' in request.path %} nav-actif{% endif %}" href="{% url 'portal:param_rubrique' 'profil' %}">Paramètres ▾</a>
+            <div class="nav-gestion-menu">
+              <a href="{% url 'portal:param_rubrique' 'profil' %}">👤 Mon profil</a>
+              <a href="{% url 'portal:param_rubrique' 'ferme' %}">🚜 Ma ferme</a>
+              {% if user.exploitant %}<a href="{% url 'portal:equipe_manage' %}">👥 Mon équipe</a>{% endif %}
+              {% if user.exploitant %}<a href="{% url 'portal:param_rubrique' 'messagerie' %}">✉️ Messagerie</a>{% endif %}
+            </div>
+          </div>
         {% else %}
           <a href="{% url 'portal:my_orders' %}" class="{% if request.path == '/mes-commandes/' %}nav-actif{% endif %}">Mes commandes</a>
           <a href="{% url 'portal:mes_producteurs' %}" class="{% if request.path == '/mes-producteurs/' %}nav-actif{% endif %}">Mes producteurs</a>
           <a href="{% url 'portal:profil_client' %}" class="{% if request.path == '/profil/' %}nav-actif{% endif %}">Mon profil</a>
         {% endif %}
         <form class="inline" method="post" action="{% url 'logout' %}">
-          {% csrf_token %}<button class="btn-link" type="submit">Déconnexion</button>
+          {% csrf_token %}<button class="btn" type="submit" title="Se déconnecter" aria-label="Se déconnecter"><span class="pastille-session pastille-verte" aria-hidden="true"></span>Logout</button>
         </form>
       {% else %}
         <a href="{% url 'portal:register_client' %}" class="nav-compte">Devenir client</a>
         <a class="btn btn-outline" href="{% url 'portal:register_producer' %}">Je suis producteur</a>
-        <a class="btn" href="{% url 'login' %}">Connexion</a>
+        <a class="btn" href="{% url 'login' %}" title="Se connecter"><span class="pastille-session pastille-rouge" aria-hidden="true"></span>Login</a>
       {% endif %}
     </div>
   </nav>
@@ -93,8 +106,12 @@
           <a href="{% url 'portal:panier_list' %}">Paniers</a>
           <a href="{% url 'portal:points_manage' %}">Points &amp; créneaux</a>
           <a href="{% url 'portal:clients_suivi' %}">Mes clients</a>
-          <a href="{% url 'portal:publications_manage' %}">Publications</a>
-          <a href="{% url 'portal:parametres' %}">Paramètres</a>
+          <a href="{% url 'portal:harvest_list' %}">Récoltes</a>
+          <a href="{% url 'portal:pub_rubrique' 'newsletter' %}">Newsletter</a>
+          <a href="{% url 'portal:pub_rubrique' 'annonces' %}">Annonces</a>
+          <a href="{% url 'portal:param_rubrique' 'profil' %}">Mon profil</a>
+          <a href="{% url 'portal:param_rubrique' 'ferme' %}">Ma ferme</a>
+          {% if user.exploitant %}<a href="{% url 'portal:equipe_manage' %}">Mon équipe</a>{% endif %}
         {% else %}
           <a href="{% url 'portal:my_orders' %}">Mes commandes</a>
           <a href="{% url 'portal:mes_producteurs' %}">Mes producteurs</a>
