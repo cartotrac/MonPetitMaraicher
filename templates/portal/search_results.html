@@ -85,7 +85,7 @@
         <img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">
       {% endif %}
       <div class="vignette-titre">
-        <span class="badge badge-activite">{{ exploitant.emoji_activite }} {{ exploitant.get_activite_display }}</span>
+        <span class="badge badge-activite vignette-badge-activite" title="{{ exploitant.get_activite_display }}" aria-label="{{ exploitant.get_activite_display }}">{{ exploitant.emoji_activite }}</span>
         <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
       </div>
       {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
@@ -99,13 +99,13 @@
         <a class="btn btn-sm btn-commander" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a></p>
       <div class="vignette-corps">
         {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
-        <div class="vignette-horaires" role="note">
-          <strong>📍 Boutique / points de livraison :</strong>
-          {% for h in exploitant.horaires %}
-            <span>🗓️ {{ h }}</span>
-          {% endfor %}
-          {% if not exploitant.horaires %}<span class="muted">Horaires non renseignés — voir la fiche de la ferme.</span>{% endif %}
-        </div>
+      </div>
+      <div class="vignette-horaires" role="note">
+        <strong>📍 Boutique / points de livraison :</strong>
+        {% for h in exploitant.horaires %}
+          <span>🗓️ {{ h }}</span>
+        {% endfor %}
+        {% if not exploitant.horaires %}<span class="muted">Horaires non renseignés — voir la fiche de la ferme.</span>{% endif %}
       </div>
       {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
     </div>
