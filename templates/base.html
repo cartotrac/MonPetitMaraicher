@@ -13,15 +13,18 @@
 <body data-geojson-url="{% url 'portal:producers_geojson' %}" class="{% if request.GET.apercu %}mode-apercu{% endif %}">
 <header class="site-header">
   <nav class="nav container">
-    <a class="brand" href="{% url 'portal:home' %}">🌱 MonPetitProducteurLocal</a>
+    <div class="nav-gauche">
+      <a class="brand" href="{% url 'portal:home' %}">🌱 MonPetitProducteurLocal</a>
+      <button class="btn-darkmode" type="button" id="btn-darkmode" title="Basculer en mode sombre" aria-label="Basculer en mode sombre">🌙</button>
+    </div>
     <button class="nav-burger" type="button" id="nav-burger"
             aria-controls="nav-principal" aria-expanded="false"
             aria-label="Ouvrir le menu">☰</button>
     <div class="nav-links" id="nav-principal">
-      <a href="{% url 'portal:producer_search' %}" class="nav-chercher" title="Chercher mon producteur local" aria-label="Chercher mon producteur local"><span class="nav-chercher-colis">🧺</span><span class="nav-chercher-loupe">🔍</span></a>
+      <a href="{% url 'portal:producer_search' %}" class="nav-chercher {% if request.path == '/recherche/' %}nav-actif{% endif %}" title="Chercher mon producteur local" aria-label="Chercher mon producteur local"><span class="nav-chercher-colis">🧺</span><span class="nav-chercher-loupe">🔍</span></a>
       {% if user.is_authenticated %}
         {% if exploitant_courant %}
-          <a href="{% url 'portal:dashboard' %}">Dashboard</a>
+          <a href="{% url 'portal:dashboard' %}" class="{% if request.path == '/espace-pro/' %}nav-actif{% endif %}">Dashboard</a>
           <div class="nav-gestion">
             <a class="nav-gestion-titre" href="{% url 'portal:dashboard' %}#produits">Gestion ▾</a>
             <div class="nav-gestion-menu">
@@ -34,18 +37,18 @@
               <a href="{% url 'portal:mes_producteurs' %}">⭐ Mes favoris</a>
             </div>
           </div>
-          <a href="{% url 'portal:publications_manage' %}">Publications</a>
-          <a href="{% url 'portal:parametres' %}">⚙️ Paramètres</a>
+          <a href="{% url 'portal:publications_manage' %}" class="{% if request.path == '/publications/' %}nav-actif{% endif %}">Publications</a>
+          <a href="{% url 'portal:parametres' %}" class="{% if request.path == '/parametres/' %}nav-actif{% endif %}">⚙️ Paramètres</a>
         {% else %}
-          <a href="{% url 'portal:my_orders' %}">Mes commandes</a>
-          <a href="{% url 'portal:mes_producteurs' %}">Mes producteurs</a>
-          <a href="{% url 'portal:profil_client' %}">Mon profil</a>
+          <a href="{% url 'portal:my_orders' %}" class="{% if request.path == '/mes-commandes/' %}nav-actif{% endif %}">Mes commandes</a>
+          <a href="{% url 'portal:mes_producteurs' %}" class="{% if request.path == '/mes-producteurs/' %}nav-actif{% endif %}">Mes producteurs</a>
+          <a href="{% url 'portal:profil_client' %}" class="{% if request.path == '/profil/' %}nav-actif{% endif %}">Mon profil</a>
         {% endif %}
         <form class="inline" method="post" action="{% url 'logout' %}">
           {% csrf_token %}<button class="btn-link" type="submit">Déconnexion</button>
         </form>
       {% else %}
-        <a href="{% url 'portal:register_client' %}">Devenir client</a>
+        <a href="{% url 'portal:register_client' %}" class="nav-compte">Devenir client</a>
         <a class="btn btn-outline" href="{% url 'portal:register_producer' %}">Je suis producteur</a>
         <a class="btn" href="{% url 'login' %}">Connexion</a>
       {% endif %}
@@ -136,6 +139,30 @@
     burger.setAttribute("aria-label",
                          ouvert ? "Fermer le menu" : "Ouvrir le menu");
     burger.textContent = ouvert ? "✕" : "☰";
+  });
+})();
+</script>
+<script>
+/* Mode sombre : bouton rond à côté du titre du site, préférence
+   mémorisée dans le navigateur. */
+(function () {
+  var bouton = document.getElementById("btn-darkmode");
+  if (!bouton) { return; }
+  function appliquer(sombre) {
+    document.documentElement.classList.toggle("dark", sombre);
+    bouton.textContent = sombre ? "☀️" : "🌙";
+    bouton.title = sombre ? "Revenir en mode clair"
+                          : "Basculer en mode sombre";
+  }
+  var sombre = false;
+  try { sombre = localStorage.getItem("mppl_dark") === "1"; }
+  catch (e) { sombre = false; }
+  appliquer(sombre);
+  bouton.addEventListener("click", function () {
+    sombre = !sombre;
+    try { localStorage.setItem("mppl_dark", sombre ? "1" : "0"); }
+    catch (e) {}
+    appliquer(sombre);
   });
 })();
 </script>

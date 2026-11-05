@@ -87,14 +87,13 @@
       <div class="vignette-titre">
         <span class="badge badge-activite vignette-badge-activite" title="{{ exploitant.get_activite_display }}" aria-label="{{ exploitant.get_activite_display }}">{{ exploitant.emoji_activite }}</span>
         <h2><a href="{% url 'portal:producer_detail' exploitant.slug %}">{{ exploitant.nom_ferme }}</a></h2>
+        {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
+        {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
+        {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
+        {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
+        {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
+        {% endif %}
       </div>
-      {% if exploitant.est_demo %}<span class="badge badge-demo">🧪 DÉMO</span>{% endif %}
-      {% if exploitant.mode_production == 'AB' %}<span class="badge badge-ab">Bio (AB)</span>
-      {% elif exploitant.mode_production == 'PERMA' %}<span class="badge badge-perma">Permaculture</span>
-      {% elif exploitant.mode_production == 'PAYSAN' %}<span class="badge badge-paysan">Paysanne</span>
-      {% elif exploitant.mode_production == 'RAISONNE' %}<span class="badge badge-raisonne">Raisonnée</span>
-      {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
-      {% endif %}
       <p class="muted vignette-localite"><span>{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% elif exploitant.departement %} ({{ exploitant.departement }}){% endif %}</span>
         <a class="btn btn-sm btn-commander" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a></p>
       <div class="vignette-reste">
@@ -108,9 +107,10 @@
         </div>
       </div>
       <p class="vignette-pied">
-        <span class="vignette-activite-libelle">{{ exploitant.get_activite_display }}{% if exploitant.siret_valide %} <strong>certifié</strong>{% endif %}</span>
+        <span class="vignette-activite-libelle">{{ exploitant.get_activite_display }}{% if exploitant.siret_valide %} <strong>vérifié</strong>{% endif %}</span>
         {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
       </p>
+      {% if exploitant.est_demo %}<p class="vignette-demo-ligne"><span class="badge badge-demo">🧪 DÉMO</span></p>{% endif %}
     </div>
   {% empty %}
     <p>Aucun producteur ne correspond à votre recherche.</p>
