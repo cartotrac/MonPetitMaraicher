@@ -1,11 +1,17 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load l10n %}
 {% block title %}Recherche — MonPetitProducteurLocal{% endblock %}
 {% block extrahead %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 {% endblock %}
+{% block retour_dashboard %}{% endblock %}
 {% block content %}
 <h1>🔍 Chercher un producteur local</h1>
+<p class="stats-portail">
+  <span class="badge badge-activite">🧑‍🌾 {{ nb_producteurs }} producteur{{ nb_producteurs|pluralize }} inscrit{{ nb_producteurs|pluralize }}</span>
+  <span class="badge badge-ab">👥 {{ nb_clients }} client{{ nb_clients|pluralize }} inscrit{{ nb_clients|pluralize }}</span>
+  <span class="badge badge-demo">👀 {{ nb_visiteurs }} visiteur{{ nb_visiteurs|pluralize }}</span>
+</p>
 <form class="search-bar" method="get" action="{% url 'portal:producer_search' %}">
   <input type="text" name="q" placeholder="Produit, ferme, ville ou code postal…" value="{{ q }}">
   <input type="text" name="dept" placeholder="Dépt. ou code postal (ex : 81)" value="{{ dept }}" size="10">
@@ -28,8 +34,7 @@
 
 <section class="map-section">
   <div class="map-header">
-    <h2>🗺️ Carte des producteurs trouvés</h2>
-    <button id="btn-geoloc" class="btn" type="button">📍 Me géolocaliser</button>
+    <h2 class="map-titre">🗺️ Carte des producteurs trouvés</h2>
   </div>
   {% if carte_data %}
     <div id="carte-recherche" class="map-canvas"></div>
@@ -40,9 +45,10 @@
   {% endif %}
 </section>
 
+<p class="muted" id="compteur-vignettes"></p>
 <div class="grid producers">
   {% for exploitant in exploitants %}
-    <div class="card vignette-producteur">
+    <div class="card vignette-producteur"{% if exploitant.latitude and exploitant.longitude %} data-lat="{{ exploitant.latitude|unlocalize }}" data-lng="{{ exploitant.longitude|unlocalize }}"{% endif %}>
       {% if exploitant.logo %}
         <img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">
       {% endif %}
@@ -56,8 +62,15 @@
       {% elif exploitant.mode_production == 'CONV' %}<span class="badge badge-conventionnelle">Conventionnelle</span>
       {% endif %}
       <p class="muted">{{ exploitant.ville }}{% if exploitant.code_postal %} ({{ exploitant.code_postal }}){% elif exploitant.departement %} ({{ exploitant.departement }}){% endif %}</p>
+      <a class="btn btn-sm btn-commander" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
       {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
-      <a class="btn btn-sm" href="{% url 'portal:order_create' exploitant.slug %}">🛒 Commander</a>
+      <div class="vignette-horaires" role="note">
+        <strong>📍 Boutique / points de livraison :</strong>
+        {% for h in exploitant.horaires %}
+          <span>🗓️ {{ h }}</span>
+        {% endfor %}
+        {% if not exploitant.horaires %}<span class="muted">Horaires non renseignés — voir la fiche de la ferme.</span>{% endif %}
+      </div>
       {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
     </div>
   {% empty %}

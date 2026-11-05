@@ -18,7 +18,7 @@
             aria-controls="nav-principal" aria-expanded="false"
             aria-label="Ouvrir le menu">☰</button>
     <div class="nav-links" id="nav-principal">
-      <a href="{% url 'portal:producer_search' %}">Chercher</a>
+      <a href="{% url 'portal:producer_search' %}" class="nav-chercher" title="Chercher mon producteur local" aria-label="Chercher mon producteur local"><span class="nav-chercher-colis">🧺</span><span class="nav-chercher-loupe">🔍</span></a>
       {% if user.is_authenticated %}
         {% if exploitant_courant %}
           <a href="{% url 'portal:dashboard' %}">Dashboard</a>
@@ -74,8 +74,8 @@
         <p class="footer-admin">
           <span class="muted">Instance animée par</span>
           {% if instance_admin_url %}<a href="{{ instance_admin_url }}" target="_blank" rel="noopener" class="footer-admin-lien">{% endif %}
-            {% if instance_admin_logo %}<img class="footer-admin-logo" src="{{ instance_admin_logo }}" alt="Logo {{ instance_admin_nom }}">{% endif %}
             <strong>{{ instance_admin_nom }}</strong>
+            {% if instance_admin_logo %}<img class="footer-admin-logo" src="{{ instance_admin_logo }}" alt="Logo {{ instance_admin_nom }}">{% endif %}
           {% if instance_admin_url %}</a>{% endif %}
         </p>
       {% endif %}

@@ -863,6 +863,27 @@ class Favori(models.Model):
                 f" ({self.user.username})")
 
 
+class Visiteur(models.Model):
+    """Compteur d'audience minimaliste et RGPD-friendly : une ligne par
+    session anonyme (clé de session, aucune donnée personnelle),
+    créée/mise à jour à chaque rendu de page. Alimente le dénombrement
+    « visiteurs » de la page de recherche."""
+
+    session_key = models.CharField("Clé de session", max_length=40,
+                                   unique=True)
+    premiere_visite = models.DateTimeField("Première visite",
+                                           auto_now_add=True)
+    derniere_visite = models.DateTimeField("Dernière visite",
+                                           auto_now=True)
+
+    class Meta:
+        verbose_name = "Visiteur"
+        verbose_name_plural = "Visiteurs"
+
+    def __str__(self):
+        return f"👀 Visiteur {self.session_key[:8]}…"
+
+
 def exploitant_pour(user):
     """L'exploitation gérée par ce compte, ou None : soit le compte
     propriétaire (Exploitant.user), soit un membre rattaché."""

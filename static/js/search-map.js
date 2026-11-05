@@ -181,18 +181,25 @@ var ACTIVITES = {
 
 /* --------------------------------------------------------------- legende */
 var legend = L.control({ position: "bottomright" });
+var legendSpans = {};   // clés d'activité -> <span> pour mise à jour des comptes
 legend.onAdd = function () {
   var div = L.DomUtil.create("div", "map-legend");
   /* Symboles par activité (identiques aux marqueurs et aux vignettes) —
      seuls symboles affichés : le filtre par cases à cocher (modes de
-     production) a été retiré pour alléger la légende. */
+     production) a été retiré pour alléger la légende. Chaque ligne
+     porte le dénombrement des entités VISIBLES dans l'emprise. */
   var symboles = document.createElement("div");
   symboles.className = "legend-symbole";
   symboles.innerHTML = Object.keys(ACTIVITES).map(function (cle) {
-    var libelle = ACTIVITES[cle].split(" ");
-    return "<span>" + libelle[0] + " " + libelle.slice(1).join(" ") + "</span>";
+    return '<span data-activite="' + cle + '">' + ACTIVITES[cle] +
+           ' <em class="legend-nb"></em></span>';
   }).join("");
   div.appendChild(symboles);
+  Array.prototype.forEach.call(
+    symboles.querySelectorAll("span[data-activite]"), function (s) {
+      legendSpans[s.getAttribute("data-activite")] =
+        s.querySelector(".legend-nb");
+    });
   return div;
 };
 legend.addTo(carte);
@@ -223,9 +230,50 @@ exploitants.forEach(function (e) {
     '<br><a href="' + e.url + '">Voir la ferme →</a>'
   );
   marker._category = e.mode_production;
+  marker._activite = e.activite;
   markers.push(marker);
   carte.addLayer(marker);
 });
+
+/* --------------------------- filtre spatial dynamique + dénombrements */
+/* Légende : compte des marqueurs par activité DANS l'emprise courante ;
+   vignettes : seules celles dans l'emprise restent affichées. */
+function majEmprise() {
+  var bornes = carte.getBounds();
+  var comptes = {};
+  var visibles = 0, total = 0;
+  markers.forEach(function (m) {
+    if (bornes.contains(m.getLatLng())) {
+      comptes[m._activite] = (comptes[m._activite] || 0) + 1;
+      visibles += 1;
+    }
+  });
+  Object.keys(ACTIVITES).forEach(function (cle) {
+    var nb = comptes[cle] || 0;
+    if (legendSpans[cle]) {
+      legendSpans[cle].textContent = "(" + nb + ")";
+      legendSpans[cle].parentNode.style.opacity = nb ? 1 : 0.45;
+    }
+  });
+  var cartes = document.querySelectorAll(
+    ".vignette-producteur[data-lat]");
+  cartes.forEach(function (card) {
+    total += 1;
+    var lat = parseFloat(card.getAttribute("data-lat"));
+    var lng = parseFloat(card.getAttribute("data-lng"));
+    card.classList.toggle(
+      "hors-carte", !bornes.contains(L.latLng(lat, lng)));
+  });
+  var compteur = document.getElementById("compteur-vignettes");
+  if (compteur) {
+    compteur.textContent =
+      visibles + " ferme" + (visibles > 1 ? "s" : "") +
+      " dans l'emprise de la carte" +
+      (visibles < markers.length
+       ? " — déplacez ou zoomez la carte pour les voir toutes." : ".");
+  }
+}
+carte.on("moveend zoomend", majEmprise);
 
 // Cadrer la carte sur les résultats
 if (exploitants.length) {
@@ -233,20 +281,37 @@ if (exploitants.length) {
   exploitants.forEach(function (e) { bornes.push([e.latitude, e.longitude]); });
   carte.fitBounds(bornes, { padding: [30, 30], maxZoom: 12 });
 }
+carte.whenReady(majEmprise);
 
-document.getElementById("btn-geoloc").addEventListener("click", function () {
-  if (!navigator.geolocation) {
-    alert("La géolocalisation n'est pas supportée par votre navigateur.");
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(
-    function (pos) {
-      carte.setView([pos.coords.latitude, pos.coords.longitude], 11);
-      L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
-        radius: 6, color: "#c62828", fillColor: "#ef5350", fillOpacity: 0.9
-      }).addTo(carte).bindPopup("Vous êtes ici").openPopup();
-    },
-    function () { alert("Position non disponible."); },
-    { timeout: 10000 }
-  );
-});
+/* ----------------------------------------------- géolocalisation (cible) */
+/* Bouton « 🎯 Me géolocaliser » directement SUR la carte (haut droite),
+   symbole seul avec info-bulle au survol. */
+var geolocCtrl = L.control({ position: "topright" });
+geolocCtrl.onAdd = function () {
+  var div = L.DomUtil.create("div",
+    "leaflet-bar leaflet-control ctrl-geoloc");
+  var btn = L.DomUtil.create("button", "btn-geoloc-cible", div);
+  btn.type = "button";
+  btn.title = "Me géolocaliser";
+  btn.setAttribute("aria-label", "Me géolocaliser");
+  btn.textContent = "🎯";
+  L.DomEvent.disableClickPropagation(div);
+  btn.addEventListener("click", function () {
+    if (!navigator.geolocation) {
+      alert("La géolocalisation n'est pas supportée par votre navigateur.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        carte.setView([pos.coords.latitude, pos.coords.longitude], 11);
+        L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
+          radius: 6, color: "#c62828", fillColor: "#ef5350", fillOpacity: 0.9
+        }).addTo(carte).bindPopup("Vous êtes ici").openPopup();
+      },
+      function () { alert("Position non disponible."); },
+      { timeout: 10000 }
+    );
+  });
+  return div;
+};
+geolocCtrl.addTo(carte);

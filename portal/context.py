@@ -8,8 +8,9 @@ catalogue) des membres limités à la gestion courante.
 """
 
 from django.conf import settings
+from django.utils import timezone
 
-from .models import exploitant_pour
+from .models import Visiteur, exploitant_pour
 
 
 def exploitant_contexte(request):
@@ -24,8 +25,21 @@ def exploitant_contexte(request):
 
 def instance_contexte(request):
     """Identité de l'admin de l'instance (pied de page, mentions légales) :
-    réglable via settings.INSTANCE_ADMIN sans toucher aux templates."""
+    réglable via settings.INSTANCE_ADMIN sans toucher aux templates.
+    Compte aussi les visiteurs : une ligne par session anonyme, sans
+    donnée personnelle (RGPD)."""
     admin = getattr(settings, "INSTANCE_ADMIN", None) or {}
+    try:
+        cle = request.session.session_key
+        if not cle:
+            request.session.save()
+            cle = request.session.session_key
+        if cle:
+            Visiteur.objects.update_or_create(
+                session_key=cle,
+                defaults={"derniere_visite": timezone.now()})
+    except Exception:
+        pass  # comptage d'audience : jamais bloquant pour l'affichage
     return {
         "instance_admin_nom": admin.get("nom", ""),
         "instance_admin_url": admin.get("url", ""),

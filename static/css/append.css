@@ -396,3 +396,48 @@ details.panier-bloc > summary::-webkit-details-marker { display: none; }
   box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 .site-footer .footer-plan { margin-top: 0.9rem; }
+
+/* ===== En-tête : toujours AU-DESSUS de la carte Leaflet ===== */
+.site-header { position: relative; z-index: 1200; }
+
+/* ===== Bandeau : icône « loupe sur un colis » ===== */
+.nav-chercher {
+  position: relative; display: inline-flex; align-items: center;
+  text-decoration: none; padding: 0 0.15rem;
+}
+.nav-chercher-colis { font-size: 1.25rem; line-height: 1; }
+.nav-chercher-loupe {
+  font-size: 0.78rem; line-height: 1;
+  margin-left: -0.28rem; margin-top: -0.45rem;
+}
+
+/* ===== Page Chercher : stats + carte ===== */
+.stats-portail { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0 1rem; }
+.map-header { justify-content: center; text-align: center; }
+.map-titre { margin: 0 auto; }
+.ctrl-geoloc .btn-geoloc-cible {
+  font-size: 1.2rem; line-height: 1.2;
+  background: #fff; border: 0; cursor: pointer;
+  padding: 6px 8px;
+}
+.ctrl-geoloc .btn-geoloc-cible:hover { background: #f5f5f5; }
+.legend-symbole span { transition: opacity 0.2s; }
+.legend-nb { font-style: normal; font-weight: 600; opacity: 0.8; }
+
+/* ===== Vignettes : filtre spatial + horaires au survol ===== */
+.vignette-producteur.hors-carte { display: none; }
+.vignette-horaires {
+  display: none; margin-top: 0.5rem; padding: 0.5rem 0.6rem;
+  border: 1px dashed #bdb76b; border-radius: 8px;
+  background: #fffdf3; font-size: 0.88rem;
+}
+.vignette-horaires span { display: block; }
+.vignette-producteur:hover .vignette-horaires { display: block; }
+.btn-commander { margin: 0.25rem 0 0.4rem; }
+
+/* ===== Footer : lisibilité du plan du site (texte foncé sur fond clair) */
+.site-footer, .site-footer p { color: #33281a; }
+.site-footer .footer-plan a,
+.site-footer a { color: #38551f; opacity: 1; }
+.site-footer .footer-plan a:hover,
+.site-footer a:hover { color: #1b3a00; text-decoration: underline; }

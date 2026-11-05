@@ -112,7 +112,7 @@ TIME_ZONE = "Europe/Paris"
 # Admin de l'instance : affiché en pied de page (logo distant + nom
 # cliquable) et sur la page des mentions légales.
 INSTANCE_ADMIN = {
-    "nom": "CartoTrac",
+    "nom": "CartOtraC",
     "url": "https://www.cartotrac.fr",
     "logo": "https://www.cartotrac.fr/assets/img/porteurs/logos/CartOtraC.png",
 }

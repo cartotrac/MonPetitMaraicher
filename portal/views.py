@@ -28,7 +28,7 @@ from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
                     LigneRecolte, MembreExploitation, Panier,
                     ParametresVitrine, PointLivraison, PreferenceContact,
                     Produit, ProduitStandard, ProfilClient, SemaineRecolte,
-                    exploitant_pour)
+                    Visiteur, exploitant_pour)
 from .notifications import envoyer_sms, notifier_client
 from .management.commands.charger_catalogues_activites import (
     emoji_pour_nom)
@@ -89,6 +89,26 @@ def producer_search(request):
     if activite:
         exploitants = exploitants.filter(activite=activite)
     exploitants = list(exploitants)
+    # Dénombrements affichés à côté du titre : producteurs visibles,
+    # clients inscrits (comptes non pro), visiteurs (sessions anonymes).
+    nb_clients = (User.objects
+                  .filter(exploitant__isnull=True,
+                          membre_exploitation__isnull=True).count())
+    nb_visiteurs = Visiteur.objects.count()
+    # Horaires de retrait / boutique : créneaux récurrents par ferme,
+    # affichés au survol des vignettes.
+    horaires = {}
+    for c in (CreneauLivraison.objects
+              .filter(exploitant__in=exploitants)
+              .select_related("point_livraison")
+              .order_by("jour", "heure_debut")):
+        horaires.setdefault(c.exploitant_id, []).append(
+            f"{c.get_jour_display()} "
+            f"{c.heure_debut.strftime('%H:%M')}–"
+            f"{c.heure_fin.strftime('%H:%M')}"
+            + (f" — {c.point_livraison.nom}" if c.point_livraison else ""))
+    for e in exploitants:
+        e.horaires = horaires.get(e.pk, [])
     # Données carto : uniquement les résultats filtrés avec coordonnées.
     carte_data = [{
         "nom_ferme": e.nom_ferme,
@@ -105,6 +125,9 @@ def producer_search(request):
         "exploitants": exploitants,
         "carte_data": carte_data,
         "activites": Exploitant.Activite.choices,
+        "nb_producteurs": Exploitant.objects.filter(visible=True).count(),
+        "nb_clients": nb_clients,
+        "nb_visiteurs": nb_visiteurs,
         "q": q, "dept": dept, "mode": mode, "activite": activite,
     })
 
