@@ -58,6 +58,7 @@ from itertools import count
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
+from django.db import connection
 from django.utils.text import slugify
 from django.utils import timezone
 
@@ -67,6 +68,24 @@ from portal.models import (Bulletin, Categorie, Commande, CreneauLivraison,
                            ProduitStandard, ProfilClient, SemaineRecolte)
 
 MOT_DE_PASSE_DEMO = "demo1234!"
+
+# Tables dont les séquences (PostgreSQL) sont réinitialisées après
+# un effacement des commandes / paniers : les nouveaux objets
+# repartent des index 1 au lieu de continuer la numérotation.
+TABLES_SEQUENCE = ("portal_commande", "portal_panier",
+                   "portal_lignecommande", "portal_lignepanier")
+
+
+def reinitialiser_sequences():
+    """Repositionne les compteurs d'id de PostgreSQL à 1 pour les
+    tables de commandes et paniers (sans effet sur les autres SGBD)."""
+    if connection.vendor != "postgresql":
+        return
+    with connection.cursor() as curseur:
+        for table in TABLES_SEQUENCE:
+            curseur.execute(
+                "SELECT setval(pg_get_serial_sequence(%s, 'id'), 1, false)",
+                [table])
 
 
 def _siret_valide(prefixe13):
@@ -884,9 +903,11 @@ class Command(BaseCommand):
             nb_commandes = Commande.objects.count()
             Panier.objects.all().delete()
             Commande.objects.all().delete()
+            reinitialiser_sequences()
             self.stdout.write(self.style.SUCCESS(
                 f"Commandes et paniers effacés : {nb_commandes} "
-                f"commande(s), {nb_paniers} panier(s) supprimé(s)."))
+                f"commande(s), {nb_paniers} panier(s) supprimé(s), "
+                "index réinitialisés."))
         elif reset_demo:
             # Nettoyage courant : seules les commandes et paniers des
             # fermes de DÉMONSTRATION sont effacés — les commandes
@@ -897,10 +918,11 @@ class Command(BaseCommand):
                 exploitant__est_demo=True).count()
             Panier.objects.filter(exploitant__est_demo=True).delete()
             Commande.objects.filter(exploitant__est_demo=True).delete()
+            reinitialiser_sequences()
             self.stdout.write(self.style.SUCCESS(
                 f"Commandes et paniers de DÉMO effacés : {nb_commandes} "
                 f"commande(s), {nb_paniers} panier(s) — les commandes "
-                "réelles sont conservées."))
+                "réelles sont conservées, index réinitialisés."))
 
         clients = self._clients()
         for spec in FERMES:
@@ -934,6 +956,12 @@ class Command(BaseCommand):
                            trois, Commande.Statut.VALIDEE, jours=-2,
                            panier_statut=Panier.Statut.LIVRE,
                            quantite_livree=ajuste)
+            # 5. Panier PRÊT pour le compte client d'essai (demo.public)
+            #    → permet de tester « Valider la réception ».
+            if len(clients) > 2:
+                self._commande(exploitant, produits, points[0], clients[2],
+                               deux, Commande.Statut.VALIDEE, jours=6,
+                               panier_statut=Panier.Statut.PRET)
         self.stdout.write(self.style.SUCCESS(
             f"Démonstration prête : {len(FERMES)} fermes fictives "
             "(Tarn et départements limitrophes, Bretagne, Loire, Corse, "

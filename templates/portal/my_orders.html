@@ -82,7 +82,12 @@
      voir le détail et ajuster vos quantités tant que le producteur ne l'a
      pas validée. Refus du producteur et annulation client sont regroupées
      dans le filtre rouge.</p>
-  {% regroup resultats by commande.date_livraison as jours %}
+  {% for section in sections %}
+  <h2 class="my-orders-section">{{ section.titre }} <span class="muted">({{ section.resultats|length }})</span></h2>
+  {% if not section.resultats %}
+    <p class="card etat-vide"><span class="etat-vide-emoji">{% if forloop.first %}🌱{% else %}🗄️{% endif %}</span>{{ section.vide }}</p>
+  {% endif %}
+  {% regroup section.resultats by commande.date_livraison as jours %}
   {% for jour in jours %}
     <details class="groupe-jour {% if jour.grouper < today %}cal-passe{% elif jour.grouper == today %}cal-courante{% else %}cal-avenir{% endif %}" {% if forloop.first %}open{% endif %}>
       <summary>📅 {{ jour.grouper|date:"l d F Y" }}
@@ -195,6 +200,7 @@
        Vous n'avez pas encore de commande{% if filtre %} avec ce filtre{% endif %}.
        Trouvez un producteur près de chez vous et commandez sa récolte de la semaine !
        <a class="btn" href="{% url 'portal:producer_search' %}">🔎 Trouver un producteur</a></p>
+  {% endfor %}
   {% endfor %}
 {% endif %}
 {% endblock %}

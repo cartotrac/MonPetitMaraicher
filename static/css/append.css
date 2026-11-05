@@ -780,3 +780,65 @@ html.dark input[type="checkbox"], html.dark input[type="radio"] {
   accent-color: #9ccc65;
 }
 html.dark select option { background: #2e3826; color: #e6e4da; }
+
+/* ===== Mes commandes : rubriques En cours / Historique ===== */
+.my-orders-section {
+  margin: 1.4rem 0 0.5rem; font-size: 1.15rem; color: #2e5d1a;
+  border-bottom: 2px solid #d7e6c8; padding-bottom: 0.25rem;
+}
+html.dark .my-orders-section { color: #c5e1a5; border-bottom-color: #4e5f3f; }
+
+/* ===== Vignettes : badge DÉMO aligné dans le pied ===== */
+.vignette-pied .vignette-demo-badge {
+  flex-shrink: 0; border-radius: 999px; font-size: 0.7rem;
+  padding: 0.15rem 0.5rem; margin: 0;
+}
+
+/* ===== Dashboard : calendrier hebdomadaire des récoltes ===== */
+.cal-semaines { gap: 0.8rem; }
+.cal-semaines .cal-semaine {
+  display: block; padding: 0.75rem 0.9rem; min-height: 5.2rem;
+  border: 1px solid #cfd8c3; border-radius: 10px;
+  background: #ffffff; text-decoration: none; color: inherit;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+              border-color 0.15s ease;
+}
+.cal-semaines .cal-semaine:hover {
+  transform: translateY(-2px); border-color: #7ea25e;
+  box-shadow: 0 5px 12px rgba(0,0,0,0.14); text-decoration: none;
+}
+.cal-semaines .cal-semaine .cal-dates { font-weight: 700; font-size: 0.95rem; }
+.cal-semaines .cal-semaine .cal-etat { margin-top: 0.3rem; display: inline-block; }
+html.dark .cal-semaines .cal-semaine {
+  background: #26301f; border-color: #3f4d34; color: #e6e4da;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+}
+html.dark .cal-semaines .cal-semaine:hover {
+  border-color: #8fae76; background: #2d3a23; color: #ffffff;
+}
+html.dark .cal-semaines .cal-semaine .muted { color: #aab599 !important; }
+
+/* ===== Calendrier client (Mes commandes) : ergonomie et dark ===== */
+.cal-nav .btn { min-width: 10rem; text-align: center; }
+.cal-jour { border-radius: 8px; }
+.cal-jour h3 { font-size: 0.9rem; margin: 0 0 0.3rem; }
+.cal-evt { font-size: 0.85rem; }
+html.dark .cal-jour { background: #26301f !important; border-color: #3f4d34; }
+html.dark .cal-jour h3 { color: #e6e4da; }
+html.dark .cal-jour .cal-evt a { color: #aed581; }
+html.dark .cal-jour.cal-courante { background: #2c3d22 !important;
+                                   border-color: #66915b; }
+
+/* ===== Dark : récolte de la semaine de la vitrine (aperçu) ===== */
+html.dark section.cal-courante {
+  background: #20301c; color: #e6e4da;
+  border: 1px solid #4e6b3a; border-radius: 0.6rem;
+}
+html.dark section.cal-courante h2, html.dark section.cal-courante h3 {
+  color: #c5e1a5;
+}
+html.dark section.cal-courante .muted { color: #aab599 !important; }
+html.dark .card.cal-avenir { background: #26301f; color: #e6e4da;
+                             border-color: #3f4d34; }
+html.dark .meteo-hero { background: #26301f !important; color: #e6e4da; }

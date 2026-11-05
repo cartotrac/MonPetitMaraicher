@@ -1896,6 +1896,7 @@ def points_manage(request):
     points = (exploitant.points_livraison
               .prefetch_related("creneaux").order_by("ville", "nom"))
     return render(request, "portal/pro/points.html", {
+        "exploitant": exploitant,
         "points": points,
         "jours": CreneauLivraison._meta.get_field("jour").choices,
         "frequences": CreneauLivraison.Frequence.choices,
@@ -2487,9 +2488,35 @@ def my_orders(request):
         (code, "à traiter" if code == Commande.Statut.NOUVELLE
          else libelle.lower())
         for code, libelle in Commande.Statut.choices]
+    # Deux rubriques : commandes et paniers EN COURS (à traiter,
+    # en préparation ou prêts) vs HISTORIQUE (livrés, retirés,
+    # refusés, annulés).
+    en_cours, historique = [], []
+    for resultat in resultats:
+        commande = resultat["commande"]
+        panier = resultat["panier"]
+        active = (commande.statut in (Commande.Statut.NOUVELLE,
+                                     Commande.Statut.VALIDEE)
+                  and (panier is None
+                       or panier.statut in (Panier.Statut.PREPARATION,
+                                            Panier.Statut.PRET)))
+        (en_cours if active else historique).append(resultat)
+    sections = [
+        {"titre": "🔄 Commandes et paniers en cours",
+         "resultats": en_cours,
+         "vide": "Aucune commande en cours : trouvez un producteur "
+                 "et passez votre première commande !"},
+        {"titre": "🗄️ Historique des commandes et paniers",
+         "resultats": historique,
+         "vide": "Pas encore d'historique : vos commandes livrées, "
+                 "paniers retirés et commandes clôturées "
+                 "apparaîtront ici."},
+    ]
     return render(request, "portal/my_orders.html", {
         "mode": "liste", "filtre": filtre,
         "today": timezone.localdate(),
+        "resultats": resultats,
+        "sections": sections,
         "jours_badges": _badges_par_jour(commandes, "statut", statuts_client),
     })
 

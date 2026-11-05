@@ -30,7 +30,7 @@ Attend la variable « exploitant ».
   </div>
   <p class="vignette-pied">
     <span class="vignette-activite-libelle">{{ exploitant.get_activite_display }}{% if exploitant.siret_valide %} <strong>vérifié</strong>{% endif %}</span>
+    {% if exploitant.est_demo %}<span class="badge badge-demo vignette-demo-badge">🧪 DÉMO</span>{% endif %}
     {% if exploitant.siret_valide %}<span class="medaille-siret" title="SIRET vérifié">✓</span>{% endif %}
   </p>
-  {% if exploitant.est_demo %}<p class="vignette-demo-ligne"><span class="badge badge-demo">🧪 DÉMO</span></p>{% endif %}
 </div>
