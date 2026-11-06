@@ -19,8 +19,9 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 
-from portal.models import (Categorie, Exploitant, LigneRecolte,
-                           Produit, ProduitStandard, SemaineRecolte)
+from portal.models import (Categorie, Exploitant, LigneCommande,
+                           LignePanier, LigneRecolte, Panier, Produit,
+                           ProduitStandard, SemaineRecolte)
 
 CONSERVERIES = [
     ("demo.conserverie.sor", Decimal("4.20"),
@@ -46,12 +47,22 @@ class Command(BaseCommand):
                 continue
             exploitant = user.exploitant
 
-            # 1. Produits hors catalogue conserverie (cascade : les
-            #    lignes de récolte et commandes les référençant partent)
-            supprimes = Produit.objects.filter(
+            # 1. Produits hors catalogue conserverie. Les lignes de
+            #    commande et de panier les protègent (FK PROTECT) :
+            #    on supprime d'abord ces lignes (et les paniers qui
+            #    se retrouvent vides), puis les produits.
+            hors_catalogue = Produit.objects.filter(
                 exploitant=exploitant).exclude(
                 origine_standard__activite=(
-                    Exploitant.Activite.CONSERVERIE)).delete()[0]
+                    Exploitant.Activite.CONSERVERIE))
+            nb_lc, _ = LigneCommande.objects.filter(
+                produit__in=hors_catalogue).delete()
+            nb_lp, _ = LignePanier.objects.filter(
+                produit__in=hors_catalogue).delete()
+            # Paniers vidés par ces suppressions (et paniers vides)
+            Panier.objects.filter(
+                exploitant=exploitant, lignes__isnull=True).delete()
+            supprimes = hors_catalogue.delete()[0]
 
             # 2. Catalogue conserverie complet (même logique que
             #    peupler_demo : catégorie type par produit, prix
@@ -111,5 +122,7 @@ class Command(BaseCommand):
 
             self.stdout.write(self.style.SUCCESS(
                 f"🥫 {exploitant.nom_ferme} : {supprimes} produit(s) "
-                f"hors conserverie retiré(s), {len(produits)} produits "
-                "conserverie, production de la semaine reconstruite."))
+                f"hors conserverie retiré(s) ({nb_lc} ligne(s) de "
+                f"commande, {nb_lp} ligne(s) de panier), {len(produits)} "
+                "produits conserverie, production de la semaine "
+                "reconstruite."))
