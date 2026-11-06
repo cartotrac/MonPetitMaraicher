@@ -228,7 +228,7 @@ exploitants.forEach(function (e) {
     (activite ? '<br><span class="muted">' + activite + "</span>" : "") +
     badgeDemo +
     "<br>" + (e.ville || "") +
-    '<br><a href="' + e.url + '">Voir la ferme →</a>'
+    '<br><a href="' + e.url + '">Nos Produits →</a>'
   );
   marker._category = e.mode_production;
   marker._activite = e.activite;

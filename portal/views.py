@@ -64,9 +64,19 @@ def home(request):
     return render(request, "portal/home.html", {"exploitants": exploitants})
 
 
-def _recherche_producteurs(q, dept, mode, activite):
+def _recherche_producteurs(q, dept, modes, activites):
     """Jeu de critères -> queryset d'exploitants visibles (partagé par
-    la recherche simple et par les filtres combinés enregistrés)."""
+    la recherche simple et par les filtres combinés enregistrés).
+    « modes » et « activites » acceptent une ou plusieurs valeurs
+    (listes à choix multiple) : la sélection s'additionne (ex : Bio OU
+    Permaculture), les autres critères se croisent."""
+    # Tolère les valeurs uniques héritées (chaîne ou listes plates)
+    if isinstance(modes, str):
+        modes = [modes] if modes else []
+    if isinstance(activites, str):
+        activites = [activites] if activites else []
+    modes = [m for m in modes if m]
+    activites = [a for a in activites if a]
     exploitants = Exploitant.objects.filter(visible=True)
     if q:
         exploitants = exploitants.filter(
@@ -82,10 +92,10 @@ def _recherche_producteurs(q, dept, mode, activite):
         exploitants = exploitants.filter(
             Q(departement__iexact=dept)
             | Q(code_postal__istartswith=dept)).distinct()
-    if mode:
-        exploitants = exploitants.filter(mode_production=mode)
-    if activite:
-        exploitants = exploitants.filter(activite=activite)
+    if modes:
+        exploitants = exploitants.filter(mode_production__in=modes)
+    if activites:
+        exploitants = exploitants.filter(activite__in=activites)
     return exploitants
 
 
@@ -118,19 +128,28 @@ def producer_search(request):
         # Cumul / agrégat de plusieurs filtres enregistrés
         cumul = None
         for qs_comb in combinaisons[:10]:
-            params = dict(parse_qsl(qs_comb, keep_blank_values=True))
+            brut = parse_qsl(qs_comb, keep_blank_values=True)
+            params = {}
+            for cle, valeur in brut:
+                params.setdefault(cle, []).append(valeur)
             jeu = _recherche_producteurs(
-                params.get("q", ""), params.get("dept", ""),
-                params.get("mode", ""), params.get("activite", ""))
+                (params.get("q") or [""])[0].strip(),
+                (params.get("dept") or [""])[0].strip(),
+                params.get("mode", []), params.get("activite", []))
             cumul = jeu if cumul is None else (cumul | jeu)
         exploitants = (cumul or Exploitant.objects.none()).distinct()
-        q = dept = mode = activite = ""
+        q = dept = ""
+        mode_choisi = activite_choisie = []
     else:
         q = request.GET.get("q", "").strip()
         dept = request.GET.get("dept", "").strip()
-        mode = request.GET.get("mode", "").strip()
-        activite = request.GET.get("activite", "").strip()
-        exploitants = _recherche_producteurs(q, dept, mode, activite)
+        # Listes à choix multiple : Ctrl/clic pour combiner plusieurs
+        # modes de production ou activités dans une même recherche.
+        mode_choisi = [m for m in request.GET.getlist("mode") if m.strip()]
+        activite_choisie = [a for a in request.GET.getlist("activite")
+                            if a.strip()]
+        exploitants = _recherche_producteurs(
+            q, dept, mode_choisi, activite_choisie)
     exploitants = list(exploitants.order_by("nom_ferme"))
     # Dénombrements affichés à côté du titre : producteurs visibles,
     # clients inscrits (comptes non pro), visiteurs (sessions anonymes),
@@ -197,7 +216,8 @@ def producer_search(request):
         "graph_producteurs": graphs["producteurs"],
         "graph_clients": graphs["clients"],
         "graph_visiteurs": graphs["visiteurs"],
-        "q": q, "dept": dept, "mode": mode, "activite": activite,
+        "q": q, "dept": dept,
+        "mode_choisi": mode_choisi, "activite_choisie": activite_choisie,
         "favoris_slugs": favoris_slugs,
     })
 

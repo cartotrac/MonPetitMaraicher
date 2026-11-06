@@ -47,22 +47,23 @@
 <form class="search-bar" method="get" action="{% url 'portal:producer_search' %}">
   <input type="text" name="q" placeholder="Produit, ferme, ville ou code postal…" value="{{ q }}">
   <input type="text" name="dept" placeholder="Dépt. ou code postal (ex : 81)" value="{{ dept }}" size="10">
-  <select name="activite">
-    <option value="">Toutes les activités</option>
+  <select name="activite" multiple size="5" class="multi-choix" aria-label="Activités (choix multiple)">
     {% for code, libelle in activites %}
-      <option value="{{ code }}" {% if activite == code %}selected{% endif %}>{{ libelle }}</option>
+      <option value="{{ code }}"{% if code in activite_choisie %} selected{% endif %}>{{ libelle }}</option>
     {% endfor %}
   </select>
-  <select name="mode">
-    <option value="">Tous les modes de production</option>
-    <option value="AB" {% if mode == 'AB' %}selected{% endif %}>Bio (AB)</option>
-    <option value="PERMA" {% if mode == 'PERMA' %}selected{% endif %}>Permaculture</option>
-    <option value="PAYSAN" {% if mode == 'PAYSAN' %}selected{% endif %}>Agriculture paysanne</option>
-    <option value="RAISONNE" {% if mode == 'RAISONNE' %}selected{% endif %}>Raisonnée</option>
-    <option value="CONV" {% if mode == 'CONV' %}selected{% endif %}>Conventionnelle</option>
+  <select name="mode" multiple size="5" class="multi-choix" aria-label="Modes de production (choix multiple)">
+    <option value="AB"{% if 'AB' in mode_choisi %} selected{% endif %}>Bio (AB)</option>
+    <option value="PERMA"{% if 'PERMA' in mode_choisi %} selected{% endif %}>Permaculture</option>
+    <option value="PAYSAN"{% if 'PAYSAN' in mode_choisi %} selected{% endif %}>Agriculture paysanne</option>
+    <option value="RAISONNE"{% if 'RAISONNE' in mode_choisi %} selected{% endif %}>Raisonnée</option>
+    <option value="CONV"{% if 'CONV' in mode_choisi %} selected{% endif %}>Conventionnelle</option>
   </select>
   <button class="btn" type="submit">Filtrer</button>
 </form>
+<p class="muted">Activités et modes de production : <strong>choix
+   multiple</strong> (Ctrl + clic ou clic + glisser sous Windows,
+   Cmd + clic sur Mac) — aucun choix = tout afficher.</p>
 <div id="filtres-sauvegardes" class="filtres-sauvegardes" data-url="{% url 'portal:producer_search' %}"></div>
 
 <section class="map-section">
@@ -176,22 +177,48 @@
     var morceaux = [];
     if (valeurs.q) morceaux.push("« " + valeurs.q + " »");
     if (valeurs.dept) morceaux.push("📍 " + valeurs.dept);
-    if (valeurs.mode) morceaux.push(valeurs.mode);
-    if (valeurs.activite) morceaux.push(valeurs.activite);
+    if (valeurs.mode) {
+      morceaux.push(Array.isArray(valeurs.mode)
+        ? valeurs.mode.join(" + ") : valeurs.mode);
+    }
+    if (valeurs.activite) {
+      morceaux.push(Array.isArray(valeurs.activite)
+        ? valeurs.activite.join(" + ") : valeurs.activite);
+    }
     return morceaux.join(" · ") || "Tous les producteurs";
   }
   function courants() {
     var vals = {};
-    ["q", "dept", "mode", "activite"].forEach(function (nom) {
+    ["q", "dept"].forEach(function (nom) {
       var champ = form.elements[nom];
       if (champ && champ.value.trim()) vals[nom] = champ.value.trim();
+    });
+    /* Listes à choix multiple : on relève toutes les options
+       sélectionnées (Ctrl/clic, ou tout désélectionner = tout). */
+    ["mode", "activite"].forEach(function (nom) {
+      var champ = form.elements[nom];
+      if (!champ) return;
+      if (champ.multiple) {
+        var sel = Array.prototype.slice.call(champ.selectedOptions)
+          .map(function (o) { return o.value.trim(); })
+          .filter(Boolean);
+        if (sel.length) vals[nom] = sel;
+      } else if (champ.value.trim()) {
+        vals[nom] = champ.value.trim();
+      }
     });
     return vals;
   }
   function qs(vals) {
     var morceaux = [];
     Object.keys(vals).forEach(function (k) {
-      morceaux.push(encodeURIComponent(k) + "=" + encodeURIComponent(vals[k]));
+      if (Array.isArray(vals[k])) {
+        vals[k].forEach(function (v) {
+          morceaux.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
+        });
+      } else {
+        morceaux.push(encodeURIComponent(k) + "=" + encodeURIComponent(vals[k]));
+      }
     });
     return morceaux.join("&");
   }
