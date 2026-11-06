@@ -1,10 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Mon profil — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 <h1>👤 Mon profil</h1>
 <p class="muted">Votre identité de compte individuel : prénom, nom,
-   e-mail, téléphone et photo (lien externe). Modifier votre nom met à
-   jour toutes vos commandes et paniers passés.</p>
+   e-mail, téléphone et photo (lien externe). Ces informations servent
+   aux clients et aux autres producteurs pour vous identifier et vous
+   contacter. Modifier votre nom met à jour toutes vos commandes et
+   paniers passés — exactement comme sur le profil du compte client :
+   seuls vos droits diffèrent.</p>
 
 <section class="harvest-bloc">
   <div class="card">
@@ -14,9 +18,11 @@
     {{ form_profil.as_p }}
     <div class="save-bar">
       <button class="btn" type="submit">💾 Enregistrer mon profil</button>
+      <a class="btn btn-outline" href="{% url 'portal:dashboard' %}">Annuler</a>
     </div>
   </form>
   </div>
 </section>
 
 {% endblock %}
+{% block extrajs %}<script src="{% static 'js/image-picker.js' %}" defer></script>{% endblock %}

@@ -176,6 +176,7 @@ var ACTIVITES = {
   "FROMAGER": "🧀 Fromager·ère",
   "APICULTEUR": "🍯 Apiculteur·rice",
   "MICRO_BRASSEUR": "🍺 Micro-brasseur·euse",
+  "CONSERVERIE": "🥫 Conserverie",
   "AUTRE": "🌾 Autre production locale"
 };
 

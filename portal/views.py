@@ -163,9 +163,18 @@ def producer_search(request):
             f"{c.get_jour_display()} "
             f"{c.heure_debut.strftime('%H:%M')}–"
             f"{c.heure_fin.strftime('%H:%M')}"
-            + (f" — {c.point_livraison.nom}" if c.point_livraison else ""))
+            + (f" — {c.point_livraison.emoji_type} "
+               f"{c.point_livraison.nom}"
+               if c.point_livraison else ""))
     for e in exploitants:
         e.horaires = horaires.get(e.pk, [])
+    # Favoris de l'utilisateur connecté : l'étoile des vignettes est
+    # pleine pour les fermes déjà suivies.
+    favoris_slugs = (
+        list(Favori.objects.filter(
+            user=request.user, exploitant__in=exploitants)
+            .values_list("exploitant__slug", flat=True))
+        if request.user.is_authenticated else [])
     # Données carto : uniquement les résultats filtrés avec coordonnées.
     carte_data = [{
         "nom_ferme": e.nom_ferme,
@@ -189,6 +198,7 @@ def producer_search(request):
         "graph_clients": graphs["clients"],
         "graph_visiteurs": graphs["visiteurs"],
         "q": q, "dept": dept, "mode": mode, "activite": activite,
+        "favoris_slugs": favoris_slugs,
     })
 
 
@@ -315,6 +325,11 @@ def favoris_toggle(request, slug):
         libelle = dict(Favori.Nature.choices).get(nature, "")
         messages.success(request, f"{exploitant.nom_ferme} ajouté à vos "
                          f"favoris ⭐ ({libelle.lower()})")
+    # Depuis une vignette (recherche, favoris), revenir à la page
+    # d'origine au lieu de la vitrine de la ferme.
+    suite = request.POST.get("next", "")
+    if suite.startswith("/"):
+        return redirect(suite)
     return redirect("portal:producer_detail", slug=slug)
 
 
@@ -331,7 +346,9 @@ def _horaires_exploitants(exploitants):
             f"{c.get_jour_display()} "
             f"{c.heure_debut.strftime('%H:%M')}–"
             f"{c.heure_fin.strftime('%H:%M')}"
-            + (f" — {c.point_livraison.nom}" if c.point_livraison else ""))
+            + (f" — {c.point_livraison.emoji_type} "
+               f"{c.point_livraison.nom}"
+               if c.point_livraison else ""))
     for e in exploitants:
         e.horaires = horaires.get(e.pk, [])
 
@@ -351,6 +368,8 @@ def mes_producteurs(request):
         .exclude(pk__in=exploitant_ids)
         .distinct().order_by("nom_ferme"))
     est_pro = exploitant_pour(request.user) is not None
+    favoris_slugs = list(Favori.objects.filter(
+        user=request.user).values_list("exploitant__slug", flat=True))
     if est_pro:
         # Les fermes déjà commandées sont classées « client pro »
         deja = list(deja_commandes)
@@ -364,6 +383,7 @@ def mes_producteurs(request):
             "favoris_fournisseurs": fournisseurs,
             "favoris_clients": clients_pro,
             "deja_commandes": deja,
+            "favoris_slugs": favoris_slugs,
         })
     favoris_clients = [f.exploitant for f in favoris]
     deja = list(deja_commandes)
@@ -372,6 +392,7 @@ def mes_producteurs(request):
         "est_pro": False,
         "favoris": favoris_clients,
         "deja_commandes": deja,
+        "favoris_slugs": favoris_slugs,
     })
 
 
@@ -1811,6 +1832,12 @@ def points_manage(request):
             note = request.POST.get("note", "").strip()
             latitude = _latlon(request.POST.get("latitude"))
             longitude = _latlon(request.POST.get("longitude"))
+            type_point = request.POST.get("type_point", "")
+            if type_point not in PointLivraison.Type.values:
+                type_point = (
+                    PointLivraison.Type.BOUTIQUE
+                    if exploitant.en_mode_boutique
+                    else PointLivraison.Type.LIVRAISON)
             if not nom or not ville:
                 messages.error(request, "Nom et ville du point requis.")
             else:
@@ -1818,9 +1845,12 @@ def points_manage(request):
                     exploitant=exploitant, nom=nom[:150],
                     adresse=adresse[:255], ville=ville[:100],
                     code_postal=code_postal[:10], note=note,
-                    latitude=latitude, longitude=longitude)
+                    latitude=latitude, longitude=longitude,
+                    type_point=type_point)
+                libelle_type = dict(
+                    PointLivraison.Type.choices).get(type_point, "")
                 messages.success(request,
-                                 f"Point « {nom} » créé.")
+                                 f"{libelle_type} « {nom} » créé.")
         elif action == "point_geo":
             # Position du point : géocodée (Nominatim) ou posée sur la
             # carte par le maraîcher — transmise au client au moment de
@@ -1900,6 +1930,7 @@ def points_manage(request):
         "points": points,
         "jours": CreneauLivraison._meta.get_field("jour").choices,
         "frequences": CreneauLivraison.Frequence.choices,
+        "types_points": PointLivraison.Type.choices,
         "creneaux": exploitant.creneaux.select_related("point_livraison"),
         "creneaux_sans_point": exploitant.creneaux
                               .filter(point_livraison__isnull=True),

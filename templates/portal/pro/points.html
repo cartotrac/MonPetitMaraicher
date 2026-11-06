@@ -4,12 +4,18 @@
 {% block extra_style %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
 {% block content %}
 <h1>📍 {{ exploitant.vocab.points }} &amp; {{ exploitant.vocab.creneaux }}</h1>
-<p class="muted">Les {{ exploitant.vocab.point }}s s'affichent sur votre vitrine et sont
-   proposés à la commande. Positionnez chaque point sur la carte (clic ou
-   géocodage de l'adresse) : le client reçoit la localisation dès que son
-   panier passe en prêt ou livré. Les {{ exploitant.vocab.creneaux }} (jour, horaires, fréquence,
-   capacité) cadrent les dates proposées aux clients — en mode boutique,
-   ils font office d'horaires d'ouverture de vos points de vente.</p>
+<p class="muted">Vos lieux de mise en relation avec la clientèle :
+   <strong>📍 points de livraison</strong> (paniers),
+   <strong>🏪 boutiques / points de vente</strong> et
+   <strong>🎪 marchés</strong> — tout producteur peut déclarer des
+   créneaux récurrents sur un marché (stand hebdomadaire, une semaine
+   sur deux, mensuel…). Les points s'affichent sur votre vitrine et
+   sont proposés à la commande. Positionnez chaque point sur la carte
+   (clic ou géocodage de l'adresse) : le client reçoit la localisation
+   dès que son panier passe en prêt ou livré. Les
+   {{ exploitant.vocab.creneaux }} (jour, horaires, fréquence, capacité)
+   cadrent les dates proposées aux clients — en mode boutique, ils
+   font office d'horaires d'ouverture de vos points de vente.</p>
 
 <section class="harvest-bloc">
   <h2>➕ Nouveau point</h2>
@@ -17,6 +23,12 @@
     {% csrf_token %}
     <input type="hidden" name="action" value="point_creer">
     <div class="form-row">
+      <label>Type
+        <select name="type_point">
+          {% for valeur, libelle in types_points %}
+            <option value="{{ valeur }}"{% if exploitant.en_mode_boutique and valeur == "BOUTIQUE" or not exploitant.en_mode_boutique and valeur == "LIVRAISON" %} selected{% endif %}>{{ libelle }}</option>
+          {% endfor %}
+        </select></label>
       <label>Nom <input type="text" name="nom" required placeholder="Ex : Marché couvert"></label>
       <label>Ville <input type="text" name="ville" id="id_ville" required placeholder="Ville"></label>
     </div>
@@ -60,7 +72,7 @@
         <select name="point">
           <option value="">— sans point précis —</option>
           {% for point in points %}
-            <option value="{{ point.pk }}">{{ point.nom }} ({{ point.ville }})</option>
+            <option value="{{ point.pk }}">{{ point.emoji_type }} {{ point.nom }} ({{ point.ville }})</option>
           {% endfor %}
         </select></label>
     </div>
@@ -115,6 +127,7 @@
   {% for point in points %}
     <div class="card harvest-item">
       <div>
+        <span class="badge badge-activite" title="{{ point.get_type_point_display }}">{{ point.emoji_type }} {{ point.get_type_point_display }}</span>
         <strong>{{ point.nom }}</strong> — {{ point.adresse }},
         {{ point.code_postal }} {{ point.ville }}
         {% if point.note %}<span class="muted">— {{ point.note }}</span>{% endif %}

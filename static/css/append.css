@@ -881,3 +881,72 @@ html.dark .order-card summary { color: #e6e4da !important; }
 html.dark .etat-vide { background: #26301f !important; color: #e6e4da !important; }
 html.dark .points-defile-titre { color: #e6e4da !important; }
 html.dark .point-puce { background: #2f3a26 !important; color: #e6e4da !important; }
+
+/* ===== Dark mode : contrôles Leaflet lisibles (contrôleur de couches,
+   popups, info-bulles) — le texte y était invisible sur fond sombre. */
+html.dark .leaflet-control-layers {
+  background: rgba(20, 26, 16, 0.95) !important;
+  color: #e6e4da !important;
+}
+html.dark .leaflet-control-layers-expanded {
+  padding: 10px 12px !important;
+  color: #e6e4da !important;
+}
+html.dark .leaflet-control-layers-list,
+html.dark .leaflet-control-layers label,
+html.dark .leaflet-control-layers span {
+  color: #e6e4da !important;
+}
+html.dark .leaflet-control-layers a {
+  color: #c5e1a5 !important;
+}
+html.dark .leaflet-control-layers a:hover {
+  background: #33511c !important;
+}
+html.dark .leaflet-control-layers-separator {
+  border-top-color: #55624a !important;
+}
+html.dark .leaflet-popup-content-wrapper,
+html.dark .leaflet-popup-tip {
+  background: #26301f !important;
+  color: #e6e4da !important;
+}
+html.dark .leaflet-popup-content-wrapper a { color: #aed581 !important; }
+html.dark .leaflet-container .leaflet-control-attribution {
+  background: rgba(20, 26, 16, 0.8) !important;
+  color: #cfcabb !important;
+}
+html.dark .leaflet-container .leaflet-control-attribution a {
+  color: #aed581 !important;
+}
+html.dark .leaflet-bar a {
+  background: #26301f !important;
+  color: #e6e4da !important;
+  border-color: #55624a !important;
+}
+html.dark .leaflet-bar a:hover {
+  background: #33511c !important;
+}
+
+/* ===== Étoile favori compacte sur les vignettes producteur ===== */
+.vignette-producteur { position: relative; }
+.vignette-favori-form { position: absolute; top: 6px; right: 6px;
+  margin: 0; z-index: 5; }
+.btn-favori-vignette {
+  border: 1px solid rgba(85, 98, 74, 0.4); border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75); cursor: pointer;
+  width: 26px; height: 26px; line-height: 1; font-size: 15px;
+  padding: 0; display: inline-flex; align-items: center;
+  justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+.btn-favori-vignette:hover { transform: scale(1.12);
+  background: #fff8e1; }
+.btn-favori-vignette.actif {
+  background: #fff3cd; border-color: #e0b83c;
+}
+html.dark .btn-favori-vignette {
+  background: rgba(38, 48, 31, 0.9); color: #ffd54f;
+  border-color: #55624a;
+}
+html.dark .btn-favori-vignette:hover { background: #33511c; }

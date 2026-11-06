@@ -421,7 +421,17 @@ class LigneRecolte(models.Model):
 
 
 class PointLivraison(models.Model):
-    """Point de livraison ou de mise à disposition des paniers."""
+    """Point de mise en relation avec la clientèle : livraison de
+    paniers, boutique / point de vente, ou stand sur un marché. Les
+    créneaux récurrents (jours, horaires, fréquence) se rattachent à
+    n'importe lequel de ces types."""
+
+    class Type(models.TextChoices):
+        LIVRAISON = "LIVRAISON", "Point de livraison / retrait"
+        BOUTIQUE = "BOUTIQUE", "Boutique / point de vente"
+        MARCHE = "MARCHE", "Marché"
+
+    TYPE_EMOJIS = {"LIVRAISON": "📍", "BOUTIQUE": "🏪", "MARCHE": "🎪"}
 
     exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
                                    related_name="points_livraison")
@@ -435,6 +445,16 @@ class PointLivraison(models.Model):
     # dès que son panier passe en prêt/livré (lien vers la carte).
     latitude = models.FloatField("Latitude", null=True, blank=True)
     longitude = models.FloatField("Longitude", null=True, blank=True)
+    # Type de mise en relation : livraison de paniers (maraîchers et
+    # arboriculteurs), boutique / point de vente, ou marché — tout
+    # producteur peut aussi déclarer des créneaux récurrents sur un
+    # marché (stand hebdomadaire, bisomadaire, mensuel).
+    type_point = models.CharField(
+        "Type de mise en relation", max_length=10,
+        choices=Type.choices, default=Type.LIVRAISON,
+        help_text="Livraison de paniers, vente en boutique ou stand de "
+                  "marché : les créneaux récurrents se rattachent à "
+                  "n'importe lequel de ces points.")
 
     class Meta:
         verbose_name = "Point de livraison"
@@ -442,6 +462,10 @@ class PointLivraison(models.Model):
 
     def __str__(self):
         return f"{self.nom} ({self.ville})"
+
+    @property
+    def emoji_type(self):
+        return self.TYPE_EMOJIS.get(self.type_point, "📍")
 
 
 class CreneauLivraison(models.Model):

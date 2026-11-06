@@ -56,21 +56,21 @@
 
 {% if creneaux %}
 <div class="points-defile-bande">
-  <span class="points-defile-titre">🗓️ Livraisons :</span>
+  <span class="points-defile-titre">🗓️ {{ exploitant.vocab.points }} :</span>
   <div class="points-defile">
     <div class="points-defile-piste">
-      {% for c in creneaux %}<span class="point-puce">📍 {% if c.point_livraison %}{{ c.point_livraison.nom }} — {{ c.point_livraison.ville }}{% else %}Sans point dédié{% endif %} : {{ c.get_jour_display }} {{ c.heure_debut|time:"H:i" }}–{{ c.heure_fin|time:"H:i" }} ({{ c.get_frequence_display }})</span>{% endfor %}
-      {% for c in creneaux %}<span class="point-puce">📍 {% if c.point_livraison %}{{ c.point_livraison.nom }} — {{ c.point_livraison.ville }}{% else %}Sans point dédié{% endif %} : {{ c.get_jour_display }} {{ c.heure_debut|time:"H:i" }}–{{ c.heure_fin|time:"H:i" }} ({{ c.get_frequence_display }})</span>{% endfor %}
+      {% for c in creneaux %}<span class="point-puce">{% if c.point_livraison %}{{ c.point_livraison.emoji_type }} {{ c.point_livraison.nom }} — {{ c.point_livraison.ville }}{% else %}Sans point dédié{% endif %} : {{ c.get_jour_display }} {{ c.heure_debut|time:"H:i" }}–{{ c.heure_fin|time:"H:i" }} ({{ c.get_frequence_display }})</span>{% endfor %}
+      {% for c in creneaux %}<span class="point-puce">{% if c.point_livraison %}{{ c.point_livraison.emoji_type }} {{ c.point_livraison.nom }} — {{ c.point_livraison.ville }}{% else %}Sans point dédié{% endif %} : {{ c.get_jour_display }} {{ c.heure_debut|time:"H:i" }}–{{ c.heure_fin|time:"H:i" }} ({{ c.get_frequence_display }})</span>{% endfor %}
     </div>
   </div>
 </div>
-{% elif points %}
+{% elif points_livraison %}
 <div class="points-defile-bande">
-  <span class="points-defile-titre">📍 Livraisons :</span>
+  <span class="points-defile-titre">📍 {{ exploitant.vocab.points }} :</span>
   <div class="points-defile">
     <div class="points-defile-piste">
-      {% for p in points %}<span class="point-puce">📍 {{ p.nom }} — {{ p.ville }}{% if p.code_postal %} ({{ p.code_postal }}){% endif %}</span>{% endfor %}
-      {% for p in points %}<span class="point-puce">📍 {{ p.nom }} — {{ p.ville }}{% if p.code_postal %} ({{ p.code_postal }}){% endif %}</span>{% endfor %}
+      {% for p in points_livraison %}<span class="point-puce">{{ p.emoji_type }} {{ p.nom }} — {{ p.ville }}{% if p.code_postal %} ({{ p.code_postal }}){% endif %}</span>{% endfor %}
+      {% for p in points_livraison %}<span class="point-puce">{{ p.emoji_type }} {{ p.nom }} — {{ p.ville }}{% if p.code_postal %} ({{ p.code_postal }}){% endif %}</span>{% endfor %}
     </div>
   </div>
 </div>
@@ -163,10 +163,10 @@
 
 {% if points_livraison %}
 <section>
-  <h2>📍 Points de livraison</h2>
+  <h2>📍 Boutiques, marchés &amp; {{ exploitant.vocab.points|lower }}</h2>
   <ul>
     {% for point in points_livraison %}
-      <li><strong>{{ point.nom }}</strong> — {{ point.adresse }}, {{ point.code_postal }} {{ point.ville }}
+      <li>{{ point.emoji_type }} <strong>{{ point.nom }}</strong> <span class="muted">({{ point.get_type_point_display }})</span> — {{ point.adresse }}, {{ point.code_postal }} {{ point.ville }}
         {% if point.note %}<br><span class="muted">{{ point.note }}</span>{% endif %}</li>
     {% endfor %}
   </ul>
@@ -180,7 +180,7 @@
     {% for creneau in creneaux %}
       <li>{{ creneau.get_jour_display }} {{ creneau.heure_debut|time:"H:i" }}–{{ creneau.heure_fin|time:"H:i" }}
           — {{ creneau.get_frequence_display }}
-          {% if creneau.point_livraison %}({{ creneau.point_livraison.nom }}){% endif %}</li>
+          {% if creneau.point_livraison %}({{ creneau.point_livraison.emoji_type }} {{ creneau.point_livraison.nom }}){% endif %}</li>
     {% endfor %}
   </ul>
 </section>

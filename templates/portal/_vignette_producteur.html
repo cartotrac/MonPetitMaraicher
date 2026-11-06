@@ -3,6 +3,15 @@ Vignette producteur unifiée (pages Chercher et Mes favoris).
 Attend la variable « exploitant ».
 {% endcomment %}
 <div class="card vignette-producteur"{% if exploitant.latitude and exploitant.longitude %} data-lat="{{ exploitant.latitude|unlocalize }}" data-lng="{{ exploitant.longitude|unlocalize }}"{% endif %}>
+  {% if user.is_authenticated %}
+    <form method="post" action="{% url 'portal:favoris_toggle' exploitant.slug %}" class="vignette-favori-form">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button type="submit" class="btn-favori-vignette{% if exploitant.slug in favoris_slugs %} actif{% endif %}"
+              title="{% if exploitant.slug in favoris_slugs %}Retirer des favoris{% else %}Ajouter aux favoris{% endif %}"
+              aria-label="{% if exploitant.slug in favoris_slugs %}Retirer {{ exploitant.nom_ferme }} des favoris{% else %}Ajouter {{ exploitant.nom_ferme }} aux favoris{% endif %}">{% if exploitant.slug in favoris_slugs %}⭐{% else %}☆{% endif %}</button>
+    </form>
+  {% endif %}
   {% if exploitant.logo %}
     <img class="card-logo" src="{{ exploitant.logo.url }}" alt="Logo {{ exploitant.nom_ferme }}">
   {% endif %}
@@ -21,7 +30,7 @@ Attend la variable « exploitant ».
   <div class="vignette-reste">
     {% if exploitant.description %}<p>{{ exploitant.description|truncatewords:20 }}</p>{% endif %}
     <div class="vignette-horaires" role="note">
-      <strong>📍 Boutique / points de livraison :</strong>
+      <strong>📍 Boutiques, marchés &amp; points de livraison :</strong>
       {% for h in exploitant.horaires %}
         <span>🗓️ {{ h }}</span>
       {% endfor %}

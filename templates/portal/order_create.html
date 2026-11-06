@@ -70,7 +70,7 @@
     <label>{{ exploitant.vocab.point_livraison }} (requis)
       <select name="point_livraison" required>
         {% for point in points_livraison %}
-          <option value="{{ point.pk }}" data-jours="{{ points_jours|get_item:point.pk }}" {% if point.pk|stringformat:"s" == point_choisi %}selected{% endif %}>{{ point.nom }} — {{ point.ville }}</option>
+          <option value="{{ point.pk }}" data-jours="{{ points_jours|get_item:point.pk }}" {% if point.pk|stringformat:"s" == point_choisi %}selected{% endif %}>{{ point.emoji_type }} {{ point.nom }} — {{ point.ville }}</option>
         {% endfor %}
       </select></label>
   {% endif %}
