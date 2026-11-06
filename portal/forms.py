@@ -1,37 +1,71 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import (AuthenticationForm,
+                                       UserCreationForm)
 from django.contrib.auth.models import User
 
 from .models import (Annonce, Bulletin, Categorie, Exploitant, Produit,
                     ProfilClient, SemaineRecolte)
 
 
+def _aide_mot_de_passe(form):
+    """Aide courte et rassurante pour les mots de passe (au lieu du
+    long texte par défaut de Django, anxiogène à l'inscription)."""
+    form.fields["password1"].help_text = (
+        "Au moins 8 caractères. Évitez les mots de passe trop courants.")
+    form.fields["password2"].help_text = (
+        "Retapez le mot de passe pour vérifier.")
+
+
 class InscriptionExploitantForm(UserCreationForm):
     """Inscription exploitant simplifiée : compte + ferme minimale.
+    Pas de nom d'utilisateur à inventer : l'e-mail sert d'identifiant.
     Nom de la ferme, activité et localisation à la création ; tout le
     reste (SIRET, mode de production, logo, description, téléphone,
     réseaux…) se complète ensuite dans la page ⚙️ Paramètres."""
 
-    nom_ferme = forms.CharField(label="Nom de l'exploitation",
-                                max_length=150)
+    nom_ferme = forms.CharField(
+        label="Nom de l'exploitation", max_length=150,
+        help_text="Le nom affiché sur votre vitrine (modifiable ensuite).")
     activite = forms.ChoiceField(
         label="Activité", choices=Exploitant.Activite.choices,
         initial=Exploitant.Activite.MARAICHER)
     ville = forms.CharField(label="Ville", max_length=100, required=False)
-    code_postal = forms.CharField(label="Code postal", max_length=10,
-                                  required=False)
-    latitude = forms.FloatField(label="Latitude (optionnel, pour la carte)",
-                                required=False)
-    longitude = forms.FloatField(label="Longitude (optionnel, pour la carte)",
-                                 required=False)
+    code_postal = forms.CharField(
+        label="Code postal", max_length=10, required=False,
+        help_text="Positionne votre exploitation sur la carte et sert à "
+                  "la recherche par département.")
+    latitude = forms.FloatField(widget=forms.HiddenInput, required=False)
+    longitude = forms.FloatField(widget=forms.HiddenInput, required=False)
+
+    field_order = ["nom_ferme", "activite", "ville", "code_postal",
+                   "first_name", "email", "password1", "password2"]
 
     class Meta:
         model = User
-        fields = ("username", "email", "first_name")
+        fields = ("first_name", "email")
+        labels = {"first_name": "Prénom", "email": "E-mail"}
+        help_texts = {"email": "Sert d'identifiant de connexion : "
+                               "pas de nom d'utilisateur à inventer."}
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].lower().strip()
+        if (User.objects.filter(username__iexact=email).exists()
+                or User.objects.filter(email__iexact=email).exists()):
+            raise forms.ValidationError(
+                "Un compte existe déjà avec cet e-mail. "
+                "Essayez de vous connecter, ou demandez un nouveau "
+                "mot de passe via « Mot de passe oublié ? ».")
+        return email
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _aide_mot_de_passe(self)
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.email = self.cleaned_data["email"]
+        email = self.cleaned_data["email"].lower().strip()
+        user.username = email
+        user.email = email
         if commit:
             user.save()
             code_postal = self.cleaned_data.get("code_postal", "") or ""
@@ -49,21 +83,67 @@ class InscriptionExploitantForm(UserCreationForm):
 
 
 class InscriptionClientForm(UserCreationForm):
-    telephone = forms.CharField(label="Téléphone", max_length=20, required=False)
+    """Inscription client : l'e-mail sert d'identifiant (pas de nom
+    d'utilisateur à inventer)."""
+
+    telephone = forms.CharField(
+        label="Téléphone", max_length=20, required=False,
+        help_text="Optionnel — utile pour être prévenu d'un souci de "
+                  "livraison.")
+
+    field_order = ["first_name", "email", "password1", "password2",
+                   "telephone"]
 
     class Meta:
         model = User
-        fields = ("username", "email", "first_name")
+        fields = ("first_name", "email")
+        labels = {"first_name": "Prénom", "email": "E-mail"}
+        help_texts = {"email": "Sert d'identifiant de connexion."}
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].lower().strip()
+        if (User.objects.filter(username__iexact=email).exists()
+                or User.objects.filter(email__iexact=email).exists()):
+            raise forms.ValidationError(
+                "Un compte existe déjà avec cet e-mail. "
+                "Essayez de vous connecter, ou demandez un nouveau "
+                "mot de passe via « Mot de passe oublié ? ».")
+        return email
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _aide_mot_de_passe(self)
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.email = self.cleaned_data["email"]
+        email = self.cleaned_data["email"].lower().strip()
+        user.username = email
+        user.email = email
         if commit:
             user.save()
             ProfilClient.objects.create(
                 user=user,
                 telephone=self.cleaned_data.get("telephone", ""))
         return user
+
+
+class ConnexionForm(AuthenticationForm):
+    """Connexion par nom d'utilisateur OU e-mail (les comptes créés
+    via l'inscription utilisent l'e-mail comme identifiant)."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].label = "Nom d'utilisateur ou e-mail"
+
+    def clean_username(self):
+        username = self.cleaned_data.get("username")
+        if username and not User.objects.filter(
+                username__iexact=username).exists():
+            autre = User.objects.filter(
+                email__iexact=username).first()
+            if autre:
+                return autre.username
+        return username
 
 
 class ProduitForm(forms.ModelForm):
@@ -80,6 +160,15 @@ class ProduitForm(forms.ModelForm):
                   "unite_vente": "Unité de vente",
                   "prix": "Prix de référence (€)",
                   "actif": "Actif"}
+        help_texts = {
+            "nom": "Ex : « Tomates anciennes », « Œufs plein air »…",
+            "description": "Quelques mots suffisent : variété, goût, "
+                           "préparation…",
+            "illustration": "2 Mo max — optionnelle.",
+            "prix": "Prix indicatif affiché aux clients ; vous "
+                    "l'ajustez chaque semaine dans la récolte si besoin.",
+            "actif": "Décochez pour masquer le produit sans le supprimer.",
+        }
 
     def __init__(self, *args, exploitant=None, **kwargs):
         super().__init__(*args, **kwargs)
