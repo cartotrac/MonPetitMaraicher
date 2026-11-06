@@ -561,7 +561,7 @@ class PointLivraison(models.Model):
     # producteur peut aussi déclarer des créneaux récurrents sur un
     # marché (stand hebdomadaire, bisomadaire, mensuel).
     type_point = models.CharField(
-        "Type de mise en relation", max_length=10,
+        "Type de mise en relation", max_length=12,
         choices=Type.choices, default=Type.LIVRAISON,
         help_text="Livraison de paniers, vente en boutique ou stand de "
                   "marché : les créneaux récurrents se rattachent à "
