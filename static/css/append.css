@@ -839,8 +839,12 @@ html.dark section.cal-courante h2, html.dark section.cal-courante h3 {
   color: #c5e1a5;
 }
 html.dark section.cal-courante .muted { color: #aab599 !important; }
-html.dark .card.cal-avenir { background: #26301f; color: #e6e4da;
-                             border-color: #3f4d34; }
+html.dark .card.cal-avenir { background: #26301f !important;
+  color: #e6e4da !important; border-color: #3f4d34 !important; }
+html.dark .card.cal-avenir strong { color: #c5e1a5 !important; }
+html.dark .card.cal-avenir p { color: #e6e4da !important; }
+html.dark .grid > .card.cal-avenir {
+  background: #26301f !important; color: #e6e4da !important; }
 html.dark .meteo-hero { background: #26301f !important; color: #e6e4da; }
 
 /* ===== Bouton mode sombre flottant (bandeau disparu) ===== */
