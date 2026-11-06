@@ -177,7 +177,19 @@ var ACTIVITES = {
   "APICULTEUR": "🍯 Apiculteur·rice",
   "MICRO_BRASSEUR": "🍺 Micro-brasseur·euse",
   "CONSERVERIE": "🥫 Conserverie",
+  "FOODTRUCK": "🚚 Foodtruck",
+  "TRAITEUR": "🥗 Traiteur·e",
   "AUTRE": "🌾 Autre production locale"
+};
+
+/* Spécialités foodtruck : libellés pour le popup du marqueur
+   (le symbole du camion est complété par l'emoji de spécialité). */
+var SPECIALITES = {
+  "SANDWICHS": "Sandwichs & Plats",
+  "PIZZA": "Pizza",
+  "BURGER": "Burger",
+  "TRAITEUR": "Traiteur",
+  "ROTISSEUR": "Rôtisseur"
 };
 
 /* --------------------------------------------------------------- legende */
@@ -211,7 +223,15 @@ var exploitants = JSON.parse(bloc.textContent);
 exploitants.forEach(function (e) {
   var style = CAT_STYLES[e.mode_production] || CAT_STYLES.CONV;
   var activite = ACTIVITES[e.activite] || "";
-  var symbole = (activite || "🌾 Autre").split(" ")[0];
+  /* Symbole : camion + emoji de spécialité pour les foodtrucks,
+     symbole de l'activité sinon (précalculé côté serveur). */
+  var symbole = e.symbole
+    || (activite || "🌾 Autre").split(" ")[0];
+  var libelle = activite;
+  if (e.activite === "FOODTRUCK" && e.specialite
+      && SPECIALITES[e.specialite]) {
+    libelle += " — " + SPECIALITES[e.specialite];
+  }
   var badgeDemo = e.est_demo
     ? '<br><span class="badge badge-demo">🧪 DÉMO</span>' : "";
   /* Marqueur compact : le symbole d'activité est le corps du marqueur,
@@ -219,13 +239,15 @@ exploitants.forEach(function (e) {
      en bas à droite (peu d'espace pris sur la carte). */
   var icone = L.divIcon({
     className: "marker-exploitant",
-    html: '<span class="marker-activite">' + symbole + "</span>" +
+    html: '<span class="marker-activite' +
+          (e.activite === "FOODTRUCK" && e.specialite
+             ? " marker-foodtruck" : "") + '">' + symbole + "</span>" +
           '<span class="marker-point" style="background:' + style.color + '"></span>',
     iconSize: [22, 22], iconAnchor: [11, 11]
   });
   var marker = L.marker([e.latitude, e.longitude], { icon: icone }).bindPopup(
     "<strong>" + e.nom_ferme + "</strong>" +
-    (activite ? '<br><span class="muted">' + activite + "</span>" : "") +
+    (libelle ? '<br><span class="muted">' + libelle + "</span>" : "") +
     badgeDemo +
     "<br>" + (e.ville || "") +
     '<br><a href="' + e.url + '">Nos Produits →</a>'

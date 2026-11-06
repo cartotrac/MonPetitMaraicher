@@ -199,6 +199,8 @@ def producer_search(request):
         "nom_ferme": e.nom_ferme,
         "mode_production": e.mode_production,
         "activite": e.activite,
+        "specialite": e.specialite if e.activite == Exploitant.Activite.FOODTRUCK else "",
+        "symbole": e.emoji_vitrine,
         "ville": e.ville,
         "latitude": e.latitude,
         "longitude": e.longitude,
@@ -231,6 +233,8 @@ def producteurs_geojson(request):
         "nom_ferme": e.nom_ferme,
         "mode_production": e.mode_production,
         "activite": e.activite,
+        "specialite": e.specialite if e.activite == Exploitant.Activite.FOODTRUCK else "",
+        "symbole": e.emoji_vitrine,
         "ville": e.ville,
         "latitude": e.latitude,
         "longitude": e.longitude,
@@ -565,6 +569,10 @@ def _phrases_point(point, creneaux):
         return (f"🏪 {point.nom} ({point.ville}) : ouverte {horaires}")
     if est_marche:
         return f"🎪 {point.nom} ({point.ville}) : {horaires}"
+    if (point.type_point
+            == PointLivraison.Type.EMPLACEMENT):
+        return (f"🚚 Emplacement « {point.nom} » ({point.ville}) : "
+                f"installé {horaires}")
     return f"📍 Retirez vos colis à « {point.nom} » ({point.ville}) {horaires}"
 
 
