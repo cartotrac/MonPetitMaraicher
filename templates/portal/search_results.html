@@ -82,6 +82,7 @@
     {% if carte_data %}
       <div id="carte-recherche" class="map-canvas" data-mode="{% if visu %}restauration{% else %}producteurs{% endif %}"></div>
       {{ carte_data|json_script:"donnees-carte" }}
+      {{ home_carte|json_script:"home-carte" }}
     {% else %}
       <p class="muted">Aucun producteur géolocalisé dans ces résultats :
          les fermes concernées n'ont pas renseigné de position sur la carte.</p>

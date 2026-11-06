@@ -374,6 +374,50 @@ geolocCtrl.onAdd = function () {
       { timeout: 10000 }
     );
   });
+  /* 🏠 « Chez moi » : pro connecté → son exploitation (coordonnées
+     passées par le serveur) ; client connecté → géolocalisation ;
+     visiteur anonyme → pas de bouton. */
+  var chezMoi = null;
+  var blocMaison = document.getElementById("home-carte");
+  if (blocMaison) {
+    try { chezMoi = JSON.parse(blocMaison.textContent); } catch (e) {}
+  }
+  if (chezMoi) {
+    var maison = L.DomUtil.create("button", "btn-geoloc-cible", div);
+    maison.type = "button";
+    maison.title = "Chez moi";
+    maison.setAttribute("aria-label", "Centrer sur mon adresse");
+    maison.textContent = "🏠";
+    maison.addEventListener("click", function () {
+      if (chezMoi.lat !== null && chezMoi.lat !== undefined) {
+        carte.setView([chezMoi.lat, chezMoi.lon], 12);
+        L.circleMarker([chezMoi.lat, chezMoi.lon], {
+          radius: 6, color: "#1565c0", fillColor: "#64b5f6",
+          fillOpacity: 0.9
+        }).addTo(carte).bindPopup("🏠 Mon exploitation").openPopup();
+      } else if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          carte.setView([pos.coords.latitude, pos.coords.longitude], 11);
+        }, function () { alert("Position non disponible."); },
+        { timeout: 10000 });
+      }
+    });
+  }
+  /* 🌍 Recadrage global : tous les marqueurs visibles à l'écran. */
+  var monde = L.DomUtil.create("button", "btn-geoloc-cible", div);
+  monde.type = "button";
+  monde.title = "Revoir tous les résultats";
+  monde.setAttribute("aria-label", "Recadrer sur tous les résultats");
+  monde.textContent = "🌍";
+  monde.addEventListener("click", function () {
+    if (exploitants.length) {
+      var bornes = [];
+      exploitants.forEach(function (e) {
+        bornes.push([e.latitude, e.longitude]);
+      });
+      carte.fitBounds(bornes, { padding: [30, 30], maxZoom: 12 });
+    }
+  });
   return div;
 };
 geolocCtrl.addTo(carte);

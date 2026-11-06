@@ -204,6 +204,16 @@ def producer_search(request):
             user=request.user, exploitant__in=exploitants)
             .values_list("exploitant__slug", flat=True))
         if request.user.is_authenticated else [])
+    # Position « chez moi » du bouton 🏠 de la carte : coordonnées de
+    # l'exploitation pour un pro connecté, géolocalisation du
+    # navigateur pour un client connecté, pas de bouton sinon.
+    home_carte = None
+    if request.user.is_authenticated:
+        moi = exploitant_pour(request.user)
+        if moi and moi.latitude is not None and moi.longitude is not None:
+            home_carte = {"lat": moi.latitude, "lon": moi.longitude}
+        else:
+            home_carte = {"lat": None, "connecte": True}
     # Données carto : uniquement les résultats filtrés avec coordonnées.
     carte_data = [{
         "nom_ferme": e.nom_ferme,
@@ -229,6 +239,7 @@ def producer_search(request):
         "carte_data": carte_data,
         "activites": activite_cases,
         "visu": visu,
+        "home_carte": home_carte,
         "nb_producteurs": nb_producteurs,
         "nb_clients": nb_clients,
         "nb_visiteurs": nb_visiteurs,

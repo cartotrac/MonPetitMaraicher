@@ -1129,3 +1129,9 @@ html.dark .mode-chip { background: #1d2617; color: #c5e1a5;
   border-color: #33691e; }
 html.dark .mode-chip.restauration { background: #26201a; color: #ffcc80;
   border-color: #6d4c41; }
+
+
+/* ===== Page Ventes : rubriques Commandes / Paniers ===== */
+.ventes-onglets { margin-bottom: 1.2rem; }
+.ventes-rubrique { margin-bottom: 2.2rem; scroll-margin-top: 5rem; }
+.ventes-rubrique h1 { font-size: 1.25rem; margin: 0.2rem 0 0.6rem; }
