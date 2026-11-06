@@ -170,7 +170,7 @@
       {% endif %}
     {% endfor %}
   </div>
-  <p><a href="{% url 'portal:harvest_list' %}">Toutes mes récoltes →</a></p>
+  <p><a href="{% url 'portal:harvest_list' %}">Voir tout — {{ exploitant.vocab.recoltes|capfirst }} →</a></p>
 </details>
 
 <details id="points" class="bloc-replie" open>

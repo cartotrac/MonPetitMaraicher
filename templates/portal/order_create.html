@@ -49,7 +49,7 @@
       <h3>Vous n'avez pas de compte ? Pas de souci 🌱</h3>
       <p class="muted">Laissez votre numéro : le producteur vous appelle
          pour valider votre commande. L'e-mail est optionnel — il permet
-         de recevoir la liste des récoltes de la semaine par newsletter.</p>
+         de recevoir la liste des {{ exploitant.vocab.recoltes }} de la semaine par newsletter.</p>
       <div class="form-row">
         <label>Votre nom *
           <input type="text" name="nom_client" required value="{{ nom_client }}"
@@ -59,7 +59,7 @@
                  pattern="(?:\+33|0033|0)[\s.-]*[1-9](?:[\s.-]*\d{2}){4}"
                  title="Numéro français : 06 12 34 56 78, 05 65 43 21 09…"
                  placeholder="06 12 34 56 78"></label>
-        <label>Votre e-mail (optionnel, newsletter récoltes)
+        <label>Votre e-mail (optionnel, newsletter {{ exploitant.vocab.recoltes }})
           <input type="email" name="email_client" value="{{ email_client }}"
                  placeholder="email (pour la newsletter)"></label>
       </div>

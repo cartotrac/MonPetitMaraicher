@@ -89,7 +89,7 @@
 
 {% if equipe %}
 <section>
-  <h2>👥 L'équipe de la ferme</h2>
+  <h2>👥 {{ exploitant.libelle_equipe }}</h2>
   <div class="grid">
     {% for membre in equipe %}
       <div class="card membre-equipe">
@@ -110,7 +110,7 @@
 
 <section>
 <section class="cal-courante">
-  <h2>🧺 Récolte de la semaine{% if semaine %} (semaine du {{ semaine.lundi|date:"d/m/Y" }}){% endif %}</h2>
+  <h2>🧺 {{ exploitant.titre_semaine }}{% if semaine %} (semaine du {{ semaine.lundi|date:"d/m/Y" }}){% endif %}</h2>
   {% if semaine and semaine.note %}<p class="flash info">{{ semaine.note }}</p>{% endif %}
   {% if lignes %}
     <p class="muted">Les quantités sont des estimations : elles vous informent des
@@ -141,13 +141,13 @@
         un téléphone, le producteur vous recontactera.</span>
     {% endif %}
   {% else %}
-    <p class="muted">Pas encore de récolte publiée cette semaine.</p>
+    <p class="muted">Pas encore de {{ exploitant.vocab.recolte }} publiée cette semaine.</p>
   {% endif %}
 </section>
 
 {% if semaines_avenir %}
 <section>
-  <h2>⏭️ Récoltes à venir</h2>
+  <h2>⏭️ {{ exploitant.titres_avoir }}</h2>
   <div class="grid">
     {% for s in semaines_avenir %}
       <div class="card cal-avenir">

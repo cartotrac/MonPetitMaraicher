@@ -119,20 +119,35 @@ class Exploitant(models.Model):
 
     @property
     def vocab(self):
-        """Libellés adaptés au mode de fonctionnement : « récoltes »,
-        « points de livraison » et « créneaux » pour le mode paniers
-        hebdo ; « stock à date », « points de vente » et « horaires
-        d'ouverture » pour le mode boutique."""
+        """Libellés adaptés au mode de fonctionnement et à l'activité :
+        « récoltes », « points de livraison » et « créneaux » pour le
+        mode paniers hebdo des maraîchers et arboriculteurs ; « stock à
+        date », « points de vente » et « horaires d'ouverture » pour les
+        fromagers et éleveurs ; « productions » pour apiculteurs,
+        micro-brasseurs et conserveries."""
+        points_vente = {
+            "point": "point de vente", "points": "Points de vente",
+            "point_livraison": "Point de vente / retrait",
+            "creneau": "horaire d'ouverture",
+            "creneaux": "horaires d'ouverture",
+        }
         if self.en_mode_boutique:
+            if self.activite in (self.Activite.APICULTEUR,
+                                 self.Activite.MICRO_BRASSEUR,
+                                 self.Activite.CONSERVERIE):
+                return {
+                    "recolte": "production", "recoltes": "productions",
+                    "recoltes_titre": "Mes productions",
+                    "nouvelle_recolte": "➕ Nouvelle production",
+                    "recolte_hebdo": "production de la semaine",
+                    **points_vente,
+                }
             return {
                 "recolte": "stock", "recoltes": "stocks à date",
                 "recoltes_titre": "Mon stock à date",
                 "nouvelle_recolte": "➕ Nouveau stock",
                 "recolte_hebdo": "stock de la semaine",
-                "point": "point de vente", "points": "Points de vente",
-                "point_livraison": "Point de vente / retrait",
-                "creneau": "horaire d'ouverture",
-                "creneaux": "horaires d'ouverture",
+                **points_vente,
             }
         return {
             "recolte": "récolte", "recoltes": "récoltes",
@@ -144,6 +159,56 @@ class Exploitant(models.Model):
             "creneau": "créneau de livraison",
             "creneaux": "créneaux de livraison",
         }
+
+    # Libellé « équipe » selon l'activité, page publique producteur :
+    # « L'équipe d'éleveurs », « L'équipe de brasseurs »…
+    EQUIPE_LIBELLES = {
+        "MARAICHER": "L'équipe de maraîchers",
+        "ARBORICULTEUR": "L'équipe d'arboriculteurs",
+        "ELEVEUR": "L'équipe d'éleveurs",
+        "FROMAGER": "L'équipe de fromagers",
+        "APICULTEUR": "L'équipe d'apiculteurs",
+        "MICRO_BRASSEUR": "L'équipe de brasseurs",
+        "CONSERVERIE": "L'équipe de la conserverie",
+        "AUTRE": "L'équipe de la ferme",
+    }
+
+    @property
+    def libelle_equipe(self):
+        return self.EQUIPE_LIBELLES.get(self.activite,
+                                        "L'équipe de la ferme")
+
+    @property
+    def titre_semaine(self):
+        """Titre de l'encart hebdo de la vitrine publique : « Récolte de
+        la semaine » pour maraîchers et arboriculteurs ; « produits de
+        la semaine » pour les autres ; « productions de la semaine »
+        pour apiculteurs, brasseurs et conserveries. « Nos » dès que
+        plusieurs comptes sont rattachés à l'exploitation."""
+        a_plusieurs = self.membres.exists()
+        if self.activite in (self.Activite.MARAICHER,
+                             self.Activite.ARBORICULTEUR):
+            return ("Nos récoltes de la semaine" if a_plusieurs
+                    else "Récolte de la semaine")
+        if self.activite in (self.Activite.APICULTEUR,
+                             self.Activite.MICRO_BRASSEUR,
+                             self.Activite.CONSERVERIE):
+            return ("Nos productions de la semaine" if a_plusieurs
+                    else "Mes productions de la semaine")
+        return ("Nos produits de la semaine" if a_plusieurs
+                else "Mes produits de la semaine")
+
+    @property
+    def titres_avoir(self):
+        """Titre de l'encart « à venir » de la vitrine publique."""
+        if self.activite in (self.Activite.MARAICHER,
+                             self.Activite.ARBORICULTEUR):
+            return "Récoltes à venir"
+        if self.activite in (self.Activite.APICULTEUR,
+                             self.Activite.MICRO_BRASSEUR,
+                             self.Activite.CONSERVERIE):
+            return "Productions à venir"
+        return "Produits à venir"
 
     def save(self, *args, **kwargs):
         if not self.slug:

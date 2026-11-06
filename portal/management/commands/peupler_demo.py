@@ -235,10 +235,7 @@ FERMES = [
         "vallée du Sor : confitures cuites au chaudron, bocaux de "
         "légumes, terrines et coulis, tout est fait à la ferme.",
         Decimal("4.20"),
-        [{"activite": A.CONSERVERIE, "limite": 24},
-         {"activite": A.ARBORICULTEUR, "categorie": "Fruits",
-          "limite": 4},
-         {"activite": A.APICULTEUR, "limite": 2}],
+        [{"activite": A.CONSERVERIE, "limite": 24}],
         [("Marché de Giroussens", "Place de la Halle",
           "Giroussens", "81500", 43.835, 1.690),
          ("Marché de Lavaur", "Place de la Halle",
@@ -258,9 +255,7 @@ FERMES = [
         "du jardin, conserves de légumes bretons, terrines et sauces "
         " maison, cuissons de saison.",
         Decimal("4.00"),
-        [{"activite": A.CONSERVERIE, "limite": 24},
-         {"activite": A.MARAICHER, "limite": 5},
-         {"activite": A.APICULTEUR, "limite": 2}],
+        [{"activite": A.CONSERVERIE, "limite": 24}],
         [("Marché de Bain", "Place du Champ de Foire",
           "Bain-de-Bretagne", "35310", 47.840, -1.680)],
         [(6, "09:00", "12:30", 0)],
