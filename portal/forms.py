@@ -192,18 +192,19 @@ class ProfilExploitantForm(forms.ModelForm):
         label="Site web de l'exploitation", required=False)
     facebook = forms.URLField(label="Page Facebook", required=False)
     instagram = forms.URLField(label="Compte Instagram", required=False)
-    field_order = ["nom_ferme", "activite", "siret", "mode_production",
+    field_order = ["nom_ferme", "activite", "specialite", "siret", "mode_production",
                    "logo", "logo_externe", "description", "adresse", "ville",
                    "code_postal", "departement", "telephone", "latitude",
                    "longitude", "est_demo", "mode_fonctionnement"]
 
     class Meta:
         model = Exploitant
-        fields = ["nom_ferme", "activite", "siret", "mode_production",
+        fields = ["nom_ferme", "activite", "specialite", "siret", "mode_production",
                   "logo", "description", "adresse", "ville", "code_postal",
                   "departement", "telephone", "latitude", "longitude",
                   "est_demo", "mode_fonctionnement"]
         labels = {"nom_ferme": "Nom de l'exploitation",
+                  "specialite": "Spécialité (foodtruck : pizza, burger, kebab ; traiteur)",
                   "activite": "Activité",
                   "siret": "SIRET (14 chiffres)",
                   "mode_production": "Mode de production",
