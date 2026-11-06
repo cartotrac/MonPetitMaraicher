@@ -950,3 +950,22 @@ html.dark .btn-favori-vignette {
   border-color: #55624a;
 }
 html.dark .btn-favori-vignette:hover { background: #33511c; }
+
+/* ===== Mobile : le titre de la carte passe AU-DESSUS du canvas,
+     il ne se superpose plus à la carte (trop étroit pour chevaucher). */
+@media (max-width: 820px) {
+  .map-canvas-wrap { position: static !important; }
+  .map-canvas-wrap .map-titre {
+    position: static !important;
+    transform: none !important;
+    display: block !important;
+    width: auto !important;
+    margin: 0 0 0.6rem !important;
+    white-space: normal !important;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.92);
+  }
+  html.dark .map-canvas-wrap .map-titre {
+    background: rgba(20, 26, 16, 0.95) !important;
+  }
+}

@@ -42,6 +42,37 @@
     var marqueur = L.marker(position, { draggable: true }).addTo(carte);
     if (lat === null || lon === null) marqueur.setOpacity(0.55);
 
+    /* Points existants (page « Points & créneaux ») : affichés avec
+       leur symbole propre (📍 livraison, 🏪 boutique, 🎪 marché) et
+       cadrage automatique sur leur emprise — voir #points-carte. */
+    var blocPoints = document.getElementById("points-carte");
+    if (blocPoints) {
+      var symboles = { "LIVRAISON": "📍", "BOUTIQUE": "🏪",
+                       "MARCHE": "🎪" };
+      try {
+        var existants = JSON.parse(blocPoints.textContent) || [];
+        var bornes = [];
+        existants.forEach(function (p) {
+          if (p.latitude === null || p.longitude === null) return;
+          bornes.push([p.latitude, p.longitude]);
+          L.marker([p.latitude, p.longitude], {
+            icon: L.divIcon({
+              className: "marker-exploitant",
+              html: '<span class="marker-activite">' +
+                    (symboles[p.type] || "📍") + "</span>",
+              iconSize: [22, 22], iconAnchor: [11, 11]
+            })
+          }).bindPopup("<strong>" + p.nom + "</strong>")
+            .bindTooltip(p.nom, { direction: "top" })
+            .addTo(carte);
+        });
+        if (bornes.length) {
+          carte.fitBounds(bornes, { padding: [40, 40], maxZoom: 14 });
+          marqueur.setOpacity(0.85);
+        }
+      } catch (e) { /* bloc JSON absent ou invalide : carte normale */ }
+    }
+
     function appliquer(lat, lon, silencieux) {
       latIn.value = lat.toFixed(6);
       lonIn.value = lon.toFixed(6);

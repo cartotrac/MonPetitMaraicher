@@ -45,7 +45,9 @@
       <label>Latitude <input type="text" name="latitude" id="id_latitude" placeholder="par carte ou géocodage"></label>
       <label>Longitude <input type="text" name="longitude" id="id_longitude" placeholder="par carte ou géocodage"></label>
     </div>
-    <p class="muted">… ou cliquez directement sur la carte ci-dessous :</p>
+    <p class="muted">… ou cliquez directement sur la carte ci-dessous
+       (vos points existants y apparaissent avec leur symbole 📍🏪🎪) :</p>
+    {{ points_geo|json_script:"points-carte" }}
     <div id="carte-point" data-pick-map data-lat-input="id_latitude"
          data-lon-input="id_longitude" style="height: 320px; border-radius: 8px;"></div>
     <button class="btn" type="submit">Créer le point</button>
@@ -69,10 +71,10 @@
     </fieldset>
     <div class="form-row">
       <label>Point
-        <select name="point">
+        <select name="point" id="id_point_creneau">
           <option value="">— sans point précis —</option>
           {% for point in points %}
-            <option value="{{ point.pk }}">{{ point.emoji_type }} {{ point.nom }} ({{ point.ville }})</option>
+            <option value="{{ point.pk }}" data-type="{{ point.type_point }}">{{ point.emoji_type }} {{ point.nom }} ({{ point.ville }})</option>
           {% endfor %}
         </select></label>
     </div>
@@ -85,7 +87,7 @@
             <option value="{{ valeur }}">{{ libelle }}</option>
           {% endfor %}
         </select></label>
-      <label>Capacité <input type="number" name="capacite" min="1" value="10"></label>
+      <label id="champ-capacite">Capacité (paniers) <input type="number" name="capacite" min="1" value="10"></label>
     </div>
     <button class="btn" type="submit">Ajouter le créneau</button>
   </form>
@@ -154,7 +156,7 @@
         <ul>
           {% for creneau in point.creneaux.all %}
             <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut }}–{{ creneau.heure_fin }},
-                {{ creneau.get_frequence_display|lower }}, capacité {{ creneau.capacite }}
+                {{ creneau.get_frequence_display|lower }}{% if point.type_point == 'LIVRAISON' %}, capacité {{ creneau.capacite }}{% endif %}
               <form method="post" class="inline">{% csrf_token %}
                 <input type="hidden" name="action" value="creneau_supprimer">
                 <input type="hidden" name="pk" value="{{ creneau.pk }}">
@@ -196,4 +198,23 @@
 {% block extrajs %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{% static 'js/pick-map.js' %}" defer></script>
+<script>
+/* La capacité (paniers) ne concerne que les points de livraison :
+   sur une boutique ou un marché, le champ se masque. */
+window.addEventListener("DOMContentLoaded", function () {
+  var select = document.getElementById("id_point_creneau");
+  var champ = document.getElementById("champ-capacite");
+  if (!select || !champ) return;
+  function majCapacite() {
+    var opt = select.options[select.selectedIndex];
+    var type = opt ? (opt.dataset.type || "") : "";
+    var concerne = !type || type === "LIVRAISON";
+    champ.style.display = concerne ? "" : "none";
+    var saisie = champ.querySelector("input");
+    if (saisie) saisie.disabled = !concerne;
+  }
+  select.addEventListener("change", majCapacite);
+  majCapacite();
+});
+</script>
 {% endblock %}

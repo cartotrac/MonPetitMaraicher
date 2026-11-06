@@ -1890,6 +1890,13 @@ def points_manage(request):
                 messages.error(request, "Créneau invalide "
                                "(jours, horaires ou capacité).")
                 return redirect("portal:points_manage")
+            # La capacité (nombre de paniers) n'a de sens que pour les
+            # points de livraison : sur une boutique ou un marché, le
+            # créneau décrit seulement une présence récurrente.
+            if point and point.type_point in (
+                    PointLivraison.Type.BOUTIQUE,
+                    PointLivraison.Type.MARCHE):
+                capacite = 0
             frequence = request.POST.get("frequence", "")
             if not jours_choisis:
                 messages.error(request, "Cochez au moins un jour de la "
@@ -1934,6 +1941,13 @@ def points_manage(request):
         "creneaux": exploitant.creneaux.select_related("point_livraison"),
         "creneaux_sans_point": exploitant.creneaux
                               .filter(point_livraison__isnull=True),
+        # Points localisés : affichés sur la carte de création avec
+        # leur symbole propre, cadrage automatique sur leur emprise.
+        "points_geo": [{
+            "nom": p.nom, "latitude": p.latitude,
+            "longitude": p.longitude, "type": p.type_point,
+        } for p in points
+            if p.latitude is not None and p.longitude is not None],
     })
 
 
