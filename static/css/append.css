@@ -842,3 +842,42 @@ html.dark section.cal-courante .muted { color: #aab599 !important; }
 html.dark .card.cal-avenir { background: #26301f; color: #e6e4da;
                              border-color: #3f4d34; }
 html.dark .meteo-hero { background: #26301f !important; color: #e6e4da; }
+
+/* ===== Bouton mode sombre flottant (bandeau disparu) ===== */
+.btn-darkmode-flottant {
+  position: fixed; top: 158px; right: 10px; z-index: 1160; margin: 0;
+}
+
+/* ===== Mobile : les boutons de scroll laissent respirer le contenu ===== */
+@media (max-width: 820px) {
+  .scroll-nav { top: 70px !important; right: 8px !important; }
+  .btn-darkmode-flottant { top: 148px; right: 8px; }
+  main.container { padding-right: 3.6rem; }
+}
+
+/* ===== Dark mode : checkup contraste des conteneurs restants ===== */
+html.dark .cal-semaines .cal-semaine {
+  background: #26301f !important; color: #e6e4da !important;
+  border-color: #3f4d34 !important;
+}
+html.dark section.cal-courante {
+  background: #20301c !important; color: #e6e4da !important;
+  border-color: #4e6b3a !important;
+}
+html.dark section.cal-courante h2,
+html.dark section.cal-courante h3,
+html.dark section.cal-courante p { color: #e6e4da !important; }
+html.dark .harvest-bloc, html.dark .producer-head,
+html.dark .producer-desc, html.dark .meteo-hero,
+html.dark .points-defile-bande, html.dark .reseaux-bloc,
+html.dark .order-card, html.dark .apercu-cadre {
+  background: #26301f !important; color: #e6e4da !important;
+  border-color: #3f4d34 !important;
+}
+html.dark .harvest-bloc h1, html.dark .harvest-bloc h2,
+html.dark .harvest-bloc h3, html.dark .producer-head h1,
+html.dark .producer-head h2 { color: #c5e1a5 !important; }
+html.dark .order-card summary { color: #e6e4da !important; }
+html.dark .etat-vide { background: #26301f !important; color: #e6e4da !important; }
+html.dark .points-defile-titre { color: #e6e4da !important; }
+html.dark .point-puce { background: #2f3a26 !important; color: #e6e4da !important; }
