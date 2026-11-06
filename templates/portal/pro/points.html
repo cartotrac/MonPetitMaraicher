@@ -153,6 +153,34 @@
             <input type="hidden" id="geo_lon_{{ point.pk }}" name="longitude">
           </form>
         {% endif %}
+        <details class="point-edition">
+          <summary>✏️ Modifier (nom / localisation)</summary>
+          <form method="post" class="form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="point_modifier">
+            <input type="hidden" name="pk" value="{{ point.pk }}">
+            <div class="form-row">
+              <label>Nom <input type="text" name="nom" value="{{ point.nom }}" required></label>
+              <label>Adresse <input type="text" name="adresse" id="mod_adresse_{{ point.pk }}" value="{{ point.adresse }}"></label>
+            </div>
+            <div class="form-row">
+              <label>Code postal <input type="text" name="code_postal" id="mod_cp_{{ point.pk }}" value="{{ point.code_postal }}"></label>
+              <label>Ville <input type="text" name="ville" id="mod_ville_{{ point.pk }}" value="{{ point.ville }}"></label>
+            </div>
+            <div class="form-row">
+              <label>Latitude <input type="text" name="latitude" id="mod_lat_{{ point.pk }}" placeholder="{{ point.latitude|default:'' }}" value="{{ point.latitude|default_if_none:'' }}"></label>
+              <label>Longitude <input type="text" name="longitude" id="mod_lon_{{ point.pk }}" placeholder="{{ point.longitude|default:'' }}" value="{{ point.longitude|default_if_none:'' }}"></label>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline"
+                    data-geocoder data-adresse="mod_adresse_{{ point.pk }}"
+                    data-cp="mod_cp_{{ point.pk }}" data-ville="mod_ville_{{ point.pk }}"
+                    data-lat="mod_lat_{{ point.pk }}" data-lon="mod_lon_{{ point.pk }}"
+                    data-libelle="📍 Géolocaliser l'adresse">📍 Géolocaliser l'adresse</button>
+            <p class="muted">Les paniers déjà livrés ne sont pas affectés :
+               ils conservent le nom et la position transmis aux clients.</p>
+            <button class="btn btn-sm" type="submit">💾 Enregistrer</button>
+          </form>
+        </details>
         <ul>
           {% for creneau in point.creneaux.all %}
             <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut }}–{{ creneau.heure_fin }},

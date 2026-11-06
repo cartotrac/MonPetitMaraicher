@@ -969,3 +969,47 @@ html.dark .btn-favori-vignette:hover { background: #33511c; }
     background: rgba(20, 26, 16, 0.95) !important;
   }
 }
+
+/* ===== Nav : libellé « Trouver » à côté de l'icône panier/loupe ===== */
+.nav-chercher-texte { font-weight: 600; margin-left: 0.15rem; }
+
+/* ===== Mobile : menu nav lisible en dark mode (fond resté blanc). ===== */
+@media (max-width: 820px) {
+  html.dark .nav, html.dark .nav-links, html.dark #nav-principal,
+  html.dark .nav-gestion-menu {
+    background: #141b10 !important;
+  }
+  html.dark .nav-links a, html.dark .nav-gestion-titre,
+  html.dark .nav-gestion-menu a, html.dark .nav-compte,
+  html.dark .nav-links .btn-link {
+    color: #e6e4da !important;
+  }
+  html.dark .nav-links a.nav-actif,
+  html.dark .nav-gestion-menu a:hover,
+  html.dark .nav-links a:hover {
+    background: #26301f !important;
+    color: #c5e1a5 !important;
+  }
+  html.dark .nav-burger { background: #26301f !important;
+    color: #e6e4da !important; border-color: #55624a !important; }
+  html.dark .nav-burger span { background: #e6e4da !important; }
+}
+
+/* ===== Mobile : légende de la carte complète (la Conserverie et les
+     dernières lignes étaient coupées) — repli auto et pas de hauteur
+     figée, la légende ne chevauche plus le titre ni les contrôles. ===== */
+@media (max-width: 820px) {
+  .map-legend { max-height: none !important; overflow: visible !important;
+    max-width: 78vw !important; font-size: 0.72rem !important;
+    line-height: 1.35 !important; }
+  .map-legend .legend-symbole span {
+    display: inline-block !important; margin-right: 0.45rem !important;
+    white-space: normal !important; }
+}
+
+/* ===== Édition d'un point existant (details repliable) ===== */
+.point-edition { margin-top: 0.5rem; }
+.point-edition summary { cursor: pointer; color: #2e7d32;
+  font-size: 0.85rem; }
+.point-edition[open] summary { margin-bottom: 0.4rem; }
+html.dark .point-edition summary { color: #c5e1a5; }

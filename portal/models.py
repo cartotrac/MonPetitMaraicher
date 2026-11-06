@@ -625,6 +625,54 @@ class Panier(models.Model):
         help_text="Raison visible par le client quand un panier en "
                   "préparation est annulé ; la commande repasse alors "
                   "« Annulée » et peut être recommandée.")
+    # Instantané FIGÉ des infos du point de retrait à la création du
+    # panier : si le producteur modifie ensuite le point (nom, adresse,
+    # position), l'historique des paniers déjà livrés garde les infos
+    # qui avaient été transmises aux clients.
+    point_nom = models.CharField("Nom du point (figé)", max_length=150,
+                                 blank=True, default="")
+    point_adresse = models.CharField("Adresse du point (figée)",
+                                     max_length=255, blank=True, default="")
+    point_code_postal = models.CharField("CP du point (figé)", max_length=10,
+                                         blank=True, default="")
+    point_ville = models.CharField("Ville du point (figée)", max_length=100,
+                                   blank=True, default="")
+    point_latitude = models.FloatField("Latitude du point (figée)",
+                                       null=True, blank=True)
+    point_longitude = models.FloatField("Longitude du point (figée)",
+                                        null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Figure l'identité du point à la première sauvegarde du panier
+        # (une seule fois : les paniers suivants voient les modifs).
+        if self.point_livraison_id and not self.point_nom:
+            p = self.point_livraison
+            self.point_nom = p.nom
+            self.point_adresse = p.adresse
+            self.point_code_postal = p.code_postal
+            self.point_ville = p.ville
+            self.point_latitude = p.latitude
+            self.point_longitude = p.longitude
+        super().save(*args, **kwargs)
+
+    @property
+    def point_affiche(self):
+        """Infos de retrait affichées au client : l'instantané figé à la
+        création du panier, en repli sur le point courant (paniers sans
+        point ou antérieurs au figage)."""
+        p = self.point_livraison
+        return {
+            "nom": self.point_nom or (p.nom if p else ""),
+            "adresse": self.point_adresse or (p.adresse if p else ""),
+            "code_postal": self.point_code_postal
+                           or (p.code_postal if p else ""),
+            "ville": self.point_ville or (p.ville if p else ""),
+            "note": p.note if p else "",
+            "latitude": (self.point_latitude if self.point_nom
+                         else (p.latitude if p else None)),
+            "longitude": (self.point_longitude if self.point_nom
+                          else (p.longitude if p else None)),
+        }
 
     class Meta:
         verbose_name = "Panier"

@@ -1863,6 +1863,35 @@ def points_manage(request):
             point.save()
             messages.success(request,
                              f"Position de « {point.nom} » enregistrée.")
+        elif action == "point_modifier":
+            # Modifier un point existant (nom, adresse, position) SANS
+            # toucher à l'historique : les paniers déjà livrés portent
+            # un instantané figé du nom et de la localisation transmis
+            # aux clients à l'époque.
+            point = get_object_or_404(PointLivraison,
+                                      pk=request.POST.get("pk"),
+                                      exploitant=exploitant)
+            nom = request.POST.get("nom", "").strip()
+            if not nom:
+                messages.error(request, "Le nom du point est requis.")
+            else:
+                point.nom = nom[:150]
+                for champ, limite in (("adresse", 255),
+                                      ("ville", 100),
+                                      ("code_postal", 10)):
+                    valeur = (request.POST.get(champ, "") or "").strip()
+                    setattr(point, champ, valeur[:limite])
+                nouvelle_lat = _latlon(request.POST.get("latitude"))
+                nouvelle_lon = _latlon(request.POST.get("longitude"))
+                if nouvelle_lat is not None:
+                    point.latitude = nouvelle_lat
+                if nouvelle_lon is not None:
+                    point.longitude = nouvelle_lon
+                point.save()
+                messages.success(request,
+                                 f"Point « {point.nom} » mis à jour "
+                                 "(les paniers déjà livrés conservent "
+                                 "les infos transmises aux clients).")
         elif action == "point_supprimer":
             point = get_object_or_404(PointLivraison,
                                      pk=request.POST.get("pk"),

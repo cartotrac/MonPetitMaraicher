@@ -77,7 +77,8 @@ def _contexte(panier):
         "date": panier.date_livraison.strftime("%d/%m/%Y"),
         "total": str(panier.total).replace(".", ","),
         "creneau": str(panier.creneau) if panier.creneau else "",
-        "point": panier.point_livraison.nom if panier.point_livraison else "",
+        "point": (panier.point_affiche["nom"]
+                  if panier.point_livraison else ""),
         "motif": panier.motif_annulation or "annulé par le producteur",
     }
 
