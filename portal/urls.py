@@ -46,6 +46,7 @@ urlpatterns = [
          {"nouvelle": True}, name="harvest_new"),
     path("espace-recolte/<int:semaine_id>/", views.harvest_manage,
          name="harvest_manage"),
+    path("espace-ventes/", views.ventes, name="ventes"),
     path("espace-commandes/", views.order_list, name="order_list"),
     path("espace-commandes/directe/", views.order_direct_create,
          name="order_direct"),

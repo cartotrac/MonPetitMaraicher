@@ -1292,11 +1292,17 @@ def _notifier_sans_echec(request, panier, type_msg):
 @login_required
 @exploitant_requis
 def order_list(request, statut=None):
+    exploitant = exploitant_pour(request.user)
+    return render(request, "portal/pro/orders.html",
+                  _contexte_commandes(exploitant, statut))
+
+
+def _contexte_commandes(exploitant, statut=None):
     """Commandes reçues, avec contact client (e-mail, téléphone, canal
     préféré si le client en a exprimé un). Produits rangés par
     catégorie ; pour les commandes validées, les ajustements faits à
-    la validation (contenu du panier) sont affichés."""
-    exploitant = exploitant_pour(request.user)
+    la validation (contenu du panier) sont affichés. Partagé par la
+    page « Commandes » et la rubrique de la page Ventes."""
     commandes = exploitant.commandes.order_by("-date_livraison", "-creee_le")
     if statut:
         commandes = commandes.filter(statut=statut)
@@ -1321,13 +1327,13 @@ def order_list(request, statut=None):
         c.ajustements = ajustements.get(c.pk)
         if c.statut == Commande.Statut.NOUVELLE:
             c.dispos = _dispos_lignes(c, c.lignes.all())
-    return render(request, "portal/pro/orders.html", {
+    return {
         "commandes": commandes, "filtre_statut": statut,
         "points": exploitant.points_livraison.all(),
         "today": timezone.localdate(),
         "jours_badges": _badges_par_jour(commandes, "statut",
                                          Commande.Statut.choices),
-    })
+    }
 
 
 def _quantite_ajustee(brut, quantite_commandee, produit):
@@ -1613,11 +1619,18 @@ def order_validate(request, commande_id):
 @login_required
 @exploitant_requis
 def panier_list(request):
-    """Liste des paniers, regroupés visuellement par jour de livraison
-    (en-tête du jour : comptage par statut, code couleur associé)."""
     exploitant = exploitant_pour(request.user)
-    statut = request.GET.get("statut", "").strip()
-    point_id = request.GET.get("point", "").strip()
+    return render(request, "portal/pro/paniers.html",
+                  _contexte_paniers(
+                      exploitant,
+                      request.GET.get("statut", "").strip(),
+                      request.GET.get("point", "").strip()))
+
+
+def _contexte_paniers(exploitant, statut="", point_id=""):
+    """Liste des paniers, regroupés visuellement par jour de livraison
+    (en-tête du jour : comptage par statut, code couleur associé).
+    Partagé par la page « Paniers » et la rubrique de la page Ventes."""
     paniers = (exploitant.paniers
                .select_related("client", "point_livraison")
                .prefetch_related("lignes__produit__categorie",
@@ -1635,7 +1648,7 @@ def panier_list(request):
         panier.tel_client = telephones.get(panier.client_id, "")
         panier.groupes_lignes = _groupes_lignes(list(panier.lignes.all()))
         panier.dispos = _dispos_lignes(panier, panier.lignes.all())
-    return render(request, "portal/pro/paniers.html", {
+    return {
         "paniers": paniers,
         "filtre_statut": statut,
         "filtre_point": point_id,
@@ -1643,6 +1656,28 @@ def panier_list(request):
         "today": timezone.localdate(),
         "jours_badges": _badges_par_jour(paniers, "statut",
                                          Panier.Statut.choices),
+    }
+
+
+@login_required
+@exploitant_requis
+def ventes(request):
+    """🧾 Ventes : UNE page, DEUX rubriques — commandes reçues puis
+    paniers, avec les mêmes contenus que les deux pages historiques
+    (les filtres détaillés restent sur celles-ci)."""
+    exploitant = exploitant_pour(request.user)
+    commandes = _contexte_commandes(exploitant)
+    paniers = _contexte_paniers(exploitant)
+    return render(request, "portal/pro/ventes.html", {
+        "commandes": commandes["commandes"],
+        "jours_badges_commandes": commandes["jours_badges"],
+        "filtre_statut_commandes": commandes["filtre_statut"],
+        "paniers": paniers["paniers"],
+        "jours_badges_paniers": paniers["jours_badges"],
+        "filtre_statut_paniers": paniers["filtre_statut"],
+        "filtre_point_paniers": paniers["filtre_point"],
+        "points": paniers["points"],
+        "today": commandes["today"],
     })
 
 

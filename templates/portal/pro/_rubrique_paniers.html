@@ -1,0 +1,76 @@
+{% load unites %}
+<h1>🧺 Paniers</h1>
+
+<div class="quick-actions">
+  <a class="btn btn-sm {% if not filtre_statut and not filtre_point %}btn-active{% endif %}" href="{% url 'portal:panier_list' %}">Tous</a>
+  <a class="btn btn-sm btn-filtre-prepa {% if filtre_statut == 'PREPARATION' %}btn-active{% endif %}" href="{% url 'portal:panier_list' %}?statut=PREPARATION">🟠 En préparation</a>
+  <a class="btn btn-sm btn-filtre-pret {% if filtre_statut == 'PRET' %}btn-active{% endif %}" href="{% url 'portal:panier_list' %}?statut=PRET">🟢 Prêts</a>
+  <a class="btn btn-sm btn-filtre-livre {% if filtre_statut == 'LIVRE' %}btn-active{% endif %}" href="{% url 'portal:panier_list' %}?statut=LIVRE">🟡 Livrés</a>
+  <a class="btn btn-sm btn-filtre-recu {% if filtre_statut == 'RECU' %}btn-active{% endif %}" href="{% url 'portal:panier_list' %}?statut=RECU">🟢 Retirés</a>
+  <a class="btn btn-sm btn-filtre-annule {% if filtre_statut == 'ANNULE' %}btn-active{% endif %}" href="{% url 'portal:panier_list' %}?statut=ANNULE">⚪ Annulés</a>
+  {% if points %}
+  <form method="get" action="{% url 'portal:panier_list' %}" class="inline filtre-point">
+    {% if filtre_statut %}<input type="hidden" name="statut" value="{{ filtre_statut }}">{% endif %}
+    <label class="muted">📍 Point :
+      <select name="point" onchange="this.form.submit()">
+        <option value="">Tous les points</option>
+        {% for point in points %}
+          <option value="{{ point.pk }}" {% if filtre_point == point.pk|stringformat:"s" %}selected{% endif %}>{{ point.nom }} ({{ point.ville }})</option>
+        {% endfor %}
+      </select></label>
+    <button class="btn btn-sm btn-outline" type="submit">Filtrer</button>
+  </form>
+  {% endif %}
+  <a class="btn btn-sm" href="{% url 'portal:order_direct' %}">📝 Saisir une commande directe</a>
+  <a class="btn btn-sm btn-outline" href="{% url 'portal:panier_export' %}">⬇️ Export CSV (détail)</a>
+  <a class="btn btn-sm btn-outline" href="{% url 'portal:panier_export' %}?mode=production">⬇️ Export production</a>
+</div>
+<p class="muted">Les paniers sont regroupés par jour de livraison, du plus
+   récent au plus ancien — l'en-tête de chaque jour compte les paniers
+   <strong>par statut</strong> (code couleur : orange en préparation,
+   vert prêt, jaune livré, vert foncé reçu). Produits rangés par
+   catégorie. Le dernier jour est déplié.</p>
+
+{% regroup paniers by date_livraison as jours %}
+{% for jour in jours %}
+  <details class="groupe-jour {% if jour.grouper < today %}cal-passe{% elif jour.grouper == today %}cal-courante{% else %}cal-avenir{% endif %}" {% if forloop.first %}open{% endif %}>
+    <summary>📅 {{ jour.grouper|date:"l d F Y" }}
+      {% for statut, nb, libelle in jours_badges|get_item:jour.grouper %}
+        <span class="badge badge-{{ statut }}">{{ nb }} {{ libelle|lower }}</span>
+      {% endfor %}</summary>
+    {% for panier in jour.list %}
+      <div class="card order-card statut-{{ panier.statut }}">
+        <div class="order-head">
+          {% if panier.photo_client %}
+            <img class="avatar avatar-small" src="{{ panier.photo_client }}" alt="Photo du client">
+          {% endif %}
+          <strong>Panier n°{{ panier.numero }} — {% if panier.client %}{{ panier.client.get_full_name|default:panier.client.username }}{% else %}{{ panier.nom_client }}{% endif %}</strong>
+          <span class="badge badge-{{ panier.statut }}">{{ panier.get_statut_display }}</span>
+        </div>
+        <p>📅 {{ panier.date_livraison|date:"d/m/Y" }}
+           {% if panier.point_livraison %}à {{ panier.point_livraison.nom }}{% endif %}
+           — 💰 {{ panier.total }} €
+           — {{ panier.lignes.count }} article(s)</p>
+        <p class="muted">✉️ {{ panier.email_client }}{% if panier.telephone_client %} · 📞 {{ panier.telephone_client }}{% endif %}{% if panier.tel_client %} · 📞 {{ panier.tel_client }}{% endif %}
+           {% if panier.client %}· 💻 client avec compte{% else %}· sans compte{% endif %}</p>
+        {% for nom_cat, lignes in panier.groupes_lignes %}
+          <p class="cat-lignes">{{ nom_cat }}</p>
+          <ul>
+            {% for ligne in lignes %}
+              <li{% with d=panier.dispos|get_item:ligne.pk %}{% if d.depasse %} class="ligne-exces"{% endif %}{% endwith %}>{% if ligne.produit.emoji %}{{ ligne.produit.emoji }} {% endif %}{{ ligne.produit.nom }} × {{ ligne.quantite|qte }} {{ ligne.quantite|unite:ligne.produit }}
+                {% with d=panier.dispos|get_item:ligne.pk %}
+                  {% if d %}<span class="muted">— dispo estimée : {{ d.dispo|qte }} {{ d.dispo|unite:ligne.produit }}</span>{% endif %}
+                {% endwith %}</li>
+            {% endfor %}
+          </ul>
+        {% endfor %}
+        <a class="btn btn-sm" href="{% url 'portal:panier_detail' panier.pk %}">Préparer / modifier</a>
+      </div>
+    {% endfor %}
+  </details>
+{% empty %}
+  <p class="card etat-vide"><span class="etat-vide-emoji">🧺</span>
+     Aucun panier pour l'instant. Validez une commande (ou saisissez-en
+     une directement) et le panier numéroté sera créé automatiquement.
+     <a class="btn btn-outline btn-sm" href="{% url 'portal:order_direct' %}">📝 Saisir une commande directe</a></p>
+{% endfor %}

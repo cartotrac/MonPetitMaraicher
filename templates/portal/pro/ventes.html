@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load unites %}{% load l10n %}
+{% block title %}Ventes — MonPetitProducteurLocal{% endblock %}
+{% block content %}
+<h1>🧾 Ventes</h1>
+<p class="muted">Deux rubriques : les commandes reçues, puis les paniers
+   à préparer et livrer. Les filtres détaillés restent sur les pages
+   « Commandes » et « Paniers ».</p>
+<div class="quick-actions ventes-onglets">
+  <a class="btn btn-sm" href="#rubrique-commandes">📥 Commandes reçues</a>
+  <a class="btn btn-sm" href="#rubrique-paniers">🧺 Paniers &amp; livraisons</a>
+</div>
+<section id="rubrique-commandes" class="ventes-rubrique">
+  {% include "portal/pro/_rubrique_commandes.html" with jours_badges=jours_badges_commandes filtre_statut=filtre_statut_commandes %}
+</section>
+<section id="rubrique-paniers" class="ventes-rubrique">
+  {% include "portal/pro/_rubrique_paniers.html" with jours_badges=jours_badges_paniers filtre_statut=filtre_statut_paniers filtre_point=filtre_point_paniers %}
+</section>
+{% endblock %}
