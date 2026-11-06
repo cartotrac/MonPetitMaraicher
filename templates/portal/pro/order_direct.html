@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load unites %}
-{% block title %}Saisir une commande — MonPetitProducteurLocal{% endblock %}
+{% block title %}Saisir une commande — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>📝 Saisir une commande</h1>
 <p class="muted">Commande passée hors portail (téléphone, marché…) : elle est
@@ -20,7 +20,7 @@
     <h3>Client</h3>
     <div class="form-row">
       <label>Nom
-        <input type="text" name="nom_client" required
+        <input type="text" name="nom_client" required autofocus
                placeholder="Nom du client"></label>
       <label>E-mail
         <input type="email" name="email_client"

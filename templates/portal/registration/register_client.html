@@ -1,10 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Inscription client — MonPetitProducteurLocal{% endblock %}
+{% block title %}Inscription client — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>Créer mon compte client</h1>
+<p class="muted">Quelques secondes suffisent : votre e-mail servira
+   d'identifiant, pas de nom d'utilisateur à inventer.</p>
 <form method="post" class="form">
   {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="flash warning">⚠️ Merci de corriger les champs indiqués ci-dessous.</div>
+  {% endif %}
   {{ form.as_p }}
   <button class="btn btn-lg" type="submit">Créer mon compte</button>
+  <p class="muted">Déjà inscrit ?
+    <a href="{% url 'login' %}">Se connecter</a>
+  </p>
 </form>
 {% endblock %}

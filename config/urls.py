@@ -3,9 +3,14 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.static import serve as static_serve
 
+from portal import auth_views as portal_auth_views
+
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("comptes/", include("django.contrib.auth.urls")),  # login, logout, password...
+    # Connexion par nom d'utilisateur OU e-mail (avant l'include, qui
+    # définit aussi "login/" : la première route gagnante est la nôtre).
+    path("comptes/login/", portal_auth_views.connexion, name="login"),
+    path("comptes/", include("django.contrib.auth.urls")),  # logout, password...
     path("", include("portal.urls")),
 ]
 

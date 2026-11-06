@@ -2,8 +2,13 @@
 {% block title %}Connexion — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>Connexion</h1>
+<p class="muted">💡 Indiquez votre <strong>e-mail</strong> ou votre nom
+   d'utilisateur : les deux fonctionnent.</p>
 <form method="post" class="form">
   {% csrf_token %}
+  {% if form.errors %}
+    <div class="flash warning">⚠️ Identifiant ou mot de passe incorrect.</div>
+  {% endif %}
   {{ form.as_p }}
   <button class="btn btn-lg" type="submit">Se connecter</button>
   <p class="muted">

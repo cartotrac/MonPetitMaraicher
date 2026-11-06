@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Inscription producteur — MonPetitProducteurLocal{% endblock %}
+{% block title %}Inscription producteur — MonPetitMaraicher{% endblock %}
 {% block extra_style %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
 {% block content %}
-<h1>Créer mon espace producteur</h1>
-<p class="muted">Trois informations suffisent pour créer votre espace :
-   le nom de votre exploitation, votre activité et votre localisation.
-   Tout le reste (SIRET, mode de production, logo, description,
-   téléphone, points de livraison…) se complète en deux minutes
-   ensuite depuis la page ⚙️ Paramètres.</p>
+<h1>🚜 Créer mon espace producteur</h1>
+<p class="muted">Trois informations suffisent : le nom de votre exploitation,
+   votre activité et votre localisation. Tout le reste (SIRET, mode de
+   production, logo, description, téléphone, points de livraison…)
+   se complète en deux minutes ensuite depuis la page ⚙️ Paramètres.</p>
 <form method="post" class="form">
   {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="flash warning">⚠️ Merci de corriger les champs indiqués ci-dessous.</div>
+  {% endif %}
   {{ form.as_p }}
 
   <div id="carte-inscription" data-pick-map data-lat-input="id_latitude"
@@ -22,8 +24,13 @@
           data-carte="carte-inscription"
           data-libelle="📍 Localiser ma commune">📍 Localiser ma commune</button>
 
-  <button class="btn btn-lg" type="submit">Créer mon espace pro</button>
+  <div class="save-bar">
+    <button class="btn btn-lg" type="submit">Créer mon espace pro</button>
+  </div>
 </form>
+<p class="muted">💡 Votre e-mail servira d'identifiant de connexion : pas de
+   nom d'utilisateur à retenir. Vous pourrez renseigner votre fiche et
+   publier votre première récolte dès la prochaine étape.</p>
 {% endblock %}
 {% block extrajs %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

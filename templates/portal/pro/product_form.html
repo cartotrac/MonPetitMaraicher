@@ -1,11 +1,18 @@
 {% extends "base.html" %}
-{% block title %}{{ title }} — MonPetitProducteurLocal{% endblock %}
+{% block title %}{{ title }} — MonPetitMaraicher{% endblock %}
 {% block content %}
 <h1>{{ title }}</h1>
 <form method="post" enctype="multipart/form-data" class="form">
   {% csrf_token %}
+  {% if form.errors %}
+    <div class="flash warning">⚠️ Merci de corriger les champs indiqués ci-dessous.</div>
+  {% endif %}
   {{ form.as_p }}
-  <button class="btn" type="submit">Enregistrer</button>
-  <a class="btn btn-outline" href="{% url 'portal:dashboard' %}">Annuler</a>
+  <div class="save-bar">
+    <button class="btn btn-lg" type="submit">💾 Enregistrer</button>
+    <a class="btn btn-outline" href="{% url 'portal:product_list' %}">Annuler</a>
+  </div>
 </form>
+<p class="muted">💡 Le prix saisi est un <strong>prix de référence</strong> :
+   vous l'ajusterez chaque semaine dans votre récolte si nécessaire.</p>
 {% endblock %}
