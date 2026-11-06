@@ -204,7 +204,9 @@ class ProfilExploitantForm(forms.ModelForm):
                   "departement", "telephone", "latitude", "longitude",
                   "est_demo", "mode_fonctionnement"]
         labels = {"nom_ferme": "Nom de l'exploitation",
-                  "specialite": "Spécialité (foodtruck : pizza, burger, kebab ; traiteur)",
+                  "specialite": "Spécialité (foodtruck : sandwichs & "
+                                "plats, pizza, burger, traiteur, "
+                                "rôtisseur)",
                   "activite": "Activité",
                   "siret": "SIRET (14 chiffres)",
                   "mode_production": "Mode de production",
@@ -219,6 +221,15 @@ class ProfilExploitantForm(forms.ModelForm):
             "Cochez pour marquer cette exploitation comme fictive "
             "(test, formation, démo) : un badge 🧪 DÉMO la distingue "
             "sur le portail.")}
+
+    def clean_specialite(self):
+        """La spécialité n'a de sens que pour les foodtrucks : on la
+        vide silencieusement pour toute autre activité."""
+        specialite = self.cleaned_data.get("specialite")
+        activite = self.cleaned_data.get("activite")
+        if specialite and activite != Exploitant.Activite.FOODTRUCK:
+            return ""
+        return specialite
 
 
 class ProfilPersonnelForm(forms.Form):

@@ -47,15 +47,16 @@ class Exploitant(models.Model):
 
     class Specialite(models.TextChoices):
         """Type précis au sein d'une activité. Réservé pour l'instant
-        aux foodtrucks (pizza, burger, kebab) et traiteurs ; servira
-        plus tard à préciser d'autres catégories de producteurs."""
+        aux foodtrucks ; servira plus tard à préciser d'autres
+        catégories de producteurs."""
+        SANDWICHS = "SANDWICHS", "Sandwichs & Plats"
         PIZZA = "PIZZA", "Pizza"
         BURGER = "BURGER", "Burger"
-        KEBAB = "KEBAB", "Kebab"
         TRAITEUR = "TRAITEUR", "Traiteur"
+        ROTISSEUR = "ROTISSEUR", "Rôtisseur"
 
-    SPECIALITE_EMOJIS = {"PIZZA": "🍕", "BURGER": "🍔",
-                         "KEBAB": "🥙", "TRAITEUR": "🍽️"}
+    SPECIALITE_EMOJIS = {"SANDWICHS": "🥪", "PIZZA": "🍕", "BURGER": "🍔",
+                         "TRAITEUR": "🍽️", "ROTISSEUR": "🍗"}
 
     class ModeFonctionnement(models.TextChoices):
         RECOLTE = "RECOLTE", "Récoltes hebdomadaires (paniers)"
@@ -66,7 +67,7 @@ class Exploitant(models.Model):
                        "ELEVEUR": "🐄", "FROMAGER": "🧀",
                        "APICULTEUR": "🍯", "MICRO_BRASSEUR": "🍺",
                        "CONSERVERIE": "🥫", "FOODTRUCK": "🚚",
-                       "TRAITEUR": "🍽️", "AUTRE": "🌾"}
+                       "TRAITEUR": "🥗", "AUTRE": "🌾"}
 
     user = models.OneToOneField(User, on_delete=models.CASCADE,
                                 related_name="exploitant")
@@ -84,10 +85,11 @@ class Exploitant(models.Model):
                   "d'autres activités (élevage, fromagerie, arboriculture…)"
                   "arriveront avec leurs listes de produits dédiées.")
     specialite = models.CharField(
-        "Spécialité", max_length=10, choices=Specialite.choices,
+        "Spécialité", max_length=12, choices=Specialite.choices,
         blank=True, default="",
         help_text="Affine l'activité — réservé pour l'instant aux "
-                  "foodtrucks (pizza, burger, kebab) et traiteurs.")
+                  "foodtrucks (sandwichs & plats, pizza, burger, "
+                  "traiteur, rôtisseur).")
     logo = models.ImageField("Logo miniature", upload_to=logo_chemin,
                              blank=True, null=True)
     description = models.TextField("Présentation de l'exploitation", blank=True)
@@ -135,6 +137,16 @@ class Exploitant(models.Model):
     @property
     def emoji_specialite(self):
         return self.SPECIALITE_EMOJIS.get(self.specialite, "")
+
+    @property
+    def emoji_vitrine(self):
+        """Symbole complet affiché sur la carte, la légende et les
+        vignettes : camion + spécialité pour les foodtrucks, symbole
+        d'activité seul sinon."""
+        if (self.activite == self.Activite.FOODTRUCK
+                and self.emoji_specialite):
+            return self.emoji_activite + self.emoji_specialite
+        return self.emoji_activite
 
     @property
     def en_mode_boutique(self):
