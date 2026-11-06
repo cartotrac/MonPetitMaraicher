@@ -18,82 +18,6 @@
    font office d'horaires d'ouverture de vos points de vente.</p>
 
 <section class="harvest-bloc">
-  <h2>➕ Nouveau point</h2>
-  <form method="post" class="form card">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="point_creer">
-    <div class="form-row">
-      <label>Type
-        <select name="type_point">
-          {% for valeur, libelle in types_points %}
-            <option value="{{ valeur }}"{% if exploitant.en_mode_boutique and valeur == "BOUTIQUE" or not exploitant.en_mode_boutique and valeur == "LIVRAISON" %} selected{% endif %}>{{ libelle }}</option>
-          {% endfor %}
-        </select></label>
-      <label>Nom <input type="text" name="nom" required placeholder="Ex : Marché couvert"></label>
-      <label>Ville <input type="text" name="ville" id="id_ville" required placeholder="Ville"></label>
-    </div>
-    <div class="form-row">
-      <label>Adresse <input type="text" name="adresse" id="id_adresse" placeholder="Adresse"></label>
-      <label>Code postal <input type="text" name="code_postal" id="id_code_postal" placeholder="CP"></label>
-    </div>
-    <label>Précisions <input type="text" name="note" placeholder="Ex : à côté de la fontaine"></label>
-    <button type="button" class="btn btn-outline btn-sm"
-            data-geocoder data-adresse="id_adresse" data-cp="id_code_postal"
-            data-ville="id_ville" data-carte="carte-point"
-            data-libelle="📍 Localiser l'adresse">📍 Localiser l'adresse</button>
-    <div class="form-row">
-      <label>Latitude <input type="text" name="latitude" id="id_latitude" placeholder="par carte ou géocodage"></label>
-      <label>Longitude <input type="text" name="longitude" id="id_longitude" placeholder="par carte ou géocodage"></label>
-    </div>
-    <p class="muted">… ou cliquez directement sur la carte ci-dessous
-       (vos points existants y apparaissent avec leur symbole 📍🏪🎪) :</p>
-    {{ points_geo|json_script:"points-carte" }}
-    <div id="carte-point" data-pick-map data-lat-input="id_latitude"
-         data-lon-input="id_longitude" style="height: 320px; border-radius: 8px;"></div>
-    <button class="btn" type="submit">Créer le point</button>
-  </form>
-</section>
-
-<section class="harvest-bloc">
-  <h2>➕ Nouveau créneau</h2>
-  <form method="post" class="form card">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="creneau_ajouter">
-    <p class="muted">Cochez un ou plusieurs jours : un créneau sera créé
-       pour chacun. Ces jours cadrent les dates proposées aux clients
-       qui choisissent ce {{ exploitant.vocab.point }}{% if exploitant.en_mode_boutique %} — horaires
-       d'ouverture de la boutique{% endif %}.</p>
-    <fieldset class="form-row jours-choix">
-      <legend>Jours</legend>
-      {% for valeur, libelle in jours %}
-        <label class="jour-puce"><input type="checkbox" name="jours" value="{{ valeur }}"> {{ libelle }}</label>
-      {% endfor %}
-    </fieldset>
-    <div class="form-row">
-      <label>Point
-        <select name="point" id="id_point_creneau">
-          <option value="">— sans point précis —</option>
-          {% for point in points %}
-            <option value="{{ point.pk }}" data-type="{{ point.type_point }}">{{ point.emoji_type }} {{ point.nom }} ({{ point.ville }})</option>
-          {% endfor %}
-        </select></label>
-    </div>
-    <div class="form-row">
-      <label>Début <input type="time" name="heure_debut" required></label>
-      <label>Fin <input type="time" name="heure_fin" required></label>
-      <label>Fréquence
-        <select name="frequence">
-          {% for valeur, libelle in frequences %}
-            <option value="{{ valeur }}">{{ libelle }}</option>
-          {% endfor %}
-        </select></label>
-      <label id="champ-capacite">Capacité (paniers) <input type="number" name="capacite" min="1" value="10"></label>
-    </div>
-    <button class="btn" type="submit">Ajouter le créneau</button>
-  </form>
-</section>
-
-<section class="harvest-bloc">
   <h2>🗓 Ma semaine type</h2>
   {% if creneaux %}
     <table class="table">
@@ -106,7 +30,7 @@
             {% for creneau in creneaux %}
               {% if creneau.jour|stringformat:"s" == valeur|stringformat:"s" %}
                 <div class="badge">{{ creneau.heure_debut|time:"H:i" }}–{{ creneau.heure_fin|time:"H:i" }}</div>
-                <div class="muted">{{ creneau.point_livraison.nom|default:"sans point" }}</div>
+                <div class="muted">{% if creneau.point_livraison %}{{ creneau.point_livraison.emoji_type }} {{ creneau.point_livraison.nom }}{% else %}sans point{% endif %}</div>
               {% endif %}
             {% endfor %}
           </td>
@@ -115,12 +39,12 @@
     </table>
     <p class="muted">La vue ci-dessus récapitule vos créneaux récurrents ;
        les clients ne peuvent choisir que les dates tombant sur ces jours
-       (et uniquement ceux du point de livraison sélectionné).</p>
+       (et uniquement ceux du point sélectionné).</p>
   {% else %}
     <p class="card etat-vide"><span class="etat-vide-emoji">🗓</span>
        Aucun créneau : les clients se voient proposer tous les jours.
-       Créez vos créneaux ci-dessus pour cadrer vos livraisons.
-    </p>
+       Créez vos créneaux sur un point ci-dessous pour cadrer vos
+       livraisons et passages de marché.</p>
   {% endif %}
 </section>
 
@@ -153,8 +77,9 @@
             <input type="hidden" id="geo_lon_{{ point.pk }}" name="longitude">
           </form>
         {% endif %}
+
         <details class="point-edition">
-          <summary>✏️ Modifier (nom / localisation)</summary>
+          <summary>✏️ Modifier le point (nom / localisation)</summary>
           <form method="post" class="form">
             {% csrf_token %}
             <input type="hidden" name="action" value="point_modifier">
@@ -168,8 +93,8 @@
               <label>Ville <input type="text" name="ville" id="mod_ville_{{ point.pk }}" value="{{ point.ville }}"></label>
             </div>
             <div class="form-row">
-              <label>Latitude <input type="text" name="latitude" id="mod_lat_{{ point.pk }}" placeholder="{{ point.latitude|default:'' }}" value="{{ point.latitude|default_if_none:'' }}"></label>
-              <label>Longitude <input type="text" name="longitude" id="mod_lon_{{ point.pk }}" placeholder="{{ point.longitude|default:'' }}" value="{{ point.longitude|default_if_none:'' }}"></label>
+              <label>Latitude <input type="text" name="latitude" id="mod_lat_{{ point.pk }}" value="{{ point.latitude|default_if_none:'' }}"></label>
+              <label>Longitude <input type="text" name="longitude" id="mod_lon_{{ point.pk }}" value="{{ point.longitude|default_if_none:'' }}"></label>
             </div>
             <button type="button" class="btn btn-sm btn-outline"
                     data-geocoder data-adresse="mod_adresse_{{ point.pk }}"
@@ -181,19 +106,79 @@
             <button class="btn btn-sm" type="submit">💾 Enregistrer</button>
           </form>
         </details>
-        <ul>
+
+        <ul class="creneaux-liste">
           {% for creneau in point.creneaux.all %}
-            <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut }}–{{ creneau.heure_fin }},
+            <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut|time:"H:i" }}–{{ creneau.heure_fin|time:"H:i" }},
                 {{ creneau.get_frequence_display|lower }}{% if point.type_point == 'LIVRAISON' %}, capacité {{ creneau.capacite }}{% endif %}
               <form method="post" class="inline">{% csrf_token %}
                 <input type="hidden" name="action" value="creneau_supprimer">
                 <input type="hidden" name="pk" value="{{ creneau.pk }}">
                 <button class="btn btn-sm btn-danger" type="submit">🗑</button>
-              </form></li>
+              </form>
+              <details class="creneau-edition">
+                <summary>✏️</summary>
+                <form method="post" class="form form-row">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="creneau_modifier">
+                  <input type="hidden" name="pk" value="{{ creneau.pk }}">
+                  <label>Jour
+                    <select name="jour">
+                      {% for valeur, libelle in jours %}
+                        <option value="{{ valeur }}"{% if creneau.jour|stringformat:"s" == valeur|stringformat:"s" %} selected{% endif %}>{{ libelle }}</option>
+                      {% endfor %}
+                    </select></label>
+                  <label>Début <input type="time" name="heure_debut" value="{{ creneau.heure_debut|time:'H:i' }}" required></label>
+                  <label>Fin <input type="time" name="heure_fin" value="{{ creneau.heure_fin|time:'H:i' }}" required></label>
+                  <label>Fréquence
+                    <select name="frequence">
+                      {% for valeur, libelle in frequences %}
+                        <option value="{{ valeur }}"{% if creneau.frequence == valeur %} selected{% endif %}>{{ libelle }}</option>
+                      {% endfor %}
+                    </select></label>
+                  {% if point.type_point == 'LIVRAISON' %}
+                  <label>Capacité <input type="number" name="capacite" min="1" value="{{ creneau.capacite }}"></label>
+                  {% endif %}
+                  <button class="btn btn-sm" type="submit">💾</button>
+                </form>
+              </details>
+            </li>
           {% empty %}
             <li class="muted">Aucun créneau sur ce point.</li>
           {% endfor %}
         </ul>
+
+        <details class="point-edition">
+          <summary>➕ Ajouter un créneau à {{ point.nom }}</summary>
+          <form method="post" class="form card">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="creneau_ajouter">
+            <input type="hidden" name="point" value="{{ point.pk }}">
+            <p class="muted">Cochez un ou plusieurs jours : un créneau sera
+               créé pour chacun sur {{ point.emoji_type }} {{ point.nom }}.
+               Ces jours cadrent les dates proposées aux clients.</p>
+            <fieldset class="form-row jours-choix">
+              <legend>Jours</legend>
+              {% for valeur, libelle in jours %}
+                <label class="jour-puce"><input type="checkbox" name="jours" value="{{ valeur }}"> {{ libelle }}</label>
+              {% endfor %}
+            </fieldset>
+            <div class="form-row">
+              <label>Début <input type="time" name="heure_debut" required></label>
+              <label>Fin <input type="time" name="heure_fin" required></label>
+              <label>Fréquence
+                <select name="frequence">
+                  {% for valeur, libelle in frequences %}
+                    <option value="{{ valeur }}">{{ libelle }}</option>
+                  {% endfor %}
+                </select></label>
+              {% if point.type_point == 'LIVRAISON' %}
+              <label>Capacité (paniers) <input type="number" name="capacite" min="1" value="10"></label>
+              {% endif %}
+            </div>
+            <button class="btn" type="submit">Ajouter le créneau</button>
+          </form>
+        </details>
       </div>
       <form method="post" class="inline" onsubmit="return confirm('Supprimer le point « {{ point.nom }} » et ses créneaux ?');">{% csrf_token %}
         <input type="hidden" name="action" value="point_supprimer">
@@ -202,47 +187,119 @@
       </form>
     </div>
   {% empty %}
-    <p class="muted">Aucun point de livraison pour l'instant.</p>
+    <p class="muted">Aucun point pour l'instant : créez-en un ci-dessous
+       (marché, boutique, dépôt de paniers…).</p>
   {% endfor %}
+
   {% if creneaux_sans_point %}
     <div class="card harvest-item">
       <div><strong>Créneaux généraux (sans point)</strong>
-        <ul>
+        <ul class="creneaux-liste">
           {% for creneau in creneaux_sans_point %}
-            <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut }}–{{ creneau.heure_fin }},
-                {{ creneau.get_frequence_display|lower }}
+            <li>🗓 {{ creneau.get_jour_display }} {{ creneau.heure_debut|time:"H:i" }}–{{ creneau.heure_fin|time:"H:i" }},
+                {{ creneau.get_frequence_display|lower }}, capacité {{ creneau.capacite }}
               <form method="post" class="inline">{% csrf_token %}
                 <input type="hidden" name="action" value="creneau_supprimer">
                 <input type="hidden" name="pk" value="{{ creneau.pk }}">
                 <button class="btn btn-sm btn-danger" type="submit">🗑</button>
-              </form></li>
+              </form>
+              <details class="creneau-edition">
+                <summary>✏️</summary>
+                <form method="post" class="form form-row">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="creneau_modifier">
+                  <input type="hidden" name="pk" value="{{ creneau.pk }}">
+                  <label>Jour
+                    <select name="jour">
+                      {% for valeur, libelle in jours %}
+                        <option value="{{ valeur }}"{% if creneau.jour|stringformat:"s" == valeur|stringformat:"s" %} selected{% endif %}>{{ libelle }}</option>
+                      {% endfor %}
+                    </select></label>
+                  <label>Début <input type="time" name="heure_debut" value="{{ creneau.heure_debut|time:'H:i' }}" required></label>
+                  <label>Fin <input type="time" name="heure_fin" value="{{ creneau.heure_fin|time:'H:i' }}" required></label>
+                  <label>Fréquence
+                    <select name="frequence">
+                      {% for valeur, libelle in frequences %}
+                        <option value="{{ valeur }}"{% if creneau.frequence == valeur %} selected{% endif %}>{{ libelle }}</option>
+                      {% endfor %}
+                    </select></label>
+                  <label>Capacité <input type="number" name="capacite" min="1" value="{{ creneau.capacite }}"></label>
+                  <button class="btn btn-sm" type="submit">💾</button>
+                </form>
+              </details>
+            </li>
           {% endfor %}
         </ul>
+        <details class="point-edition">
+          <summary>➕ Ajouter un créneau général</summary>
+          <form method="post" class="form card">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="creneau_ajouter">
+            <input type="hidden" name="point" value="">
+            <fieldset class="form-row jours-choix">
+              <legend>Jours</legend>
+              {% for valeur, libelle in jours %}
+                <label class="jour-puce"><input type="checkbox" name="jours" value="{{ valeur }}"> {{ libelle }}</label>
+              {% endfor %}
+            </fieldset>
+            <div class="form-row">
+              <label>Début <input type="time" name="heure_debut" required></label>
+              <label>Fin <input type="time" name="heure_fin" required></label>
+              <label>Fréquence
+                <select name="frequence">
+                  {% for valeur, libelle in frequences %}
+                    <option value="{{ valeur }}">{{ libelle }}</option>
+                  {% endfor %}
+                </select></label>
+              <label>Capacité (paniers) <input type="number" name="capacite" min="1" value="10"></label>
+            </div>
+            <button class="btn" type="submit">Ajouter le créneau</button>
+          </form>
+        </details>
       </div>
     </div>
   {% endif %}
+
+  <details class="point-edition point-creation">
+    <summary>➕ Créer un nouveau point</summary>
+    <form method="post" class="form card">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="point_creer">
+      <div class="form-row">
+        <label>Type
+          <select name="type_point">
+            {% for valeur, libelle in types_points %}
+              <option value="{{ valeur }}"{% if exploitant.en_mode_boutique and valeur == "BOUTIQUE" or not exploitant.en_mode_boutique and valeur == "LIVRAISON" %} selected{% endif %}>{{ libelle }}</option>
+            {% endfor %}
+          </select></label>
+        <label>Nom <input type="text" name="nom" required placeholder="Ex : Marché couvert"></label>
+        <label>Ville <input type="text" name="ville" id="id_ville" required placeholder="Ville"></label>
+      </div>
+      <div class="form-row">
+        <label>Adresse <input type="text" name="adresse" id="id_adresse" placeholder="Adresse"></label>
+        <label>Code postal <input type="text" name="code_postal" id="id_code_postal" placeholder="CP"></label>
+      </div>
+      <label>Précisions <input type="text" name="note" placeholder="Ex : à côté de la fontaine"></label>
+      <button type="button" class="btn btn-outline btn-sm"
+              data-geocoder data-adresse="id_adresse" data-cp="id_code_postal"
+              data-ville="id_ville" data-carte="carte-point"
+              data-libelle="📍 Localiser l'adresse">📍 Localiser l'adresse</button>
+      <div class="form-row">
+        <label>Latitude <input type="text" name="latitude" id="id_latitude" placeholder="par carte ou géocodage"></label>
+        <label>Longitude <input type="text" name="longitude" id="id_longitude" placeholder="par carte ou géocodage"></label>
+      </div>
+      <p class="muted">… ou cliquez directement sur la carte ci-dessous
+         (vos points existants y apparaissent avec leur symbole 📍🏪🎪) :</p>
+      {{ points_geo|json_script:"points-carte" }}
+      <div id="carte-point" data-pick-map data-lat-input="id_latitude"
+           data-lon-input="id_longitude" style="height: 320px; border-radius: 8px;
+"></div>
+      <button class="btn" type="submit">Créer le point</button>
+    </form>
+  </details>
 </section>
 {% endblock %}
 {% block extrajs %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{% static 'js/pick-map.js' %}" defer></script>
-<script>
-/* La capacité (paniers) ne concerne que les points de livraison :
-   sur une boutique ou un marché, le champ se masque. */
-window.addEventListener("DOMContentLoaded", function () {
-  var select = document.getElementById("id_point_creneau");
-  var champ = document.getElementById("champ-capacite");
-  if (!select || !champ) return;
-  function majCapacite() {
-    var opt = select.options[select.selectedIndex];
-    var type = opt ? (opt.dataset.type || "") : "";
-    var concerne = !type || type === "LIVRAISON";
-    champ.style.display = concerne ? "" : "none";
-    var saisie = champ.querySelector("input");
-    if (saisie) saisie.disabled = !concerne;
-  }
-  select.addEventListener("change", majCapacite);
-  majCapacite();
-});
-</script>
 {% endblock %}

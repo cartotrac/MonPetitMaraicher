@@ -484,6 +484,107 @@ def proprietaire_requis(fonction):
 
 # ---------------------------------------------------------------- espace pro
 
+JOURS_NOMS = {1: "lundi", 2: "mardi", 3: "mercredi", 4: "jeudi",
+              5: "vendredi", 6: "samedi", 7: "dimanche"}
+
+
+def _heure_courte(t):
+    """18:30 -> « 18h30 », 08:00 -> « 8h »."""
+    return t.strftime("%Hh%M").replace("h00", "h").lstrip("0")
+
+
+def _phrase_jours(jours):
+    """[1..5] -> « du lundi au vendredi » ; [4] -> « le jeudi » ;
+    [2, 4] -> « le mardi et le jeudi »."""
+    jours = sorted(jours)
+    if not jours:
+        return ""
+    if len(jours) == 1:
+        return "le " + JOURS_NOMS[jours[0]]
+    if jours == list(range(jours[0], jours[-1] + 1)):
+        return (f"du {JOURS_NOMS[jours[0]]} au "
+                f"{JOURS_NOMS[jours[-1]]}")
+    return ("le " + ", ".join(JOURS_NOMS[j] for j in jours[:-1])
+            + " et le " + JOURS_NOMS[jours[-1]])
+
+
+def _phrase_jours_pluriel(jours):
+    """Variante « marché » : [4] -> « tous les jeudis »,
+    [2, 4] -> « les mardis et les jeudis »."""
+    jours = sorted(jours)
+    if len(jours) == 1:
+        return "tous les " + JOURS_NOMS[jours[0]] + "s"
+    if jours == list(range(jours[0], jours[-1] + 1)):
+        return (f"du {JOURS_NOMS[jours[0]]} au "
+                f"{JOURS_NOMS[jours[-1]]}")
+    return ("les " + "s, les ".join(JOURS_NOMS[j] for j in jours[:-1])
+            + "s et les " + JOURS_NOMS[jours[-1]] + "s")
+
+
+def _phrases_point(point, creneaux):
+    """Une phrase naturelle par point, à partir de ses créneaux :
+    « Boutique X ouverte du lundi au vendredi de 8h à 12h et de 14h à
+    16h30, le samedi de 8h à 11h », « Marché Y tous les jeudis de 8h à
+    12h », « Retirez vos colis Place Z le vendredi soir de 18h30 à 20h ».
+    Les jours partageant les mêmes plages horaires sont regroupés."""
+    # Par jour : plages (début, fin) triées ; signature = plages du jour
+    par_jour = {}
+    for c in creneaux:
+        par_jour.setdefault(c.jour, []).append(
+            (c.heure_debut, c.heure_fin, c.frequence))
+    groupes = {}
+    for jour, plages in par_jour.items():
+        signature = tuple(sorted((d, f) for d, f, _ in plages))
+        groupes.setdefault(signature, {"jours": [], "freqs": []})
+        groupes[signature]["jours"].append(jour)
+        groupes[signature]["freqs"].extend(
+            f for *_, f in plages)
+    est_marche = (point is not None
+                  and point.type_point == PointLivraison.Type.MARCHE)
+    parties = []
+    for signature, groupe in groupes.items():
+        texte = (_phrase_jours_pluriel(groupe["jours"]) if est_marche
+                 else _phrase_jours(groupe["jours"]))
+        # « soir » si toutes les plages commencent à 17h ou plus tard
+        if all(d.hour >= 17 for d, _ in signature):
+            texte += " soir"
+        plages_txt = " et ".join(
+            f"de {_heure_courte(d)} à {_heure_courte(f)}"
+            for d, f in signature)
+        partie = f"{texte} {plages_txt}"
+        freqs = set(groupe["freqs"])
+        if freqs and freqs != {CreneauLivraison.Frequence.HEBDO}:
+            libelles = [dict(CreneauLivraison.Frequence.choices)[fr]
+                        .lower() for fr in freqs]
+            partie += " (" + ", ".join(libelles) + ")"
+        parties.append(partie)
+    horaires = ", ".join(parties)
+    if point is None:
+        return f"📍 Retirez vos colis à la ferme {horaires}"
+    if point.type_point == PointLivraison.Type.BOUTIQUE:
+        return (f"🏪 {point.nom} ({point.ville}) : ouverte {horaires}")
+    if est_marche:
+        return f"🎪 {point.nom} ({point.ville}) : {horaires}"
+    return f"📍 Retirez vos colis à « {point.nom} » ({point.ville}) {horaires}"
+
+
+def _phrases_livraison(exploitant):
+    """Bandeau des livraisons du dashboard : un message par point
+    (boutique, marché, point de livraison), créneaux regroupés."""
+    phrases = []
+    points = exploitant.points_livraison.prefetch_related("creneaux") \
+        .order_by("ville", "nom")
+    for point in points:
+        creneaux = list(point.creneaux.all())
+        if creneaux:
+            phrases.append(_phrases_point(point, creneaux))
+    sans_point = list(exploitant.creneaux
+                      .filter(point_livraison__isnull=True))
+    if sans_point:
+        phrases.append(_phrases_point(None, sans_point))
+    return phrases
+
+
 def _calendrier_recoltes(exploitant):
     """Vue calendaire hebdomadaire des récoltes (dashboard) : les 8
     prochaines semaines, chacune reliée à sa semaine de récolte si elle
@@ -554,6 +655,7 @@ def dashboard(request):
         "calendrier": _calendrier_recoltes(exploitant),
         "points": exploitant.points_livraison.all(),
         "creneaux": exploitant.creneaux.select_related("point_livraison"),
+        "phrases_livraison": _phrases_livraison(exploitant),
         "commandes_attente": exploitant.commandes
                              .filter(statut=Commande.Statut.NOUVELLE)
                              .order_by("-creee_le")[:10],
@@ -1971,6 +2073,44 @@ def points_manage(request):
                                      .get_field("jour").choices)[j]
                                 for j in jours_choisis)
                     + f" {heure_debut}–{heure_fin}.")
+        elif action == "creneau_modifier":
+            creneau = get_object_or_404(CreneauLivraison,
+                                        pk=request.POST.get("pk"),
+                                        exploitant=exploitant)
+            try:
+                heure_debut = datetime.time.fromisoformat(
+                    request.POST.get("heure_debut", ""))
+                heure_fin = datetime.time.fromisoformat(
+                    request.POST.get("heure_fin", ""))
+                jour = int(request.POST.get("jour"))
+                capacite = int(request.POST.get("capacite")
+                                or creneau.capacite)
+            except (TypeError, ValueError):
+                messages.error(request, "Créneau invalide "
+                               "(jour, horaires ou capacité).")
+                return redirect("portal:points_manage")
+            frequence = request.POST.get("frequence", "")
+            if not (1 <= jour <= 7):
+                messages.error(request, "Jour inconnu.")
+            elif heure_debut >= heure_fin:
+                messages.error(request, "Créneau invalide : la fin doit "
+                               "arriver après le début.")
+            elif frequence not in CreneauLivraison.Frequence.values:
+                messages.error(request, "Fréquence inconnue.")
+            else:
+                creneau.jour = jour
+                creneau.heure_debut = heure_debut
+                creneau.heure_fin = heure_fin
+                creneau.frequence = frequence
+                # La capacité ne concerne que les points de livraison
+                if (creneau.point_livraison is None
+                        or creneau.point_livraison.type_point
+                        == PointLivraison.Type.LIVRAISON):
+                    creneau.capacite = capacite
+                creneau.save()
+                messages.success(request, "Créneau mis à jour : "
+                                 + creneau.get_jour_display()
+                                 + f" {heure_debut}–{heure_fin}.")
         elif action == "creneau_supprimer":
             creneau = get_object_or_404(CreneauLivraison,
                                         pk=request.POST.get("pk"),

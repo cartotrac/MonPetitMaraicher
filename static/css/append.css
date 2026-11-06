@@ -1040,3 +1040,53 @@ html.dark .search-bar .multi-choix option:checked {
 @media (max-width: 820px) {
   .search-bar .multi-choix { min-width: 0; width: 100%; }
 }
+
+/* ===== Filtres déroulants à choix multiple (cases à cocher) :
+     même visuel que l'ancien select, mais multi-sélection. ===== */
+.filtre-multi { position: relative; display: inline-block; }
+.filtre-multi summary {
+  list-style: none; cursor: pointer; user-select: none;
+  padding: 0.45rem 0.8rem; border: 1px solid #c9d6bd;
+  border-radius: 8px; background: #fff; font-size: 0.9rem;
+  white-space: nowrap;
+}
+.filtre-multi summary::-webkit-details-marker { display: none; }
+.filtre-multi[open] summary { border-color: #2e7d32; }
+.filtre-multi-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 1050;
+  min-width: 15rem; max-height: 15rem; overflow-y: auto;
+  background: #fff; border: 1px solid #c9d6bd; border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.16); padding: 0.4rem 0.6rem;
+}
+.filtre-multi-choix {
+  display: flex; align-items: center; gap: 0.45rem;
+  padding: 0.28rem 0.2rem; cursor: pointer; border-radius: 6px;
+  font-size: 0.88rem;
+}
+.filtre-multi-choix:hover { background: #f1f6ec; }
+.filtre-multi-choix input { accent-color: #2e7d32; }
+.filtre-multi-menu .muted { font-size: 0.75rem; margin: 0.3rem 0 0; }
+html.dark .filtre-multi summary { background: #26301f;
+  color: #e6e4da; border-color: #55624a; }
+html.dark .filtre-multi[open] summary { border-color: #aed581; }
+html.dark .filtre-multi-menu { background: #1d2617;
+  border-color: #55624a; color: #e6e4da; }
+html.dark .filtre-multi-choix:hover { background: #26301f; }
+
+/* ===== Page points : listes de créneaux + édition inline ===== */
+.creneaux-liste { list-style: none; padding-left: 0; margin: 0.5rem 0 0; }
+.creneaux-liste li { padding: 0.18rem 0; }
+.creneau-edition { display: inline-block; margin-left: 0.3rem; }
+.creneau-edition summary { cursor: pointer; font-size: 0.8rem;
+  color: #2e7d32; display: inline; }
+.creneau-edition[open] summary { display: inline; }
+.creneau-edition form { margin: 0.35rem 0 0.2rem; }
+html.dark .creneau-edition summary { color: #c5e1a5; }
+.point-creation { margin-top: 0.8rem; }
+.point-creation summary { font-weight: 600; font-size: 0.95rem; }
+.point-creation[open] { margin-top: 0.9rem; }
+@media (max-width: 820px) {
+  .filtre-multi { width: 100%; }
+  .filtre-multi summary { width: 100%; }
+  .filtre-multi-menu { max-height: 11rem; }
+}

@@ -47,23 +47,28 @@
 <form class="search-bar" method="get" action="{% url 'portal:producer_search' %}">
   <input type="text" name="q" placeholder="Produit, ferme, ville ou code postal…" value="{{ q }}">
   <input type="text" name="dept" placeholder="Dépt. ou code postal (ex : 81)" value="{{ dept }}" size="10">
-  <select name="activite" multiple size="5" class="multi-choix" aria-label="Activités (choix multiple)">
-    {% for code, libelle in activites %}
-      <option value="{{ code }}"{% if code in activite_choisie %} selected{% endif %}>{{ libelle }}</option>
-    {% endfor %}
-  </select>
-  <select name="mode" multiple size="5" class="multi-choix" aria-label="Modes de production (choix multiple)">
-    <option value="AB"{% if 'AB' in mode_choisi %} selected{% endif %}>Bio (AB)</option>
-    <option value="PERMA"{% if 'PERMA' in mode_choisi %} selected{% endif %}>Permaculture</option>
-    <option value="PAYSAN"{% if 'PAYSAN' in mode_choisi %} selected{% endif %}>Agriculture paysanne</option>
-    <option value="RAISONNE"{% if 'RAISONNE' in mode_choisi %} selected{% endif %}>Raisonnée</option>
-    <option value="CONV"{% if 'CONV' in mode_choisi %} selected{% endif %}>Conventionnelle</option>
-  </select>
+  <details class="filtre-multi">
+    <summary>🥬 Activités{% if activite_choisie %} ({{ activite_choisie|length }}){% endif %} ▾</summary>
+    <div class="filtre-multi-menu">
+      {% for code, libelle in activites %}
+        <label class="filtre-multi-choix"><input type="checkbox" name="activite" value="{{ code }}"{% if code in activite_choisie %} checked{% endif %}> {{ libelle }}</label>
+      {% endfor %}
+      <p class="muted">Plusieurs choix possibles — tout décocher = toutes les activités.</p>
+    </div>
+  </details>
+  <details class="filtre-multi">
+    <summary>🌱 Modes de production{% if mode_choisi %} ({{ mode_choisi|length }}){% endif %} ▾</summary>
+    <div class="filtre-multi-menu">
+      <label class="filtre-multi-choix"><input type="checkbox" name="mode" value="AB"{% if 'AB' in mode_choisi %} checked{% endif %}> Bio (AB)</label>
+      <label class="filtre-multi-choix"><input type="checkbox" name="mode" value="PERMA"{% if 'PERMA' in mode_choisi %} checked{% endif %}> Permaculture</label>
+      <label class="filtre-multi-choix"><input type="checkbox" name="mode" value="PAYSAN"{% if 'PAYSAN' in mode_choisi %} checked{% endif %}> Agriculture paysanne</label>
+      <label class="filtre-multi-choix"><input type="checkbox" name="mode" value="RAISONNE"{% if 'RAISONNE' in mode_choisi %} checked{% endif %}> Raisonnée</label>
+      <label class="filtre-multi-choix"><input type="checkbox" name="mode" value="CONV"{% if 'CONV' in mode_choisi %} checked{% endif %}> Conventionnelle</label>
+      <p class="muted">Plusieurs choix possibles — tout décocher = tous les modes.</p>
+    </div>
+  </details>
   <button class="btn" type="submit">Filtrer</button>
 </form>
-<p class="muted">Activités et modes de production : <strong>choix
-   multiple</strong> (Ctrl + clic ou clic + glisser sous Windows,
-   Cmd + clic sur Mac) — aucun choix = tout afficher.</p>
 <div id="filtres-sauvegardes" class="filtres-sauvegardes" data-url="{% url 'portal:producer_search' %}"></div>
 
 <section class="map-section">
@@ -193,19 +198,14 @@
       var champ = form.elements[nom];
       if (champ && champ.value.trim()) vals[nom] = champ.value.trim();
     });
-    /* Listes à choix multiple : on relève toutes les options
-       sélectionnées (Ctrl/clic, ou tout désélectionner = tout). */
+    /* Listes à choix multiple (cases à cocher des filtres déroulants) :
+       on relève toutes les cases cochées. */
     ["mode", "activite"].forEach(function (nom) {
-      var champ = form.elements[nom];
-      if (!champ) return;
-      if (champ.multiple) {
-        var sel = Array.prototype.slice.call(champ.selectedOptions)
-          .map(function (o) { return o.value.trim(); })
-          .filter(Boolean);
-        if (sel.length) vals[nom] = sel;
-      } else if (champ.value.trim()) {
-        vals[nom] = champ.value.trim();
-      }
+      var sel = Array.prototype.slice.call(
+        form.querySelectorAll('[name="' + nom + '"]:checked'))
+        .map(function (o) { return o.value.trim(); })
+        .filter(Boolean);
+      if (sel.length) vals[nom] = sel;
     });
     return vals;
   }
