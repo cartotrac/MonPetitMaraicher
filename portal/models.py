@@ -41,7 +41,21 @@ class Exploitant(models.Model):
         APICULTEUR = "APICULTEUR", "Apiculteur·rice"
         MICRO_BRASSEUR = "MICRO_BRASSEUR", "Micro-brasseur·euse"
         CONSERVERIE = "CONSERVERIE", "Conserverie"
+        FOODTRUCK = "FOODTRUCK", "Foodtruck"
+        TRAITEUR = "TRAITEUR", "Traiteur·e"
         AUTRE = "AUTRE", "Autre production locale"
+
+    class Specialite(models.TextChoices):
+        """Type précis au sein d'une activité. Réservé pour l'instant
+        aux foodtrucks (pizza, burger, kebab) et traiteurs ; servira
+        plus tard à préciser d'autres catégories de producteurs."""
+        PIZZA = "PIZZA", "Pizza"
+        BURGER = "BURGER", "Burger"
+        KEBAB = "KEBAB", "Kebab"
+        TRAITEUR = "TRAITEUR", "Traiteur"
+
+    SPECIALITE_EMOJIS = {"PIZZA": "🍕", "BURGER": "🍔",
+                         "KEBAB": "🥙", "TRAITEUR": "🍽️"}
 
     class ModeFonctionnement(models.TextChoices):
         RECOLTE = "RECOLTE", "Récoltes hebdomadaires (paniers)"
@@ -51,7 +65,8 @@ class Exploitant(models.Model):
     ACTIVITE_EMOJIS = {"MARAICHER": "🥬", "ARBORICULTEUR": "🍎",
                        "ELEVEUR": "🐄", "FROMAGER": "🧀",
                        "APICULTEUR": "🍯", "MICRO_BRASSEUR": "🍺",
-                       "CONSERVERIE": "🥫", "AUTRE": "🌾"}
+                       "CONSERVERIE": "🥫", "FOODTRUCK": "🚚",
+                       "TRAITEUR": "🍽️", "AUTRE": "🌾"}
 
     user = models.OneToOneField(User, on_delete=models.CASCADE,
                                 related_name="exploitant")
@@ -68,6 +83,11 @@ class Exploitant(models.Model):
         help_text="Les pros déjà enregistrés sont typés maraîcher ; "
                   "d'autres activités (élevage, fromagerie, arboriculture…)"
                   "arriveront avec leurs listes de produits dédiées.")
+    specialite = models.CharField(
+        "Spécialité", max_length=10, choices=Specialite.choices,
+        blank=True, default="",
+        help_text="Affine l'activité — réservé pour l'instant aux "
+                  "foodtrucks (pizza, burger, kebab) et traiteurs.")
     logo = models.ImageField("Logo miniature", upload_to=logo_chemin,
                              blank=True, null=True)
     description = models.TextField("Présentation de l'exploitation", blank=True)
@@ -113,6 +133,10 @@ class Exploitant(models.Model):
         return self.ACTIVITE_EMOJIS.get(self.activite, "🌾")
 
     @property
+    def emoji_specialite(self):
+        return self.SPECIALITE_EMOJIS.get(self.specialite, "")
+
+    @property
     def en_mode_boutique(self):
         return (self.mode_fonctionnement
                 == self.ModeFonctionnement.BOUTIQUE)
@@ -134,7 +158,9 @@ class Exploitant(models.Model):
         if self.en_mode_boutique:
             if self.activite in (self.Activite.APICULTEUR,
                                  self.Activite.MICRO_BRASSEUR,
-                                 self.Activite.CONSERVERIE):
+                                 self.Activite.CONSERVERIE,
+                                 self.Activite.FOODTRUCK,
+                                 self.Activite.TRAITEUR):
                 return {
                     "recolte": "production", "recoltes": "productions",
                     "recoltes_titre": "Mes productions",
@@ -170,6 +196,8 @@ class Exploitant(models.Model):
         "APICULTEUR": "L'équipe d'apiculteurs",
         "MICRO_BRASSEUR": "L'équipe de brasseurs",
         "CONSERVERIE": "L'équipe de la conserverie",
+        "FOODTRUCK": "L'équipe du foodtruck",
+        "TRAITEUR": "L'équipe de traiteurs",
         "AUTRE": "L'équipe de la ferme",
     }
 
@@ -192,7 +220,9 @@ class Exploitant(models.Model):
                     else "Récolte de la semaine")
         if self.activite in (self.Activite.APICULTEUR,
                              self.Activite.MICRO_BRASSEUR,
-                             self.Activite.CONSERVERIE):
+                             self.Activite.CONSERVERIE,
+                             self.Activite.FOODTRUCK,
+                             self.Activite.TRAITEUR):
             return ("Nos productions de la semaine" if a_plusieurs
                     else "Mes productions de la semaine")
         return ("Nos produits de la semaine" if a_plusieurs
@@ -206,7 +236,9 @@ class Exploitant(models.Model):
             return "Récoltes à venir"
         if self.activite in (self.Activite.APICULTEUR,
                              self.Activite.MICRO_BRASSEUR,
-                             self.Activite.CONSERVERIE):
+                             self.Activite.CONSERVERIE,
+                             self.Activite.FOODTRUCK,
+                             self.Activite.TRAITEUR):
             return "Productions à venir"
         return "Produits à venir"
 
@@ -495,8 +527,10 @@ class PointLivraison(models.Model):
         LIVRAISON = "LIVRAISON", "Point de livraison / retrait"
         BOUTIQUE = "BOUTIQUE", "Boutique / point de vente"
         MARCHE = "MARCHE", "Marché"
+        EMPLACEMENT = "EMPLACEMENT", "Emplacement / arrêt foodtruck"
 
-    TYPE_EMOJIS = {"LIVRAISON": "📍", "BOUTIQUE": "🏪", "MARCHE": "🎪"}
+    TYPE_EMOJIS = {"LIVRAISON": "📍", "BOUTIQUE": "🏪", "MARCHE": "🎪",
+                   "EMPLACEMENT": "🚚"}
 
     exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
                                    related_name="points_livraison")
