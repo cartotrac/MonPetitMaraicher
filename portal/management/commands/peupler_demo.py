@@ -50,6 +50,14 @@ Comptes créés (mot de passe : demo1234!) :
     Réunion     : demo.reunion.maraicher, demo.reunion.arboriculteur
     Martinique  : demo.martinique.maraicher, demo.martinique.eleveur
     Brasseries : demo.brasserie.sor, demo.brasserie.leguer
+    Foodtrucks  : demo.foodtruck.pizza.lavaur,
+                  demo.foodtruck.pizza.rennes,
+                  demo.foodtruck.burger.castres,
+                  demo.foodtruck.sandwichs.albi,
+                  demo.foodtruck.rotisseur.toulouse
+    Traiteurs   : demo.traiteur.gaillac, demo.traiteur.lavaur,
+                  demo.traiteur.montauban, demo.traiteur.brest,
+                  demo.traiteur.rennes
     Clients     : demo.cliente, demo.client
 """
 import datetime
@@ -57,6 +65,7 @@ from decimal import Decimal
 from itertools import count
 
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import connection
 from django.utils.text import slugify
@@ -108,7 +117,8 @@ _SIRET_SEQ = count(1)
 
 def _ferme_spec(utilisateur, ferme, activite, mode, cp, adresse, ville,
                 lat, lon, tel, description, prix_base, mix, points,
-                creneaux, note_semaine, bulletin_objet, bulletin_corps):
+                creneaux, note_semaine, bulletin_objet, bulletin_corps,
+                specialite=None, type_point=None):
     """Construit la spécification d'une ferme de démo (appel compact).
     Le préfixe SIRET (13 chiffres, clé de Luhn ajoutée ensuite) est
     dérivé du code postal + un compteur global unique."""
@@ -119,6 +129,7 @@ def _ferme_spec(utilisateur, ferme, activite, mode, cp, adresse, ville,
         "adresse": adresse, "ville": ville, "cp": cp,
         "lat": lat, "lon": lon, "tel": tel,
         "description": description, "prix_base": prix_base, "mix": mix,
+        "specialite": specialite, "type_point": type_point,
         "points": points, "creneaux": creneaux, "note_semaine": note_semaine,
         "bulletin": (bulletin_objet, bulletin_corps),
     }
@@ -617,6 +628,198 @@ FERMES = [
         "Blonde, ambrée et weizen en bouteilles et en fûts ; le stout "
         "au blé noir arrive mercredi. Miel de sarrasin des ruches de "
         "la baie de Lannion en complément."),
+    # ── Foodtrucks 🚚 : emplacements du soir, spécialité au camion ─
+    _ferme_spec(
+        "demo.foodtruck.pizza.lavaur", "Pizza Vago", A.FOODTRUCK,
+        M.RAISONNE, "81500", "Place de la Halle (parking nord)",
+        "Lavaur", 43.700, 1.918, "05 63 00 00 41",
+        "Camion pizza du centre de Lavaur : pâte fraîche du jour, "
+        "cuisson au feu de bois, margherita, reine et 4 fromages, "
+        "menus du soir et desserts maison.",
+        Decimal("9.00"),
+        [{"activite": A.FOODTRUCK, "limite": 12}],
+        [("Emplacement Place de la Halle", "Place de la Halle",
+          "Lavaur", "81500", 43.700, 1.900),
+         ("Quai de Rabastens", "Parking des halles",
+          "Rabastens", "81600", 43.820, 1.722)],
+        [(4, "18:00", "21:30", 0), (5, "18:00", "22:00", 0),
+         (6, "11:00", "14:00", 0)],
+        "Spécial 4 fromages : le bleu d'Auvergne arrive au camion.",
+        "Au camion cette semaine",
+        "Pizzas au feu de bois jeudi et vendredi soir place de la "
+        "Halle, samedi midi aussi. Menu enfant disponible.",
+        specialite=Exploitant.Specialite.PIZZA,
+        type_point=PointLivraison.Type.EMPLACEMENT),
+    _ferme_spec(
+        "demo.foodtruck.pizza.rennes", "Fornu Pizza Truck", A.FOODTRUCK,
+        M.CONV, "35000", "Place Sainte-Anne (jeudi soirs)",
+        "Rennes", 48.110, -1.678, "02 99 00 00 41",
+        "Camion pizza rennais : pâtes maturées 48 h, produits bretons "
+        "(andouille, emmental de Bretagne), menus et boissons locales.",
+        Decimal("9.00"),
+        [{"activite": A.FOODTRUCK, "limite": 12}],
+        [("Emplacement Place Sainte-Anne", "Place Sainte-Anne",
+          "Rennes", "35000", 48.109, -1.679),
+         ("Marché des Lices", "Marché des Lices",
+          "Rennes", "35000", 48.110, -1.672)],
+        [(4, "18:00", "22:00", 0), (6, "10:00", "14:00", 1)],
+        "La pizza aux andouilles de Guémené revient ce week-end.",
+        "Fornu : pizzas du week-end",
+        "Jeudi soir place Sainte-Anne, dimanche midi aux Lices. "
+        "Pâtes maturées 48 h, cuisson 90 secondes.",
+        specialite=Exploitant.Specialite.PIZZA,
+        type_point=PointLivraison.Type.EMPLACEMENT),
+    _ferme_spec(
+        "demo.foodtruck.burger.castres", "Burger du Dadou", A.FOODTRUCK,
+        M.RAISONNE, "81100", "Parking de la Rouère",
+        "Castres", 43.605, 2.240, "05 63 00 00 42",
+        "Burger gourmand castrais : viande du Tarn, frites maison "
+        "coupées minute, cheddar affiné et burger végétarien.",
+        Decimal("9.50"),
+        [{"activite": A.FOODTRUCK, "limite": 12}],
+        [("Emplacement Parking de la Rouère", "Parking de la Rouère",
+          "Castres", "81100", 43.604, 2.241)],
+        [(4, "18:00", "22:00", 0), (5, "18:00", "22:00", 0)],
+        "Double burger : le cheddar affiné 6 mois est de retour.",
+        "Burger du Dadou : cette semaine",
+        "Jeudi et vendredi soir, parking de la Rouère. Frites maison "
+        "et limonade artisanale du Tarn.",
+        specialite=Exploitant.Specialite.BURGER,
+        type_point=PointLivraison.Type.EMPLACEMENT),
+    _ferme_spec(
+        "demo.foodtruck.sandwichs.albi", "Le Camion Gourmand",
+        A.FOODTRUCK, M.CONV, "81000", "Place du Vigan (midi)",
+        "Albi", 43.930, 2.150, "05 63 00 00 43",
+        "Sandwichs et plats du jour à Albi : pain de la boulangerie "
+        "voisine, produits du marché, kebab agneau et poulet, wrap du "
+        "moment et barquettes à emporter.",
+        Decimal("9.00"),
+        [{"activite": A.FOODTRUCK, "limite": 12}],
+        [("Emplacement Place du Vigan", "Place du Vigan",
+          "Albi", "81000", 43.929, 2.148)],
+        [(3, "11:30", "14:30", 0), (6, "11:30", "15:00", 0),
+         (5, "18:30", "22:00", 0)],
+        "Plat du jour vendredi : confit de canard et pommes sarlaises.",
+        "Le Camion Gourmand : menus de la semaine",
+        "Sandwichs le midi en semaine et samedi, plat du jour en "
+        "barquette, et le vendredi soir c'est kebab !",
+        specialite=Exploitant.Specialite.SANDWICHS,
+        type_point=PointLivraison.Type.EMPLACEMENT),
+    _ferme_spec(
+        "demo.foodtruck.rotisseur.toulouse", "Rôti-Route",
+        A.FOODTRUCK, M.RAISONNE, "31000", "Allées Jean-Jaurès",
+        "Toulouse", 43.595, 1.444, "05 61 00 00 44",
+        "Rôtisseur ambulant : poulets fermiers des Landes rôtis sur "
+        "place, pommes de terre au gras de volaille, gratins et "
+        "plats familiaux à emporter.",
+        Decimal("11.00"),
+        [{"activite": A.FOODTRUCK, "limite": 12}],
+        [("Emplacement Allées Jean-Jaurès", "Allées Jean-Jaurès",
+          "Toulouse", "31000", 43.595, 1.440),
+         ("Emplacement Capitole", "Place du Capitole",
+          "Toulouse", "31000", 43.604, 1.444)],
+        [(5, "17:00", "21:00", 0), (6, "10:30", "13:30", 1)],
+        "Ce samedi au Capitole : poulets fermiers et gratin dauphinois.",
+        "Rôti-Route : rôtisserie du week-end",
+        "Vendredi soir allées Jean-Jaurès, samedi midi place du "
+        "Capitole. Poulets fermiers des Landes, rôtis devant vous.",
+        specialite=Exploitant.Specialite.ROTISSEUR,
+        type_point=PointLivraison.Type.EMPLACEMENT),
+    # ── Traiteurs 🥗 : boutique en centre-ville, plats du jour ─────
+    _ferme_spec(
+        "demo.traiteur.gaillac", "Saveurs du Girou", A.TRAITEUR,
+        M.RAISONNE, "81600", "5 rue des Abattoirs",
+        "Gaillac", 43.920, 1.894, "05 63 00 00 51",
+        "Traiteur gaillacois : terrines et pâtés maison, plats "
+        "cuisinés du terroir, salades composées et menus du jour à "
+        "emporter ou à déguster sur place.",
+        Decimal("8.00"),
+        [{"activite": A.TRAITEUR, "limite": 12}],
+        [("Boutique Saveurs du Girou", "5 rue des Abattoirs",
+          "Gaillac", "81600", 43.900, 1.896),
+         ("Marché couvert de Gaillac", "Place du marché couvert",
+          "Gaillac", "81600", 43.900, 1.895)],
+        [(2, "09:00", "18:00", 0), (6, "08:00", "12:30", 1)],
+        "Terrine de lièvre : la fournée de samedi arrive en boutique.",
+        "La semaine chez Saveurs du Girou",
+        "Menus du jour en boutique du mardi au samedi, terrines et "
+        "pâtés frais, plats cuisinés pour la famille.",
+        type_point=PointLivraison.Type.BOUTIQUE),
+    _ferme_spec(
+        "demo.traiteur.lavaur", "La Table de Lavaur", A.TRAITEUR,
+        M.CONV, "81500", "12 rue Alsace-Lorraine",
+        "Lavaur", 43.700, 1.905, "05 63 00 00 52",
+        "Traiteur lavaurais : plats cuisinés de saison, volailles du "
+        "Tarn, gratins et desserts maison, formules midi et plateaux "
+        "pour les familles.",
+        Decimal("8.50"),
+        [{"activite": A.TRAITEUR, "limite": 12}],
+        [("Boutique La Table de Lavaur", "12 rue Alsace-Lorraine",
+          "Lavaur", "81500", 43.700, 1.905)],
+        [(2, "10:00", "19:00", 0), (4, "10:00", "19:00", 0),
+         (6, "09:00", "13:00", 0)],
+        "Cassoulet maison : cuite du mercredi, à réserver !",
+        "Chez La Table de Lavaur",
+        "Cassoulet du mercredi, poulet fermier du vendredi, et le "
+        "plat du jour chaque midi en boutique.",
+        type_point=PointLivraison.Type.BOUTIQUE),
+    _ferme_spec(
+        "demo.traiteur.montauban", "Montauban Gourmand", A.TRAITEUR,
+        M.RAISONNE, "82000", "18 rue de la République",
+        "Montauban", 43.999, 1.352, "05 63 00 00 53",
+        "Traiteur montalbanais : spécialités du Sud-Ouest, confits, "
+        "terrines et pâtés, menus du jour et buffets pour vos "
+        "réceptions.",
+        Decimal("8.00"),
+        [{"activite": A.TRAITEUR, "limite": 12}],
+        [("Boutique Montauban Gourmand", "18 rue de la République",
+          "Montauban", "82000", 43.998, 1.350),
+         ("Marché de Montauban", "Place du marché couvert",
+          "Montauban", "82000", 44.015, 1.353)],
+        [(2, "09:00", "18:30", 0), (6, "08:00", "13:00", 1),
+         (6, "15:00", "19:00", 0)],
+        "Confit de canard : le lot du mois est arrivé.",
+        "La semaine chez Montauban Gourmand",
+        "Menus du jour en boutique, confits et terrines du "
+        "Sud-Ouest, plateaux repas et buffets sur commande.",
+        type_point=PointLivraison.Type.BOUTIQUE),
+    _ferme_spec(
+        "demo.traiteur.brest", "Armor Traiteur", A.TRAITEUR,
+        M.CONV, "29200", "24 rue de Siam",
+        "Brest", 48.390, -4.486, "02 98 00 00 54",
+        "Traiteur brestois : poissons et fruits de mer cuisinés, "
+        "terrines marines, plats du jour et plateaux pour vos "
+        "apéritifs et repas de famille.",
+        Decimal("8.50"),
+        [{"activite": A.TRAITEUR, "limite": 12}],
+        [("Boutique Armor Traiteur", "24 rue de Siam",
+          "Brest", "29200", 48.389, -4.487)],
+        [(2, "09:30", "19:00", 0), (5, "09:30", "19:00", 0),
+         (6, "09:30", "18:00", 0)],
+        "Terrine de saumon aux algues : nouvelle fournée vendredi.",
+        "Armor Traiteur : la semaine iodée",
+        "Poissons cuisinés, terrines marines et plateaux de fruits "
+        "de mer sur commande, boutique rue de Siam.",
+        type_point=PointLivraison.Type.BOUTIQUE),
+    _ferme_spec(
+        "demo.traiteur.rennes", "Traiteur Rennais", A.TRAITEUR,
+        M.RAISONNE, "35000", "8 rue Saint-Michel",
+        "Rennes", 48.110, -1.680, "02 99 00 00 55",
+        "Traiteur rennais : galettes garnies, plats bretons "
+        "cuisinés, gratins et desserts maison, formules midi et "
+        "buffets pour toutes les occasions.",
+        Decimal("8.00"),
+        [{"activite": A.TRAITEUR, "limite": 12}],
+        [("Boutique Traiteur Rennais", "8 rue Saint-Michel",
+          "Rennes", "35000", 48.110, -1.681),
+         ("Marché des Lices", "Marché des Lices",
+          "Rennes", "35000", 48.110, -1.672)],
+        [(2, "09:00", "18:30", 0), (6, "08:30", "13:30", 1)],
+        "Far aux pruneaux : le quatre-quarts du samedi.",
+        "Traiteur Rennais : menus de la semaine",
+        "Plats bretons cuisinés en boutique rue Saint-Michel, "
+        "stand au marché des Lices le samedi matin.",
+        type_point=PointLivraison.Type.BOUTIQUE),
 ]
 
 CLIENTS = [
@@ -696,6 +899,7 @@ class Command(BaseCommand):
         exploitant = Exploitant.objects.create(
             user=user, nom_ferme=spec["ferme"], activite=spec["activite"],
             mode_production=spec["mode"],
+            specialite=spec.get("specialite") or "",
             siret=_siret_valide(spec["siret_prefixe"]),
             description=spec["description"], adresse=spec["adresse"],
             ville=spec["ville"], code_postal=spec["cp"],
@@ -749,7 +953,9 @@ class Command(BaseCommand):
         for nom, adresse, ville, cp, lat, lon in spec["points"]:
             points.append(PointLivraison.objects.create(
                 exploitant=exploitant, nom=nom, adresse=adresse,
-                ville=ville, code_postal=cp, latitude=lat, longitude=lon))
+                ville=ville, code_postal=cp, latitude=lat, longitude=lon,
+                type_point=(spec.get("type_point")
+                            or PointLivraison.Type.LIVRAISON)))
         for jour, debut, fin, idx_point in spec["creneaux"]:
             CreneauLivraison.objects.create(
                 exploitant=exploitant, point_livraison=points[idx_point],
@@ -919,6 +1125,11 @@ class Command(BaseCommand):
                 f"commande(s), {nb_paniers} panier(s) — les commandes "
                 "réelles sont conservées, index réinitialisés."))
 
+        # Les catalogues types par activité doivent être en base avant
+        # de piocher les produits : foodtrucks et traiteurs reposent
+        # entièrement dessus (évite les catalogues erronés).
+        call_command("charger_catalogues_activites")
+
         clients = self._clients()
         for spec in FERMES:
             resultat = self._ferme(spec, recree_commandes=recree)
@@ -961,7 +1172,7 @@ class Command(BaseCommand):
             f"Démonstration prête : {len(FERMES)} fermes fictives "
             "(Tarn et départements limitrophes, Bretagne, Loire, Corse, "
             "Réunion, Martinique + 2 micro-brasseries et 2 conserveries "
-            "en boutique) avec "
+            "en boutique, 5 foodtrucks et 5 traiteurs) avec "
             f"{len(CLIENTS)} clients, commandes à valider, paniers en "
             "préparation, prêts et livrés (lecture seule)."))
         self.stdout.write("Connexion producteur : demo.maraicher, "
