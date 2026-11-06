@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% load static %}{% load l10n %}
-{% block title %}Recherche — MonPetitProducteurLocal{% endblock %}
+{% block title %}{% if visu %}Traiteurs & Foodtrucks{% else %}Recherche{% endif %} — MonPetitProducteurLocal{% endblock %}
 {% block extrahead %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 {% endblock %}
 {% block retour_dashboard %}{% endblock %}
 {% block content %}
 <div class="entete-chercher">
-  <h1>🔍 Chercher un producteur local</h1>
+  <h1>{% if visu %}🍽️ Traiteurs & Foodtrucks{% else %}🔍 Chercher un producteur local{% endif %}</h1>
+  <span class="mode-chip {% if visu %}restauration{% else %}producteurs{% endif %}">{% if visu %}🍽️ Mode restauration : traiteurs & emplacements de foodtrucks{% else %}🥬 Mode producteurs : fermes & productions locales{% endif %}</span>
   <div class="stats-portail">
     <span class="stats-item">
       <button type="button" class="badge badge-activite" data-stats="producteurs">🧑‍🌾 {{ nb_producteurs }} producteur{{ nb_producteurs|pluralize }} inscrit{{ nb_producteurs|pluralize }}</button>
@@ -45,6 +46,10 @@
   </div>
 </div>
 <form class="search-bar" method="get" action="{% url 'portal:producer_search' %}">
+  <div class="mode-choix" role="group" aria-label="Mode de visualisation">
+    <button type="submit" name="visu" value="" class="mode-bouton producteurs{% if not visu %} actif{% endif %}" title="Fermes et productions locales : maraîchers, éleveurs, fromageries…">🥬 Producteurs</button>
+    <button type="submit" name="visu" value="restauration" class="mode-bouton restauration{% if visu %} actif{% endif %}" title="Repas : traiteurs et emplacements de foodtrucks">🍽️ Traiteurs & Foodtrucks</button>
+  </div>
   <input type="text" name="q" placeholder="Produit, ferme, ville ou code postal…" value="{{ q }}">
   <input type="text" name="dept" placeholder="Dépt. ou code postal (ex : 81)" value="{{ dept }}" size="10">
   <details class="filtre-multi">
@@ -72,10 +77,10 @@
 <div id="filtres-sauvegardes" class="filtres-sauvegardes" data-url="{% url 'portal:producer_search' %}"></div>
 
 <section class="map-section">
-  <div class="map-canvas-wrap">
-    <h2 class="map-titre">🗺️ Producteurs trouvés{% if carte_data %} ({{ carte_data|length }}){% endif %}</h2>
+  <div class="map-canvas-wrap{% if visu %} visu-restauration{% endif %}">
+    <h2 class="map-titre">🗺️ {% if visu %}Traiteurs & foodtrucks trouvés{% else %}Producteurs trouvés{% endif %}{% if carte_data %} ({{ carte_data|length }}){% endif %}</h2>
     {% if carte_data %}
-      <div id="carte-recherche" class="map-canvas"></div>
+      <div id="carte-recherche" class="map-canvas" data-mode="{% if visu %}restauration{% else %}producteurs{% endif %}"></div>
       {{ carte_data|json_script:"donnees-carte" }}
     {% else %}
       <p class="muted">Aucun producteur géolocalisé dans ces résultats :

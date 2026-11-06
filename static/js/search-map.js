@@ -182,6 +182,22 @@ var ACTIVITES = {
   "AUTRE": "🌾 Autre production locale"
 };
 
+/* ------------------- mode de visualisation (producteurs <-> restauration) */
+var blocCarte = document.getElementById("carte-recherche");
+var modeCarte = (blocCarte && blocCarte.getAttribute("data-mode"))
+  || "producteurs";
+var ACTIVITES_RESTAURATION = ["FOODTRUCK", "TRAITEUR"];
+/* Activités affichées dans la légende selon le mode : tout sauf
+   foodtruck / traiteur en mode producteurs, uniquement ces deux-là
+   en mode restauration (la légende suit la bascule). */
+function activitesDuMode() {
+  return Object.keys(ACTIVITES).filter(function (cle) {
+    return modeCarte === "restauration"
+      ? ACTIVITES_RESTAURATION.indexOf(cle) >= 0
+      : ACTIVITES_RESTAURATION.indexOf(cle) < 0;
+  });
+}
+
 /* Spécialités foodtruck : libellés pour le popup du marqueur
    (le symbole du camion est complété par l'emoji de spécialité). */
 var SPECIALITES = {
@@ -203,7 +219,7 @@ legend.onAdd = function () {
      porte le dénombrement des entités VISIBLES dans l'emprise. */
   var symboles = document.createElement("div");
   symboles.className = "legend-symbole";
-  symboles.innerHTML = Object.keys(ACTIVITES).map(function (cle) {
+  symboles.innerHTML = activitesDuMode().map(function (cle) {
     return '<span data-activite="' + cle + '">' + ACTIVITES[cle] +
            ' <em class="legend-nb"></em></span>';
   }).join("");
@@ -269,7 +285,7 @@ function majEmprise() {
       comptes[m._activite] = (comptes[m._activite] || 0) + 1;
     }
   });
-  Object.keys(ACTIVITES).forEach(function (cle) {
+  Object.keys(legendSpans).forEach(function (cle) {
     var nb = comptes[cle] || 0;
     if (legendSpans[cle]) {
       legendSpans[cle].textContent = "(" + nb + ")";
@@ -298,6 +314,40 @@ carte.whenReady(majEmprise);
 /* ----------------------------------------------- géolocalisation (cible) */
 /* Bouton « 🎯 Me géolocaliser » directement SUR la carte (haut droite),
    symbole seul avec info-bulle au survol. */
+/* Bascule de mode depuis la carte : le formulaire de recherche est
+   re-soumis avec le mode inverse — titre, filtres, légende et
+   marqueurs s'adaptent d'un coup. */
+var modeCtrl = L.control({ position: "topright" });
+modeCtrl.onAdd = function () {
+  var div = L.DomUtil.create("div", "leaflet-bar mode-carte");
+  var cible = modeCarte === "restauration" ? "producteurs"
+                                          : "restauration";
+  var btn = document.createElement("a");
+  btn.href = "#";
+  btn.textContent = cible === "restauration" ? "🍽️" : "🥬";
+  btn.title = cible === "restauration"
+    ? "Basculer : traiteurs & foodtrucks" : "Basculer : producteurs";
+  btn.setAttribute("aria-label", btn.title);
+  L.DomEvent.disableClickPropagation(div);
+  btn.addEventListener("click", function (evenement) {
+    evenement.preventDefault();
+    var form = document.querySelector(".search-bar");
+    if (!form) { return; }
+    var cache = form.querySelector('input[name="visu"]');
+    if (!cache) {
+      cache = document.createElement("input");
+      cache.type = "hidden";
+      cache.name = "visu";
+      form.appendChild(cache);
+    }
+    cache.value = cible === "restauration" ? "restauration" : "";
+    form.submit();
+  });
+  div.appendChild(btn);
+  return div;
+};
+modeCtrl.addTo(carte);
+
 var geolocCtrl = L.control({ position: "topright" });
 geolocCtrl.onAdd = function () {
   var div = L.DomUtil.create("div",

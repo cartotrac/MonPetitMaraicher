@@ -1100,3 +1100,32 @@ html.dark .creneau-edition summary { color: #c5e1a5; }
        idem ( deux symboles ) ---- */
 .marker-activite.marker-foodtruck { inset: auto; top: -9px; left: -3px;
   width: 28px; line-height: 15px; font-size: 13px; letter-spacing: -2px; }
+
+
+/* ===== Modes de visualisation : producteurs / traiteurs & foodtrucks ===== */
+.mode-choix { display: flex; gap: 0.5rem; flex-wrap: wrap;
+  margin: 0 0 0.8rem; }
+.mode-bouton { border: 2px solid #2e7d32; background: #fff;
+  color: #2e7d32; border-radius: 999px; padding: 0.3rem 0.95rem;
+  font-weight: 700; font-size: 0.95rem; cursor: pointer; }
+.mode-bouton.restauration { border-color: #e65100; color: #e65100; }
+.mode-bouton.actif { background: #2e7d32; color: #fff; }
+.mode-bouton.restauration.actif { background: #e65100; color: #fff; }
+.mode-chip { display: inline-block; margin: 0.35rem 0 0;
+  font-size: 0.8rem; font-weight: 700; border-radius: 999px;
+  padding: 0.15rem 0.7rem; background: #e8f5e9; color: #2e7d32;
+  border: 1px solid #a5d6a7; }
+.mode-chip.restauration { background: #fff3e0; color: #e65100;
+  border-color: #ffcc80; }
+.mode-carte a { cursor: pointer; font-size: 1rem; }
+.map-canvas-wrap.visu-restauration .map-canvas { outline: 2px solid #e65100; }
+html.dark .mode-bouton { background: #1d2617; color: #c5e1a5;
+  border-color: #7cb342; }
+html.dark .mode-bouton.restauration { background: #26201a;
+  color: #ffcc80; border-color: #ff9800; }
+html.dark .mode-bouton.actif { background: #2e7d32; color: #fff; }
+html.dark .mode-bouton.restauration.actif { background: #e65100; color: #fff; }
+html.dark .mode-chip { background: #1d2617; color: #c5e1a5;
+  border-color: #33691e; }
+html.dark .mode-chip.restauration { background: #26201a; color: #ffcc80;
+  border-color: #6d4c41; }

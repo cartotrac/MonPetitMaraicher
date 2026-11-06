@@ -150,6 +150,16 @@ def producer_search(request):
                             if a.strip()]
         exploitants = _recherche_producteurs(
             q, dept, mode_choisi, activite_choisie)
+    # Mode de visualisation : « producteurs » (toutes les activités
+    # sauf foodtrucks et traiteurs) ou « restauration » (uniquement
+    # ces deux-là) : la liste de choix, le titre, la carte et la
+    # légende s'adaptent au mode demandé.
+    visu = request.GET.get("visu", "") == "restauration"
+    activites_restauration = (Exploitant.Activite.FOODTRUCK,
+                              Exploitant.Activite.TRAITEUR)
+    if visu:
+        exploitants = exploitants.filter(
+            activite__in=activites_restauration)
     exploitants = list(exploitants.order_by("nom_ferme"))
     # Dénombrements affichés à côté du titre : producteurs visibles,
     # clients inscrits (comptes non pro), visiteurs (sessions anonymes),
@@ -208,10 +218,17 @@ def producer_search(request):
         "url": e.get_absolute_url(),
     } for e in exploitants
         if e.latitude is not None and e.longitude is not None]
+    # Liste de choix d'activités adaptée au mode : seuls les deux
+    # foodtruck / traiteur en mode restauration, tous les autres en
+    # mode producteurs.
+    activite_cases = [
+        c for c in Exploitant.Activite.choices
+        if (c[0] in activites_restauration) == visu]
     return render(request, "portal/search_results.html", {
         "exploitants": exploitants,
         "carte_data": carte_data,
-        "activites": Exploitant.Activite.choices,
+        "activites": activite_cases,
+        "visu": visu,
         "nb_producteurs": nb_producteurs,
         "nb_clients": nb_clients,
         "nb_visiteurs": nb_visiteurs,
