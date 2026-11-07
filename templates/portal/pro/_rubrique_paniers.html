@@ -50,7 +50,7 @@
         <p>📅 {{ panier.date_livraison|date:"d/m/Y" }}
            {% if panier.point_livraison %}à {{ panier.point_livraison.nom }}{% endif %}
            — 💰 {{ panier.total }} €
-           — {{ panier.lignes.count }} article(s)</p>
+           — {{ panier.lignes.count }} article{{ panier.lignes.count|pluralize }}</p>
         <p class="muted">✉️ {{ panier.email_client }}{% if panier.telephone_client %} · 📞 {{ panier.telephone_client }}{% endif %}{% if panier.tel_client %} · 📞 {{ panier.tel_client }}{% endif %}
            {% if panier.client %}· 💻 client avec compte{% else %}· sans compte{% endif %}</p>
         {% for nom_cat, lignes in panier.groupes_lignes %}

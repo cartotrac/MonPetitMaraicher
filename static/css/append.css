@@ -1230,3 +1230,10 @@ html.dark .btn.btn-filtre-actif, html.dark .btn-retirer-filtre {
 /* ===== Vitrine : sections de la carte / boutique ===== */
 .carte-section td { background: #f0f4ec; font-size: 0.95rem; }
 html.dark .carte-section td { background: #31402a !important; }
+
+/* ===== Nav : « Trouver » flottant réduit au symbole (comme le
+       bouton de mode sombre) quand le bandeau disparaît ===== */
+.nav-chercher-flottant { border-radius: 10px; padding: 0.35rem 0.5rem;
+  transition: background 0.2s ease; }
+.nav-chercher-flottant .nav-chercher-texte { display: none; }
+.nav-chercher-flottant .nav-chercher-icone { margin: 0; }

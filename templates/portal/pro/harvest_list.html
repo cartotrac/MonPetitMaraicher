@@ -19,7 +19,7 @@
         <strong>Récolte du {{ courante.lundi|date:"d/m/Y" }}</strong>
         <span class="badge {{ courante.publiee|yesno:'badge-ok,badge-off' }}">
           {{ courante.publiee|yesno:'Publiée ✅,Non publiée ⏸' }}</span>
-        <span class="muted">{{ courante.nb_lignes }} produit(s)</span>
+        <span class="muted">{{ courante.nb_lignes }} produit{{ courante.nb_lignes|pluralize }}</span>
       </div>
       <div class="harvest-actions">
         <a class="btn btn-sm" href="{% url 'portal:harvest_manage' courante.pk %}">✏️ Modifier</a>
@@ -46,7 +46,7 @@
         <strong>Semaine du {{ s.lundi|date:"d/m/Y" }}</strong>
         <span class="badge {{ s.publiee|yesno:'badge-ok,badge-off' }}">
           {{ s.publiee|yesno:'Publiée ✅,Non publiée ⏸' }}</span>
-        <span class="muted">{{ s.nb_lignes }} produit(s)</span>
+        <span class="muted">{{ s.nb_lignes }} produit{{ s.nb_lignes|pluralize }}</span>
         {% if s.note %}<span class="muted">— « {{ s.note }} »</span>{% endif %}
       </div>
       <div class="harvest-actions">
@@ -75,7 +75,7 @@
     <div class="card harvest-item past">
       <div class="harvest-item-head">
         <strong>Semaine du {{ s.lundi|date:"d/m/Y" }}</strong>
-        <span class="muted">{{ s.nb_lignes }} produit(s)</span>
+        <span class="muted">{{ s.nb_lignes }} produit{{ s.nb_lignes|pluralize }}</span>
       </div>
       <div class="harvest-actions">
         <a class="btn btn-sm btn-outline" href="{% url 'portal:harvest_manage' s.pk %}">✏️ Modifier</a>

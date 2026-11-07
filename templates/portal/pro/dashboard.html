@@ -73,7 +73,7 @@
 <details id="paniers" class="bloc-replie" open>
   <summary><h2>🧺 Paniers en cours <span class="muted aide-replier">(cliquez pour replier/déplier)</span></h2></summary>
   <p>{% if paniers_en_cours %}<span class="badge badge-PREPARATION">en cours</span>{% endif %}
-     {{ paniers_en_cours }} panier(s) en préparation ou à livrer —
+     {{ paniers_en_cours }} panier{{ paniers_en_cours|pluralize }} en préparation ou à livrer —
      <a href="{% url 'portal:ventes' %}">gérer les ventes</a></p>
 </details>
 
@@ -159,7 +159,7 @@
           {% else %}
             <span class="badge badge-off cal-etat">brouillon</span>
           {% endif %}
-          <span class="muted">{{ s.nb_lignes }} produit(s)</span>
+          <span class="muted">{{ s.nb_lignes }} produit{{ s.nb_lignes|pluralize }}</span>
         </a>
       {% else %}
         <a class="cal-semaine {% if s.passe %}passe{% endif %} cal-{{ s.etat }}"
@@ -176,7 +176,7 @@
 <details id="points" class="bloc-replie" open>
   <summary><h2>📍 Points de livraison &amp; créneaux <span class="muted aide-replier">(cliquez pour replier/déplier)</span></h2></summary>
   {% if points %}
-    <p>{{ points|length }} point(s) de livraison —
+    <p>{{ points|length }} point{{ points|length|pluralize }} de livraison —
        <a href="{% url 'portal:points_manage' %}">gérer les points et créneaux</a></p>
   {% else %}
     <p class="etat-vide"><span class="etat-vide-emoji">📍</span>

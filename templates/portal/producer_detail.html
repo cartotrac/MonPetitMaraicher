@@ -173,7 +173,7 @@
     {% for s in semaines_avenir %}
       <div class="card cal-avenir">
         <strong>Semaine du {{ s.lundi|date:"d/m/Y" }}</strong>
-        <p class="muted">{{ s.lignes.count }} produit(s) prévus</p>
+        <p class="muted">{{ s.lignes.count }} produit{{ s.lignes.count|pluralize }} prévus</p>
         {% if s.note %}<p>« {{ s.note }} »</p>{% endif %}
         <p class="muted">Disponible à la commande dès cette semaine-là.</p>
       </div>
