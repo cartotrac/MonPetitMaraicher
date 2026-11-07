@@ -62,6 +62,7 @@ urlpatterns = [
     path("espace-paniers/<int:panier_id>/", views.panier_detail,
          name="panier_detail"),
     path("clients/", views.clients_suivi, name="clients_suivi"),
+    path("mes-cartes/", views.cartes_manage, name="cartes_manage"),
     path("points-livraison/", views.points_manage, name="points_manage"),
     path("publications/", views.publications_manage,
          name="publications_manage"),

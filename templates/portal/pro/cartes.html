@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Ma carte / boutique — MonPetitProducteurLocal{% endblock %}
+{% block content %}
+<h1>🧾 {{ exploitant.titre_carte_boutique }}</h1>
+<p class="muted">Votre vitrine affiche la carte <strong>active</strong> en
+   permanence, en plus de « {{ exploitant.titre_semaine }} ». Composez
+   plusieurs cartes (brouillons, versions archivées et republiables) :
+   une seule est publiée à la fois. Les lignes reprennent vos produits
+   du catalogue (de référence ou perso) ou restent libres (plat du
+   jour, menu…).</p>
+
+<section class="harvest-bloc">
+  <div class="card">
+    <form method="post" class="form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="creer">
+      <label for="id_nom_carte">Nouvelle carte / boutique</label>
+      <input type="text" id="id_nom_carte" name="nom" placeholder="Ex : Carte du moment, Menu de fête, En boutique en ce moment…" required>
+      <button class="btn" type="submit">➕ Créer en brouillon</button>
+    </form>
+  </div>
+</section>
+
+{% for carte in cartes %}
+<section class="harvest-bloc">
+  <div class="card">
+    <h2>
+      {% if carte.statut == 'ACTIVE' %}<span class="badge badge-ok">Publiée</span>
+      {% elif carte.statut == 'BROUILLON' %}<span class="badge badge-encours">Brouillon</span>
+      {% else %}<span class="badge badge-off">Archivée</span>{% endif %}
+      {{ carte.nom }}
+      <span class="muted">({{ carte.lignes.count }} ligne{{ carte.lignes.count|pluralize }})</span>
+    </h2>
+    <form method="post" class="inline">
+      {% csrf_token %}
+      <input type="hidden" name="carte_id" value="{{ carte.pk }}">
+      {% if carte.statut != 'ACTIVE' %}<button class="btn btn-sm" name="action" value="activer" type="submit">✅ Publier sur la vitrine</button>{% endif %}
+      {% if carte.statut == 'ACTIVE' %}<button class="btn btn-sm btn-outline" name="action" value="archiver" type="submit">📦 Archiver</button>{% endif %}
+      <button class="btn btn-sm btn-outline" name="action" value="dupliquer" type="submit">📄 Dupliquer</button>
+      <button class="btn btn-sm btn-outline" name="action" value="supprimer" type="submit">🗑️ Supprimer</button>
+    </form>
+
+    <table class="table">
+      <thead><tr><th></th><th>Produit / plat</th><th>Section</th><th>Prix</th><th></th></tr></thead>
+      <tbody>
+      {% for ligne in carte.lignes.all %}
+        <tr>
+          <td class="muted">{{ forloop.counter }}</td>
+          <td>{% if ligne.emoji %}{{ ligne.emoji }} {% endif %}<strong>{{ ligne.nom }}</strong>{% if ligne.description %}<br><span class="muted">{{ ligne.description }}</span>{% endif %}</td>
+          <td>{{ ligne.section|default:"—" }}</td>
+          <td>{% if ligne.prix_affiche %}{{ ligne.prix_affiche }} €{% else %}—{% endif %}</td>
+          <td>
+            <form method="post" class="inline">
+              {% csrf_token %}
+              <input type="hidden" name="carte_id" value="{{ carte.pk }}">
+              <input type="hidden" name="ligne_id" value="{{ ligne.pk }}">
+              <button class="btn btn-sm btn-outline" name="action" value="monter" type="submit" title="Monter">▲</button>
+              <button class="btn btn-sm btn-outline" name="action" value="descendre" type="submit" title="Descendre">▼</button>
+              <button class="btn btn-sm btn-outline" name="action" value="supprimer_ligne" type="submit" title="Retirer">✕</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">Aucune ligne pour l'instant — ajoutez vos produits ou des lignes libres ci-dessous.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <form method="post" class="form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="ajouter_ligne">
+      <input type="hidden" name="carte_id" value="{{ carte.pk }}">
+      <h3>➕ Ajouter une ligne à « {{ carte.nom }} »</h3>
+      <label for="produit_{{ carte.pk }}">Depuis mon catalogue</label>
+      <select id="produit_{{ carte.pk }}" name="produit_id">
+        <option value="">— ou ligne libre ci-dessous —</option>
+        {% for produit in produits %}
+          <option value="{{ produit.pk }}">{{ produit.nom }}{% if produit.categorie %} ({{ produit.categorie.nom }}){% endif %}</option>
+        {% endfor %}
+      </select>
+      <label for="libre_{{ carte.pk }}">Ou ligne libre (plat, menu…)</label>
+      <input type="text" id="libre_{{ carte.pk }}" name="nom_libre" placeholder="Ex : Menu du marché, Plat du jour…">
+      <label for="section_{{ carte.pk }}">Section (optionnel)</label>
+      <input type="text" id="section_{{ carte.pk }}" name="section" placeholder="Ex : Entrées, Plats, Fromages au lait cru…">
+      <label for="desc_{{ carte.pk }}">Description (optionnel)</label>
+      <input type="text" id="desc_{{ carte.pk }}" name="description">
+      <label for="prix_{{ carte.pk }}">Prix € (vide = prix du produit lié)</label>
+      <input type="text" id="prix_{{ carte.pk }}" name="prix" placeholder="Ex : 12,50">
+      <button class="btn" type="submit">Ajouter</button>
+    </form>
+  </div>
+</section>
+{% empty %}
+<p class="muted">Aucune carte pour l'instant : créez-en une ci-dessus.</p>
+{% endfor %}
+{% endblock %}

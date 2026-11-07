@@ -450,8 +450,19 @@ def producer_detail(request, slug):
         nature_favori = (Favori.objects.filter(
             user=request.user, exploitant=exploitant)
             .values_list("nature", flat=True).first() or "")
+    # Carte / boutique stable (traiteurs, foodtrucks, fromagers,
+    # apiculteurs, conserveries, micro-brasseurs) : la vitrine
+    # publique affiche la carte ACTIVE en plus de l'encart de la
+    # semaine — sélection permanente, esprit boutique.
+    carte_active = (Carte.objects.filter(
+        exploitant=exploitant,
+        statut=Carte.Statut.ACTIVE)
+        .prefetch_related("lignes__produit",
+                          "lignes__produit__origine_standard")
+        .first())
     return render(request, "portal/producer_detail.html", {
         "exploitant": exploitant,
+        "carte_active": carte_active,
         "vitrine": vitrine,
         "reseaux": vitrine.reseaux or {},
         "equipe": equipe,
@@ -2127,6 +2138,125 @@ def _latlon(brut):
         return valeur if -180 <= valeur <= 180 else None
     except (TypeError, ValueError):
         return None
+
+
+@login_required
+@exploitant_requis
+def cartes_manage(request):
+    """Cartes / boutique stable : traiteurs, foodtrucks et producteurs
+    en mode boutique (fromager, apiculteur, conserverie, micro-brasseur)
+    composent des cartes versionnées — brouillons, archives
+    republiables — dont UNE SEULE est active : la vitrine publique
+    l'affiche en plus de l'encart de la semaine. Les lignes reprennent
+    les produits du catalogue (de référence ou perso) ou restent
+    libres (plat du jour, menu…)."""
+    exploitant = exploitant_pour(request.user)
+    if not exploitant.a_carte_boutique:
+        messages.info(request, "Les cartes / boutiques concernent les "
+                      "traiteurs, foodtrucks et producteurs en mode "
+                      "boutique (fromager, apiculteur, conserverie, "
+                      "micro-brasseur).")
+        return redirect("portal:dashboard")
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+        carte = Carte.objects.filter(
+            exploitant=exploitant,
+            pk=request.POST.get("carte_id") or 0).first()
+        if action == "creer":
+            nom = request.POST.get("nom", "").strip()
+            if nom:
+                Carte.objects.create(exploitant=exploitant, nom=nom)
+                messages.success(request, "Carte « " + nom + " » créée "
+                                 "en brouillon : ajoutez vos lignes, "
+                                 "puis publiez-la.")
+            else:
+                messages.error(request, "Donnez un nom à la carte.")
+        elif carte is None:
+            messages.error(request, "Carte introuvable.")
+        elif action == "activer":
+            carte.activer()
+            messages.success(request, "Carte « " + carte.nom + " » "
+                             "publiée : elle s'affiche sur votre "
+                             "vitrine (la précédente est archivée).")
+        elif action == "archiver":
+            carte.statut = Carte.Statut.ARCHIVEE
+            carte.save(update_fields=["statut", "maj_le"])
+            messages.info(request, "Carte « " + carte.nom + " » "
+                          "archivée — republiez-la quand vous voulez.")
+        elif action == "dupliquer":
+            copie = Carte.objects.create(exploitant=exploitant,
+                                         nom=carte.nom + " (copie)")
+            for ligne in carte.lignes.all():
+                ligne.pk = None
+                ligne.carte_id = copie.pk
+                ligne.save()
+            messages.success(request, "Copie créée en brouillon : "
+                             "modifiez-la puis publiez-la.")
+        elif action == "supprimer":
+            nom = carte.nom
+            carte.delete()
+            messages.info(request, "Carte « " + nom + " » supprimée.")
+        elif action == "ajouter_ligne":
+            produit = Produit.objects.filter(
+                exploitant=exploitant,
+                pk=request.POST.get("produit_id") or 0).first()
+            nom_libre = request.POST.get("nom_libre", "").strip()
+            if not produit and not nom_libre:
+                messages.error(request, "Choisissez un produit du "
+                               "catalogue OU saisissez un nom libre.")
+            else:
+                brut = request.POST.get("prix", "").strip().replace(",", ".")
+                prix = None
+                if brut:
+                    try:
+                        prix = Decimal(brut)
+                    except InvalidOperation:
+                        prix = None
+                LigneCarte.objects.create(
+                    carte=carte,
+                    produit=produit,
+                    nom_libre="" if produit else nom_libre,
+                    section=request.POST.get("section", "").strip(),
+                    description=request.POST.get("description", "").strip(),
+                    unite_vente=(produit.unite_vente if produit
+                                 else Produit.Unite.PIECE),
+                    prix=prix,
+                    position=(carte.lignes.aggregate(
+                        Max("position"))["position__max"] or 0) + 1)
+                messages.success(request, "Ligne ajoutée à la carte « "
+                                 + carte.nom + " ».")
+        elif action == "supprimer_ligne":
+            ligne = LigneCarte.objects.filter(
+                pk=request.POST.get("ligne_id") or 0, carte=carte).first()
+            if ligne:
+                ligne.delete()
+                messages.info(request, "Ligne retirée de la carte.")
+        elif action in ("monter", "descendre"):
+            ligne = LigneCarte.objects.filter(
+                pk=request.POST.get("ligne_id") or 0, carte=carte).first()
+            if ligne:
+                voisines = list(carte.lignes.order_by("position", "id"))
+                i = voisines.index(ligne)
+                j = (max(0, i - 1) if action == "monter"
+                     else min(len(voisines) - 1, i + 1))
+                voisines[i], voisines[j] = voisines[j], voisines[i]
+                for n, l in enumerate(voisines, 1):
+                    l.position = n
+                    l.save(update_fields=["position"])
+        return redirect("portal:cartes_manage")
+
+    ordre = {Carte.Statut.ACTIVE: 0, Carte.Statut.BROUILLON: 1,
+             Carte.Statut.ARCHIVEE: 2}
+    cartes = sorted(
+        exploitant.cartes.prefetch_related("lignes__produit"),
+        key=lambda c: (ordre.get(c.statut, 3), -c.pk))
+    return render(request, "portal/pro/cartes.html", {
+        "exploitant": exploitant,
+        "cartes": cartes,
+        "produits": exploitant.produits.filter(actif=True)
+                       .order_by("categorie__nom", "nom"),
+    })
 
 
 @login_required
