@@ -1135,3 +1135,36 @@ html.dark .mode-chip.restauration { background: #26201a; color: #ffcc80;
 .ventes-onglets { margin-bottom: 1.2rem; }
 .ventes-rubrique { margin-bottom: 2.2rem; scroll-margin-top: 5rem; }
 .ventes-rubrique h1 { font-size: 1.25rem; margin: 0.2rem 0 0.6rem; }
+
+
+/* ===== 3ᵉ mode : Marchés & Boutiques de producteurs ===== */
+.mode-choix-entete { display: flex; flex-wrap: wrap; gap: 0.5rem;
+  margin-bottom: 0.9rem; }
+.mode-bouton.marches { background: #f3e5f5; color: #6a1b9a;
+  border-color: #ce93d8; }
+.mode-bouton.marches.actif { background: #6a1b9a; color: #fff; }
+html.dark .mode-bouton.marches { background: #221a26; color: #e1bee7;
+  border-color: #8e24aa; }
+html.dark .mode-bouton.marches.actif { background: #6a1b9a; color: #fff; }
+.mode-chip.marches { background: #f3e5f5; color: #6a1b9a;
+  border-color: #ce93d8; }
+html.dark .mode-chip.marches { background: #221a26; color: #e1bee7;
+  border-color: #8e24aa; }
+.map-canvas-wrap.visu-marches .map-canvas { outline: 2px solid #6a1b9a; }
+.marker-marche { background: #fff3e0; border-color: #ef6c00; }
+html.dark .marker-marche { background: #33281c; }
+.badge-marche { background: #fff3e0; color: #e65100;
+  border: 1px solid #ffcc80; }
+.badge-boutique { background: #fce4ec; color: #880e4f;
+  border: 1px solid #f48fb1; }
+.vignette-marche .vignette-badge-activite { font-size: 1.35rem; }
+
+/* Fiche virtuelle d'un marché / d'une boutique */
+.marche-hero { display: flex; gap: 1.4rem; flex-wrap: wrap;
+  align-items: flex-start; margin-bottom: 1.4rem; }
+.marche-hero > div:first-child { flex: 1 1 280px; }
+.marche-hero .marche-map { flex: 1 1 320px; }
+.marche-map { height: 320px; min-height: 240px; border-radius: 12px;
+  z-index: 1; }
+.itineraire-btn { margin-top: 0.7rem; }
+.marche-categorie { margin: 1.5rem 0 0.6rem; }

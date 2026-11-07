@@ -15,7 +15,7 @@ from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Count, Max, Q
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -23,6 +23,7 @@ from django.utils import timezone
 from .forms import (AnnonceForm, BulletinForm, InscriptionClientForm,
                     InscriptionExploitantForm, MessagerieForm, ProduitForm,
                     ProfilExploitantForm, ProfilPersonnelForm)
+from .marches import identifier_marches
 from .meteo import meteo_synthese
 from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
                     Exploitant, Favori, LigneCommande, LignePanier,
@@ -151,16 +152,35 @@ def producer_search(request):
         exploitants = _recherche_producteurs(
             q, dept, mode_choisi, activite_choisie)
     # Mode de visualisation : « producteurs » (toutes les activités
-    # sauf foodtrucks et traiteurs) ou « restauration » (uniquement
-    # ces deux-là) : la liste de choix, le titre, la carte et la
-    # légende s'adaptent au mode demandé.
-    visu = request.GET.get("visu", "") == "restauration"
+    # sauf foodtrucks et traiteurs — ils n'ont PLUS rien à faire sur
+    # cette carte), « restauration » (uniquement ces deux-là) ou
+    # « marches » (marchés et boutiques de producteurs déduits de
+    # leurs points et créneaux déclarés). Liste de choix, titre,
+    # carte, légende et vignettes s'adaptent au mode demandé.
+    visu = request.GET.get("visu", "").strip()
+    visu_marches = visu == "marches"
     activites_restauration = (Exploitant.Activite.FOODTRUCK,
                               Exploitant.Activite.TRAITEUR)
-    if visu:
+    if visu == "restauration":
         exploitants = exploitants.filter(
             activite__in=activites_restauration)
+    elif not visu_marches:
+        exploitants = exploitants.exclude(
+            activite__in=activites_restauration)
     exploitants = list(exploitants.order_by("nom_ferme"))
+    # Marchés & boutiques identifiés (mode marches) : entités
+    # virtuelles recalculées à la demande ; les filtres texte et
+    # département s'y appliquent aussi (nom, ville, adresse, CP).
+    marches = []
+    if visu_marches:
+        marches = identifier_marches()
+        if q:
+            marches = [m for m in marches if q.lower() in (
+                f"{m['nom']} {m['ville']} {m['adresse']}".lower())]
+        if dept:
+            marches = [m for m in marches
+                       if m["code_postal"].startswith(dept)
+                       or dept.lower() in m["ville"].lower()]
     # Dénombrements affichés à côté du titre : producteurs visibles,
     # clients inscrits (comptes non pro), visiteurs (sessions anonymes),
     # + photo quotidienne pour l'historique / tendance des badges.
@@ -169,6 +189,27 @@ def producer_search(request):
                   .filter(exploitant__isnull=True,
                           membre_exploitation__isnull=True).count())
     nb_visiteurs = Visiteur.objects.count()
+    # Badges de la page selon le mode : total des pros inscrits puis
+    # dénombrements propres à chaque mode de visualisation
+    # (producteurs locaux / traiteurs & foodtrucks / marchés &
+    # boutiques de producteurs).
+    nb_pros = Exploitant.objects.count()
+    nb_producteurs_locaux = (Exploitant.objects
+                             .filter(visible=True)
+                             .exclude(
+                                 activite__in=activites_restauration)
+                             .count())
+    nb_foodtrucks = (Exploitant.objects
+                     .filter(visible=True,
+                             activite=Exploitant.Activite.FOODTRUCK)
+                     .count())
+    nb_traiteurs = (Exploitant.objects
+                    .filter(visible=True,
+                            activite=Exploitant.Activite.TRAITEUR)
+                    .count())
+    tous_marches = marches if visu_marches else identifier_marches()
+    nb_marches = sum(1 for m in tous_marches if m["est_marche"])
+    nb_boutiques = len(tous_marches) - nb_marches
     aujourdhui = timezone.localdate()
     StatistiqueQuotidienne.objects.update_or_create(
         date=aujourdhui,
@@ -214,32 +255,57 @@ def producer_search(request):
             home_carte = {"lat": moi.latitude, "lon": moi.longitude}
         else:
             home_carte = {"lat": None, "connecte": True}
-    # Données carto : uniquement les résultats filtrés avec coordonnées.
-    carte_data = [{
-        "nom_ferme": e.nom_ferme,
-        "mode_production": e.mode_production,
-        "activite": e.activite,
-        "specialite": e.specialite if e.activite == Exploitant.Activite.FOODTRUCK else "",
-        "symbole": e.emoji_vitrine,
-        "ville": e.ville,
-        "latitude": e.latitude,
-        "longitude": e.longitude,
-        "est_demo": e.est_demo,
-        "url": e.get_absolute_url(),
-    } for e in exploitants
-        if e.latitude is not None and e.longitude is not None]
+    # Données carto : uniquement les résultats filtrés avec
+    # coordonnées — en mode marches, les entités affichées sont les
+    # marchés et boutiques identifiés (même bloc json_script, la clé
+    # est_marche les distingue côté JS).
+    if visu_marches:
+        carte_data = [{
+            "est_marche": True,
+            "nom": m["nom"],
+            "type": m["type"],
+            "symbole": m["symbole"],
+            "ville": m["ville"],
+            "latitude": m["latitude"],
+            "longitude": m["longitude"],
+            "url": m["url"],
+            "nb_producteurs": m["nb_producteurs"],
+            "horaires_txt": m["horaires_txt"][:4],
+        } for m in marches]
+    else:
+        carte_data = [{
+            "nom_ferme": e.nom_ferme,
+            "mode_production": e.mode_production,
+            "activite": e.activite,
+            "specialite": e.specialite if e.activite == Exploitant.Activite.FOODTRUCK else "",
+            "symbole": e.emoji_vitrine,
+            "ville": e.ville,
+            "latitude": e.latitude,
+            "longitude": e.longitude,
+            "est_demo": e.est_demo,
+            "url": e.get_absolute_url(),
+        } for e in exploitants
+            if e.latitude is not None and e.longitude is not None]
     # Liste de choix d'activités adaptée au mode : seuls les deux
     # foodtruck / traiteur en mode restauration, tous les autres en
     # mode producteurs.
     activite_cases = [
         c for c in Exploitant.Activite.choices
-        if (c[0] in activites_restauration) == visu]
+        if (c[0] in activites_restauration)
+        == (visu == "restauration")]
     return render(request, "portal/search_results.html", {
         "exploitants": exploitants,
         "carte_data": carte_data,
         "activites": activite_cases,
         "visu": visu,
         "home_carte": home_carte,
+        "marches": marches,
+        "nb_pros": nb_pros,
+        "nb_producteurs_locaux": nb_producteurs_locaux,
+        "nb_foodtrucks": nb_foodtrucks,
+        "nb_traiteurs": nb_traiteurs,
+        "nb_marches": nb_marches,
+        "nb_boutiques": nb_boutiques,
         "nb_producteurs": nb_producteurs,
         "nb_clients": nb_clients,
         "nb_visiteurs": nb_visiteurs,
@@ -270,6 +336,19 @@ def producteurs_geojson(request):
         "url": e.get_absolute_url(),
     } for e in exploitants]
     return JsonResponse(list(data), encoder=DjangoJSONEncoder, safe=False)
+
+
+def marche_detail(request, slug):
+    """Fiche PUBLIQUE d'un marché ou d'une boutique de producteurs :
+    entité VIRTUELLE recalculée à la demande (aucune ligne dédiée en
+    base) — nom le plus probable, position moyenne, horaires déduits
+    des créneaux déclarés, et les producteurs rattachés, groupés par
+    catégorie d'activité."""
+    for marche in identifier_marches():
+        if marche["slug"] == slug:
+            return render(request, "portal/marche_detail.html",
+                          {"marche": marche})
+    raise Http404("Marché ou boutique de producteurs inconnu.")
 
 
 def producer_detail(request, slug):

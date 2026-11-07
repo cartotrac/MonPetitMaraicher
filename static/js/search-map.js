@@ -219,10 +219,18 @@ legend.onAdd = function () {
      porte le dénombrement des entités VISIBLES dans l'emprise. */
   var symboles = document.createElement("div");
   symboles.className = "legend-symbole";
-  symboles.innerHTML = activitesDuMode().map(function (cle) {
-    return '<span data-activite="' + cle + '">' + ACTIVITES[cle] +
-           ' <em class="legend-nb"></em></span>';
-  }).join("");
+  if (modeCarte === "marches") {
+    /* Mode marchés : deux symboles seulement — les marchés et les
+       boutiques de producteurs détectés, dénombrés dans l'emprise. */
+    symboles.innerHTML =
+      '<span data-activite="MARCHE">🎪 Marchés <em class="legend-nb"></em></span>' +
+      '<span data-activite="BOUTIQUE">🏪 Boutiques <em class="legend-nb"></em></span>';
+  } else {
+    symboles.innerHTML = activitesDuMode().map(function (cle) {
+      return '<span data-activite="' + cle + '">' + ACTIVITES[cle] +
+             ' <em class="legend-nb"></em></span>';
+    }).join("");
+  }
   div.appendChild(symboles);
   Array.prototype.forEach.call(
     symboles.querySelectorAll("span[data-activite]"), function (s) {
@@ -237,6 +245,33 @@ var markers = [];
 var exploitants = JSON.parse(bloc.textContent);
 
 exploitants.forEach(function (e) {
+  /* Marché / boutique de producteurs : marqueur dédié (🎪 orange,
+     🏪 rose), popup avec les horaires déduits et lien vers la
+     fiche virtuelle ; le type alimente la légende. */
+  if (e.est_marche) {
+    var iconeM = L.divIcon({
+      className: "marker-exploitant",
+      html: '<span class="marker-activite marker-marche">' +
+            e.symbole + "</span>",
+      iconSize: [22, 22], iconAnchor: [11, 11]
+    });
+    var horairesM = (e.horaires_txt || []).join("<br>");
+    var markerM = L.marker([e.latitude, e.longitude],
+                           { icon: iconeM }).bindPopup(
+      "<strong>" + e.nom + "</strong>" +
+      '<br><span class="muted">' +
+      (e.type === "MARCHE" ? "🎪 Marché" : "🏪 Boutique") +
+      " · " + e.nb_producteurs + " producteur" +
+      (e.nb_producteurs > 1 ? "s" : "") + "</span>" +
+      (horairesM ? "<br>" + horairesM : "") +
+      "<br>" + (e.ville || "") +
+      '<br><a href="' + e.url + '">Voir la fiche →</a>'
+    );
+    markerM._activite = e.type;
+    markers.push(markerM);
+    carte.addLayer(markerM);
+    return;
+  }
   var style = CAT_STYLES[e.mode_production] || CAT_STYLES.CONV;
   var activite = ACTIVITES[e.activite] || "";
   /* Symbole : camion + emoji de spécialité pour les foodtrucks,
@@ -320,13 +355,16 @@ carte.whenReady(majEmprise);
 var modeCtrl = L.control({ position: "topright" });
 modeCtrl.onAdd = function () {
   var div = L.DomUtil.create("div", "leaflet-bar mode-carte");
-  var cible = modeCarte === "restauration" ? "producteurs"
-                                          : "restauration";
+  var cible = modeCarte === "producteurs" ? "restauration"
+            : modeCarte === "restauration" ? "marches" : "producteurs";
   var btn = document.createElement("a");
   btn.href = "#";
-  btn.textContent = cible === "restauration" ? "🍽️" : "🥬";
+  btn.textContent = cible === "restauration" ? "🍽️"
+                  : cible === "marches" ? "🎪" : "🥬";
   btn.title = cible === "restauration"
-    ? "Basculer : traiteurs & foodtrucks" : "Basculer : producteurs";
+    ? "Basculer : traiteurs & foodtrucks"
+    : cible === "marches" ? "Basculer : marchés & boutiques"
+    : "Basculer : producteurs";
   btn.setAttribute("aria-label", btn.title);
   L.DomEvent.disableClickPropagation(div);
   btn.addEventListener("click", function (evenement) {
@@ -340,7 +378,8 @@ modeCtrl.onAdd = function () {
       cache.name = "visu";
       form.appendChild(cache);
     }
-    cache.value = cible === "restauration" ? "restauration" : "";
+    cache.value = cible === "restauration" ? "restauration"
+               : cible === "marches" ? "marches" : "";
     form.submit();
   });
   div.appendChild(btn);

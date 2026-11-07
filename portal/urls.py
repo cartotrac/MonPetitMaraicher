@@ -14,6 +14,8 @@ urlpatterns = [
     path("exploitants/", views.home, name="producer_list"),
     path("exploitant/<slug:slug>/", views.producer_detail,
          name="producer_detail"),
+    path("marche/<str:slug>/", views.marche_detail,
+         name="marche_detail"),
 
     # Authentification / inscription
     path("apres-connexion/", views.apres_connexion,
