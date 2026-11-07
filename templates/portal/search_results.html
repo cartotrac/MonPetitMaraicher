@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 {% load static %}{% load l10n %}
-{% block title %}{% if visu %}Traiteurs & Foodtrucks{% else %}Recherche{% endif %} — MonPetitProducteurLocal{% endblock %}
+{% block title %}{% if visu == "restauration" %}Traiteurs & Foodtrucks{% elif visu == "marches" %}Marchés & Boutiques{% else %}Recherche{% endif %} — MonPetitProducteurLocal{% endblock %}
 {% block extrahead %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 {% endblock %}
 {% block retour_dashboard %}{% endblock %}
 {% block content %}
 <div class="entete-chercher">
-  <h1>{% if visu %}🍽️ Traiteurs & Foodtrucks{% else %}🔍 Chercher un producteur local{% endif %}</h1>
-  <span class="mode-chip {% if visu %}restauration{% else %}producteurs{% endif %}">{% if visu %}🍽️ Mode restauration : traiteurs & emplacements de foodtrucks{% else %}🥬 Mode producteurs : fermes & productions locales{% endif %}</span>
+  <h1>{% if visu == "restauration" %}🍽️ Trouver un Traiteur ou Foodtruck autour de moi !{% elif visu == "marches" %}🎪 Retrouver mes producteurs locaux au Marché ou en Boutique{% else %}🔍 Trouver mon producteur local !{% endif %}</h1>
+  <span class="mode-chip {% if visu == "restauration" %}restauration{% elif visu == "marches" %}marches{% else %}producteurs{% endif %}">{% if visu == "restauration" %}🍽️ Mode restauration : traiteurs &amp; emplacements de foodtrucks{% elif visu == "marches" %}🎪 Mode marchés : marchés &amp; boutiques de producteurs — identifiés d'après leurs points et créneaux déclarés{% else %}🥬 Mode producteurs : fermes &amp; productions locales{% endif %}</span>
   <div class="stats-portail">
     <span class="stats-item">
-      <button type="button" class="badge badge-activite" data-stats="producteurs">🧑‍🌾 {{ nb_producteurs }} producteur{{ nb_producteurs|pluralize }} inscrit{{ nb_producteurs|pluralize }}</button>
+      <button type="button" class="badge badge-activite" data-stats="producteurs">🤝 {{ nb_pros }} professionnel{{ nb_pros|pluralize }} nous font confiance</button>
       <div class="stats-pop">
         <strong>📈 Historique (30 jours)</strong>
         {% if graph_producteurs.tendance > 0 %}<span class="stats-tendance hausse">↗ +{{ graph_producteurs.tendance }} sur 7 jours</span>
@@ -20,6 +20,11 @@
         <div class="stats-chart">{% for pt in graph_producteurs.points %}<span class="stats-bar" style="height:{{ pt.hauteur }}%" title="{{ pt.titre }}"></span>{% endfor %}</div>
         <p class="muted">Cliquez à nouveau ou ailleurs pour fermer.</p>
       </div>
+    </span>
+    <span class="stats-item">
+      {% if visu == "marches" %}<span class="badge badge-marche">🎪 {{ nb_marches }} marché{{ nb_marches|pluralize }} &amp; 🏪 {{ nb_boutiques }} boutique{{ nb_boutiques|pluralize }} de producteur{{ nb_boutiques|pluralize }}</span>
+      {% elif visu == "restauration" %}<span class="badge badge-activite">🥗 {{ nb_traiteurs }} traiteur{{ nb_traiteurs|pluralize }} &amp; 🚚 {{ nb_foodtrucks }} foodtruck{{ nb_foodtrucks|pluralize }}</span>
+      {% else %}<span class="badge badge-ab">🥬 {{ nb_producteurs_locaux }} producteur{{ nb_producteurs_locaux|pluralize }} local{{ nb_producteurs_locaux|pluralize }}</span>{% endif %}
     </span>
     <span class="stats-item">
       <button type="button" class="badge badge-ab" data-stats="clients">👥 {{ nb_clients }} client{{ nb_clients|pluralize }} inscrit{{ nb_clients|pluralize }}</button>
@@ -46,12 +51,10 @@
   </div>
 </div>
 <form class="search-bar" method="get" action="{% url 'portal:producer_search' %}">
-  <div class="mode-choix" role="group" aria-label="Mode de visualisation">
-    <button type="submit" name="visu" value="" class="mode-bouton producteurs{% if not visu %} actif{% endif %}" title="Fermes et productions locales : maraîchers, éleveurs, fromageries…">🥬 Producteurs</button>
-    <button type="submit" name="visu" value="restauration" class="mode-bouton restauration{% if visu %} actif{% endif %}" title="Repas : traiteurs et emplacements de foodtrucks">🍽️ Traiteurs & Foodtrucks</button>
-  </div>
-  <input type="text" name="q" placeholder="Produit, ferme, ville ou code postal…" value="{{ q }}">
+  <input type="hidden" name="visu" value="{{ visu }}">
+  <input type="text" name="q" placeholder="{% if visu == 'marches' %}Marché, boutique, ville…{% else %}Produit, ferme, ville ou code postal…{% endif %}" value="{{ q }}">
   <input type="text" name="dept" placeholder="Dépt. ou code postal (ex : 81)" value="{{ dept }}" size="10">
+  {% if visu != "marches" %}
   <details class="filtre-multi">
     <summary>🥬 Activités{% if activite_choisie %} ({{ activite_choisie|length }}){% endif %} ▾</summary>
     <div class="filtre-multi-menu">
@@ -72,24 +75,64 @@
       <p class="muted">Plusieurs choix possibles — tout décocher = tous les modes.</p>
     </div>
   </details>
+  {% endif %}
   <button class="btn" type="submit">Filtrer</button>
 </form>
 <div id="filtres-sauvegardes" class="filtres-sauvegardes" data-url="{% url 'portal:producer_search' %}"></div>
 
 <section class="map-section">
-  <div class="map-canvas-wrap{% if visu %} visu-restauration{% endif %}">
-    <h2 class="map-titre">🗺️ {% if visu %}Traiteurs & foodtrucks trouvés{% else %}Producteurs trouvés{% endif %}{% if carte_data %} ({{ carte_data|length }}){% endif %}</h2>
+  <div class="mode-choix mode-choix-entete" role="group" aria-label="Mode de visualisation">
+    <button type="button" data-visu="" class="mode-bouton producteurs{% if not visu %} actif{% endif %}" title="Fermes et productions locales : maraîchers, éleveurs, fromageries…">🥬 Producteurs</button>
+    <button type="button" data-visu="restauration" class="mode-bouton restauration{% if visu == "restauration" %} actif{% endif %}" title="Repas : traiteurs et emplacements de foodtrucks">🍽️ Traiteurs &amp; Foodtrucks</button>
+    <button type="button" data-visu="marches" class="mode-bouton marches{% if visu == "marches" %} actif{% endif %}" title="Marchés et boutiques où retrouver les producteurs locaux">🎪 Marchés &amp; Boutiques</button>
+  </div>
+  <div class="map-canvas-wrap{% if visu == "restauration" %} visu-restauration{% elif visu == "marches" %} visu-marches{% endif %}">
+    <h2 class="map-titre">🗺️ {% if visu == "restauration" %}Traiteurs &amp; foodtrucks trouvés{% elif visu == "marches" %}Marchés &amp; boutiques identifiés{% else %}Producteurs trouvés{% endif %}{% if carte_data %} ({{ carte_data|length }}){% endif %}</h2>
     {% if carte_data %}
-      <div id="carte-recherche" class="map-canvas" data-mode="{% if visu %}restauration{% else %}producteurs{% endif %}"></div>
+      <div id="carte-recherche" class="map-canvas" data-mode="{% if visu == "restauration" %}restauration{% elif visu == "marches" %}marches{% else %}producteurs{% endif %}"></div>
       {{ carte_data|json_script:"donnees-carte" }}
       {{ home_carte|json_script:"home-carte" }}
     {% else %}
-      <p class="muted">Aucun producteur géolocalisé dans ces résultats :
-         les fermes concernées n'ont pas renseigné de position sur la carte.</p>
+      <p class="muted">{% if visu == "marches" %}Aucun marché ou boutique identifié dans ces résultats :
+         les producteurs n'ont pas encore déclaré de stand de marché ou de
+         point de vente géolocalisé.{% else %}Aucun producteur géolocalisé dans ces résultats :
+         les fermes concernées n'ont pas renseigné de position sur la carte.{% endif %}</p>
     {% endif %}
   </div>
 </section>
 
+{% if visu == "marches" %}
+<div class="grid producers">
+  {% for m in marches %}
+    <div class="card vignette-producteur vignette-marche"{% if m.latitude and m.longitude %} data-lat="{{ m.latitude|unlocalize }}" data-lng="{{ m.longitude|unlocalize }}"{% endif %}>
+      <div class="vignette-titre">
+        <span class="badge badge-activite vignette-badge-activite" title="{% if m.est_marche %}Marché de producteurs{% else %}Boutique de producteurs{% endif %}">{{ m.symbole }}</span>
+        <h2><a href="{{ m.url }}">{{ m.nom }}</a></h2>
+        {% if m.est_marche %}<span class="badge badge-marche">🎪 Marché</span>{% else %}<span class="badge badge-boutique">🏪 Boutique</span>{% endif %}
+      </div>
+      <p class="muted vignette-localite"><span>{{ m.ville }}{% if m.code_postal %} ({{ m.code_postal }}){% endif %}</span>
+        <span class="badge">{{ m.nb_producteurs }} producteur{{ m.nb_producteurs|pluralize }}</span></p>
+      <div class="vignette-reste">
+        <div class="vignette-horaires" role="note">
+          <strong>🗓️ Jours &amp; horaires déduits :</strong>
+          {% for h in m.horaires_txt %}
+            <span>🗓️ {{ h }}</span>
+          {% endfor %}
+          {% if not m.horaires_txt %}<span class="muted">Aucun créneau déclaré pour l'instant.</span>{% endif %}
+        </div>
+      </div>
+      <p class="vignette-pied">
+        <span class="vignette-activite-libelle">Identifié d'après les saisies de {{ m.nb_producteurs }} producteur{{ m.nb_producteurs|pluralize }}</span>
+        <a class="btn btn-sm" href="{{ m.url }}">Voir la fiche →</a>
+      </p>
+    </div>
+  {% empty %}
+    <p>Aucun marché ou boutique de producteurs identifié pour l'instant :
+       les producteurs n'ont pas encore déclaré de stand de marché ou de
+       point de vente géolocalisé sur leur fiche.</p>
+  {% endfor %}
+</div>
+{% else %}
 <div class="grid producers">
   {% for exploitant in exploitants %}
     <div class="card vignette-producteur"{% if exploitant.latitude and exploitant.longitude %} data-lat="{{ exploitant.latitude|unlocalize }}" data-lng="{{ exploitant.longitude|unlocalize }}"{% endif %}>
@@ -137,8 +180,27 @@
     <p>Aucun producteur ne correspond à votre recherche.</p>
   {% endfor %}
 </div>
+{% endif %}
 {% endblock %}
 {% block extrajs %}
+<script>
+/* Bascule des 3 modes de visualisation (boutons au-dessus du titre de
+   la carte) : le formulaire de recherche est re-soumis avec le mode
+   choisi — titre, filtres, carte, légende et vignettes s'adaptent. */
+(function () {
+  var form = document.querySelector(".search-bar");
+  if (!form) { return; }
+  document.querySelectorAll(
+    ".mode-choix-entete .mode-bouton").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var cache = form.querySelector('input[name="visu"]');
+      if (!cache) { return; }
+      cache.value = btn.getAttribute("data-visu") || "";
+      form.submit();
+    });
+  });
+})();
+</script>
 <script>
 /* Badges de dénombrement : clic -> mini-graphe historique + tendance */
 (function () {
@@ -166,7 +228,8 @@
     p.addEventListener("click", function (e) { e.stopPropagation(); });
   });
 })();
-
+</script>
+<script>
 /* Filtres enregistrés : sauvegarde locale des combinaisons, ré-application
    en un clic, suppression (✕) et CUMUL de plusieurs combinaisons
    (union des résultats via ?comb=…&comb=…). */

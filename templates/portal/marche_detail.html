@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}{% load l10n %}
+{% block title %}{{ marche.nom }} — {{ marche.ville }} — MonPetitProducteurLocal{% endblock %}
+{% block extrahead %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+{% block retour_dashboard %}{% endblock %}
+{% block content %}
+<div class="entete-chercher">
+  <h1>{{ marche.symbole }} {{ marche.nom }}</h1>
+  <span class="mode-chip {% if marche.est_marche %}marches{% else %}producteurs{% endif %}">{% if marche.est_marche %}🎪 Marché de producteurs{% else %}🏪 Boutique de producteurs{% endif %} — {{ marche.ville }}{% if marche.code_postal %} ({{ marche.code_postal }}){% endif %}</span>
+</div>
+<p><a href="{% url 'portal:producer_search' %}?visu=marches">← Tous les marchés &amp; boutiques de producteurs</a></p>
+
+<div class="card marche-hero">
+  <div>
+    <strong>📍 {{ marche.adresse }}{% if marche.ville %} — {{ marche.ville }}{% endif %}</strong>
+    <p class="muted">Entité identifiée d'après les points et créneaux déclarés
+       par {{ marche.nb_producteurs }} producteur{{ marche.nb_producteurs|pluralize }} —
+       jours et horaires déduits de leurs saisies :</p>
+    <div class="vignette-horaires" role="note">
+      {% for h in marche.horaires_txt %}<span>🗓️ {{ h }}</span>
+      {% endfor %}{% if not marche.horaires_txt %}<span class="muted">Aucun créneau déclaré pour l'instant.</span>{% endif %}
+    </div>
+    <a class="btn itineraire-btn" target="_blank" rel="noopener"
+       href="https://www.google.com/maps/dir/?api=1&amp;destination={{ marche.latitude|unlocalize }},{{ marche.longitude|unlocalize }}">🧭 Calculer mon itinéraire</a>
+  </div>
+  <div id="carte-marche" class="marche-map"
+       data-symbole="{{ marche.symbole }}"
+       data-lat="{{ marche.latitude|unlocalize }}"
+       data-lng="{{ marche.longitude|unlocalize }}"></div>
+</div>
+
+<h2>🧑‍🌾 Les producteurs {% if marche.est_marche %}présents à ce marché{% else %}de cette boutique{% endif %}</h2>
+{% regroup marche.producteurs by libelle_activite as groupes %}
+{% for groupe in groupes %}
+<h3 class="marche-categorie">{{ groupe.list.0.symbole }} {{ groupe.grouper }}</h3>
+<div class="grid producers">
+  {% for p in groupe.list %}
+    <div class="card vignette-producteur">
+      <div class="vignette-titre">
+        <span class="badge badge-activite vignette-badge-activite" title="{{ p.libelle_activite }}">{{ p.symbole }}</span>
+        <h2><a href="{% url 'portal:producer_detail' p.slug %}">{{ p.nom_ferme }}</a></h2>
+      </div>
+      <p class="muted vignette-localite"><span>{{ p.ville }}</span></p>
+      <div class="vignette-reste">
+        <div class="vignette-horaires" role="note">
+          <strong>🗓️ {% if marche.est_marche %}Au marché{% else %}En boutique{% endif %} :</strong>
+          {% for h in p.creneaux_txt %}<span>{{ h }}</span>{% endfor %}
+        </div>
+      </div>
+      <p class="vignette-pied">
+        <span class="vignette-activite-libelle">{{ p.libelle_activite }}</span>
+        {% if p.est_demo %}<span class="badge badge-demo vignette-demo-badge">🧪 DÉMO</span>{% endif %}
+        <a class="btn btn-sm" href="{% url 'portal:producer_detail' p.slug %}">Voir la ferme →</a>
+      </p>
+    </div>
+  {% endfor %}
+</div>
+{% empty %}
+<p>Aucun producteur rattaché à cet endroit pour l'instant.</p>
+{% endfor %}
+{% endblock %}
+{% block extrajs %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* Mini-carte du marché / de la boutique : Plan IGN V2 (comme la carte
+   de recherche), marqueur emoji, recentrage simple. */
+(function () {
+  var bloc = document.getElementById("carte-marche");
+  if (!bloc) { return; }
+  var lat = parseFloat(bloc.getAttribute("data-lat"));
+  var lng = parseFloat(bloc.getAttribute("data-lng"));
+  var carte = L.map("carte-marche").setView([lat, lng], 14);
+  L.tileLayer(
+    "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" +
+    "&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png" +
+    "&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+    { maxZoom: 19,
+      attribution: "Plan IGN V2 &copy; <a href=\"https://www.geoportail.gouv.fr/\">IGN</a>" }
+  ).addTo(carte);
+  L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: "marker-exploitant",
+      html: '<span class="marker-activite marker-marche">' +
+            bloc.getAttribute("data-symbole") + "</span>",
+      iconSize: [22, 22], iconAnchor: [11, 11]
+    })
+  }).addTo(carte).bindPopup(
+    "<strong>" + (bloc.getAttribute("data-symbole") + " ") +
+    "{{ marche.nom|escapejs }}</strong>");
+})();
+</script>
+{% endblock %}
