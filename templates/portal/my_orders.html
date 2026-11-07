@@ -38,6 +38,9 @@
            — {{ pt.adresse }}{% if pt.code_postal %}, {{ pt.code_postal }}{% endif %} {{ pt.ville }}
            {% if pt.latitude %}
              — <a href="https://www.openstreetmap.org/?mlat={{ pt.latitude|floatformat:'6' }}&mlon={{ pt.longitude|floatformat:'6' }}#map=17/{{ pt.latitude|floatformat:'6' }}/{{ pt.longitude|floatformat:'6' }}" target="_blank" rel="noopener">🗺️ voir sur la carte</a>
+           {% if panier.statut == 'LIVRE' %}
+             — 🧭 <a href="https://www.openstreetmap.org/directions?to={{ pt.latitude|unlocalize|floatformat:'6' }},{{ pt.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener">Calculer mon itinéraire (OSM)</a>
+             / <a href="https://www.google.com/maps/dir/?api=1&amp;destination={{ pt.latitude|unlocalize|floatformat:'6' }},{{ pt.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener">Google Maps</a>
            {% endif %}</p>
       {% endwith %}
       {% endif %}
@@ -106,9 +109,12 @@
             <span class="badge badge-{{ commande.statut }}">{{ commande.get_statut_display }}</span>
           {% endif %}
           — 💰 {{ commande.total }} €</summary>
-        <p>📅 Livraison : {{ commande.date_livraison|date:"d/m/Y" }}
-           {% if commande.point_livraison %}à {{ commande.point_livraison.nom }}{% endif %}
-           — 💰 {{ commande.total }} €</p>
+        <p>📅 Livraison le {{ commande.date_livraison|date:"d/m/Y" }} :
+           {% if commande.point_livraison %}{{ commande.point_livraison.nom }}{% endif %}
+           — 💰 {{ commande.total }} €{% if panier.statut == 'LIVRE' and commande.point_livraison.latitude %}
+           — 🧭 <a href="https://www.openstreetmap.org/directions?to={{ commande.point_livraison.latitude|unlocalize|floatformat:'6' }},{{ commande.point_livraison.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener" title="Itinéraire vers le point de livraison (OpenStreetMap)">Calculer mon itinéraire (OSM)</a>
+           / <a href="https://www.google.com/maps/dir/?api=1&amp;destination={{ commande.point_livraison.latitude|unlocalize|floatformat:'6' }},{{ commande.point_livraison.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener" title="Itinéraire vers le point de livraison (Google Maps)">Google Maps</a>
+           {% endif %}</p>
         {% if commande.statut == 'REFUSEE' and commande.motif_refus %}
           <p class="flash warning">❌ Commande refusée par le producteur — motif : {{ commande.motif_refus }}.
              Vous pouvez recomposer une commande pour une autre date ou un autre producteur.</p>
@@ -192,6 +198,9 @@
              {% if pt.note %}({{ pt.note }}){% endif %}
              {% if pt.latitude %}
                — <a href="https://www.openstreetmap.org/?mlat={{ pt.latitude|floatformat:'6' }}&mlon={{ pt.longitude|floatformat:'6' }}#map=17/{{ pt.latitude|floatformat:'6' }}/{{ pt.longitude|floatformat:'6' }}" target="_blank" rel="noopener">🗺️ voir sur la carte</a>
+             {% if panier.statut == 'LIVRE' %}
+               — 🧭 <a href="https://www.openstreetmap.org/directions?to={{ pt.latitude|unlocalize|floatformat:'6' }},{{ pt.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener">Calculer mon itinéraire (OSM)</a>
+               / <a href="https://www.google.com/maps/dir/?api=1&amp;destination={{ pt.latitude|unlocalize|floatformat:'6' }},{{ pt.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener">Google Maps</a>
              {% endif %}</p>
         {% endwith %}
         {% endif %}
