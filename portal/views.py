@@ -64,7 +64,7 @@ def home(request):
     identifiés, clients, visiteurs) avec historique 30 jours."""
     activites_restauration = (Exploitant.Activite.FOODTRUCK,
                               Exploitant.Activite.TRAITEUR)
-    nb_pros = Exploitant.objects.count()
+    nb_pros = (Exploitant.objects.filter(visible=True).count())
     nb_visibles = Exploitant.objects.filter(visible=True).count()
     nb_producteurs_locaux = (Exploitant.objects
                              .filter(visible=True)
@@ -227,7 +227,7 @@ def producer_search(request):
     # dénombrements propres à chaque mode de visualisation
     # (producteurs locaux / traiteurs & foodtrucks / marchés &
     # boutiques de producteurs).
-    nb_pros = Exploitant.objects.count()
+    nb_pros = (Exploitant.objects.filter(visible=True).count())
     nb_producteurs_locaux = (Exploitant.objects
                              .filter(visible=True)
                              .exclude(
