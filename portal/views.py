@@ -25,9 +25,10 @@ from .forms import (AnnonceForm, BulletinForm, InscriptionClientForm,
                     ProfilExploitantForm, ProfilPersonnelForm)
 from .marches import identifier_marches
 from .meteo import meteo_synthese
-from .models import (Annonce, Bulletin, Categorie, Commande, CreneauLivraison,
-                    Exploitant, Favori, LigneCommande, LignePanier,
-                    LigneRecolte, MembreExploitation, Panier,
+from .models import (Annonce, Bulletin, Carte, Categorie, Commande,
+                    CreneauLivraison, Exploitant, Favori, LigneCarte,
+                    LigneCommande, LignePanier, LigneRecolte,
+                    MembreExploitation, Panier,
                     ParametresVitrine, PointLivraison, PreferenceContact,
                     Produit, ProduitStandard, ProfilClient,
                     SemaineRecolte, StatistiqueQuotidienne, Visiteur,
@@ -3197,6 +3198,10 @@ def param_rubrique(request, rubrique):
                     else:
                         reseaux.pop(cle, None)
                 vitrine.reseaux = reseaux
+                rythme = request.POST.get("rythme_publication", "")
+                vitrine.rythme_publication = (
+                    rythme if rythme
+                    in ParametresVitrine.Rythme.values else "")
                 vitrine.save()
                 if exploitant.siret and not exploitant.siret_valide:
                     messages.warning(
@@ -3303,6 +3308,9 @@ def param_rubrique(request, rubrique):
         return render(request, "portal/pro/param_ferme.html", {
             "exploitant": exploitant,
             "form_ferme": form_ferme,
+            "vitrine": vitrine,
+            "rythmes": ParametresVitrine.Rythme.choices,
+            "rythme_actuel": vitrine.rythme_publication,
         })
 
     form_messagerie = MessagerieForm(initial=messagerie)

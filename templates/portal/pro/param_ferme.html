@@ -20,6 +20,16 @@
        latitude/longitude sont renseignées automatiquement.</p>
     {{ form_ferme.as_p }}
     <div class="save-bar">
+  <div class="form-row">
+    <label for="id_rythme_publication">🗓️ Rythme de publication de la vitrine</label>
+    <select id="id_rythme_publication" name="rythme_publication">
+      <option value="">Automatique (selon mon activité)</option>
+      {% for code, libelle in rythmes %}
+        <option value="{{ code }}"{% if rythme_actuel == code %} selected{% endif %}>{{ libelle }}</option>
+      {% endfor %}
+    </select>
+    <p class="muted">Libellé affiché sur la vitrine (« …de la semaine », « …du mois ») — purement indicatif : publiez aussi souvent que nécessaire, plusieurs {{ exploitant.vocab.recoltes|lower }} par période ne posent aucun problème.</p>
+  </div>
       <button class="btn" type="submit">💾 Enregistrer ma fiche</button>
     </div>
   </form>

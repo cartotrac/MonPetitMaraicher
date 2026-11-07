@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 
 
@@ -218,41 +218,111 @@ class Exploitant(models.Model):
         return self.EQUIPE_LIBELLES.get(self.activite,
                                         "L'équipe de la ferme")
 
+    # Rythme de publication par défaut selon l'activité (utilisé
+    # tant que l'exploitant n'a rien choisi dans Paramètres → Ma
+    # ferme). Purement indicatif : le libellé de l'encart vitrine
+    # s'adapte, le nombre de publications reste libre.
+    RYTHMES_DEFAUT = {
+        "MARAICHER": "SEMAINE", "ARBORICULTEUR": "MOIS",
+        "FOODTRUCK": "SEMAINE", "TRAITEUR": "MOIS",
+        "APICULTEUR": "MOIS", "MICRO_BRASSEUR": "MOIS",
+        "CONSERVERIE": "MOIS", "FROMAGER": "MOIS",
+        "ELEVEUR": "MOIS", "AUTRE": "SEMAINE",
+    }
+    RYTHME_LIBELLES = {"JOUR": "du jour", "SEMAINE": "de la semaine",
+                        "MOIS": "du mois", "SAISON": "de la saison"}
+
+    @property
+    def rythme_publication(self):
+        try:
+            choix = (self.parametres_vitrine.rythme_publication or "")
+        except Exception:
+            choix = ""
+        return choix or self.RYTHMES_DEFAUT.get(self.activite, "SEMAINE")
+
+    @property
+    def libelle_rythme(self):
+        return self.RYTHME_LIBELLES.get(self.rythme_publication,
+                                        "de la semaine")
+
     @property
     def titre_semaine(self):
-        """Titre de l'encart hebdo de la vitrine publique : « Récolte de
-        la semaine » pour maraîchers et arboriculteurs ; « produits de
-        la semaine » pour les autres ; « productions de la semaine »
-        pour apiculteurs, brasseurs et conserveries. « Nos » dès que
-        plusieurs comptes sont rattachés à l'exploitation."""
-        a_plusieurs = self.membres.exists()
+        ```Titre de l'encart vitrine, accordé à l'activité, à l'équipe
+        (Mes/Notre) et au rythme choisi : « Récolte de la semaine »,
+        « Ma carte de la semaine », « Nos plats du mois », « Mes
+        produits de la semaine », « Mes productions du mois »…```
+        nous = self.membres.exists()
+        rythme = self.libelle_rythme
         if self.activite in (self.Activite.MARAICHER,
                              self.Activite.ARBORICULTEUR):
-            return ("Nos récoltes de la semaine" if a_plusieurs
-                    else "Récolte de la semaine")
+            return f"Nos récoltes {rythme}" if nous \
+                else f"Récolte {rythme}"
+        if self.activite == self.Activite.FOODTRUCK:
+            return f"Notre carte {rythme}" if nous \
+                else f"Ma carte {rythme}"
+        if self.activite == self.Activite.TRAITEUR:
+            return f"Nos plats {rythme}" if nous \
+                else f"Mes plats {rythme}"
         if self.activite in (self.Activite.APICULTEUR,
                              self.Activite.MICRO_BRASSEUR,
-                             self.Activite.CONSERVERIE,
-                             self.Activite.FOODTRUCK,
-                             self.Activite.TRAITEUR):
-            return ("Nos productions de la semaine" if a_plusieurs
-                    else "Mes productions de la semaine")
-        return ("Nos produits de la semaine" if a_plusieurs
-                else "Mes produits de la semaine")
+                             self.Activite.CONSERVERIE):
+            return f"Nos productions {rythme}" if nous \
+                else f"Mes productions {rythme}"
+        return f"Nos produits {rythme}" if nous \
+            else f"Mes produits {rythme}"
 
     @property
     def titres_avoir(self):
-        """Titre de l'encart « à venir » de la vitrine publique."""
+        ```Titre de l'encart « à venir » de la vitrine publique,`
+        ` accordé à l'activité.```
         if self.activite in (self.Activite.MARAICHER,
                              self.Activite.ARBORICULTEUR):
             return "Récoltes à venir"
+        if self.activite == self.Activite.FOODTRUCK:
+            return "Arrêts & marchés à venir"
+        if self.activite == self.Activite.TRAITEUR:
+            return "Plats à venir"
         if self.activite in (self.Activite.APICULTEUR,
                              self.Activite.MICRO_BRASSEUR,
-                             self.Activite.CONSERVERIE,
-                             self.Activite.FOODTRUCK,
-                             self.Activite.TRAITEUR):
+                             self.Activite.CONSERVERIE):
             return "Productions à venir"
         return "Produits à venir"
+
+    # Activités disposant d'une CARTE / BOUTIQUE stable en vitrine (en
+    # plus de l'encart de la semaine) : menus et plats pour traiteurs
+    # et foodtrucks, boutique à date pour fromagers, apiculteurs,
+    # conserveries et micro-brasseurs.
+    @property
+    def a_carte_boutique(self):
+        return self.activite in (self.Activite.FOODTRUCK,
+                                 self.Activite.TRAITEUR,
+                                 self.Activite.FROMAGER,
+                                 self.Activite.APICULTEUR,
+                                 self.Activite.MICRO_BRASSEUR,
+                                 self.Activite.CONSERVERIE)
+
+    @property
+    def titre_carte_boutique(self):
+        ```« Ma carte » (foodtruck), « Mes menus » (traiteur), « Ma
+        boutique » (fromager, apiculteur, conserverie, brasseur) —
+        « Notre » dès que l'équipe s'étoffe.```
+        nous = self.membres.exists()
+        if self.activite == self.Activite.FOODTRUCK:
+            return "Notre carte" if nous else "Ma carte"
+        if self.activite == self.Activite.TRAITEUR:
+            return "Nos menus" if nous else "Mes menus"
+        return "Notre boutique" if nous else "Ma boutique"
+
+    @property
+    def titre_points_vitrine(self):
+        ```Titre de la rubrique des points de la vitrine : les
+        foodtrucks exposent des EMPLACEMENTS (qui peuvent être sur des
+        marchés), les autres des points de retrait.```
+        if self.activite == self.Activite.FOODTRUCK:
+            return "Emplacements & marchés"
+        if self.en_mode_boutique:
+            return "Boutiques, marchés & points de vente"
+        return "Boutiques, marchés & points de livraison"
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -615,6 +685,111 @@ class CreneauLivraison(models.Model):
                 f"({self.get_frequence_display()})")
 
 
+class Carte(models.Model):
+    ```Carte / boutique stable d'un traiteur, foodtruck ou
+    producteur en mode boutique (fromager, apiculteur, conserverie,
+    micro-brasseur) : vitrine permanente EN PLUS de l'encart de la
+    semaine — le côté « boutique stable » qui convient à la majorité,
+    quand l'encart saisonnier reste dans l'esprit récoltes du site.
+
+    Plusieurs cartes coexistent (brouillons, versions archivées et
+    republiables) mais UNE SEULE est active à la fois.```
+
+    class Statut(models.TextChoices):
+        BROUILLON = "BROUILLON", "Brouillon"
+        ACTIVE = "ACTIVE", "Publiée (active)"
+        ARCHIVEE = "ARCHIVEE", "Archivée"
+
+    exploitant = models.ForeignKey(Exploitant, on_delete=models.CASCADE,
+                                   related_name="cartes")
+    nom = models.CharField(
+        "Nom de la carte", max_length=120,
+        help_text="Ex : « Carte du moment », « Menu de fête », "
+                  "« En boutique en ce moment ».")
+    statut = models.CharField("Statut", max_length=10,
+                              choices=Statut.choices,
+                              default=Statut.BROUILLON, db_index=True)
+    creee_le = models.DateTimeField("Créée le", auto_now_add=True)
+    maj_le = models.DateTimeField("Mise à jour", auto_now=True)
+
+    class Meta:
+        verbose_name = "Carte / boutique"
+        verbose_name_plural = "Cartes / boutiques"
+        ordering = ["-maj_le"]
+
+    def __str__(self):
+        return f"{self.nom} — {self.exploitant.nom_ferme} ({self.statut})"
+
+    def activer(self):
+        ```Publie cette carte : la carte active précédente passe en
+        archive (une seule active à la fois).```
+        with transaction.atomic():
+            (Carte.objects.filter(exploitant=self.exploitant,
+                                  statut=Carte.Statut.ACTIVE)
+             .exclude(pk=self.pk)
+             .update(statut=Carte.Statut.ARCHIVEE))
+            self.statut = Carte.Statut.ACTIVE
+            self.save(update_fields=["statut", "maj_le"])
+
+
+class LigneCarte(models.Model):
+    ```Ligne d'une carte/boutique : reprend un PRODUIT du catalogue
+    de l'exploitant (copié du catalogue de référence ou perso) ou une
+    ligne entièrement libre (plat du jour, menu…), avec son prix.```
+
+    carte = models.ForeignKey(Carte, on_delete=models.CASCADE,
+                              related_name="lignes")
+    produit = models.ForeignKey(Produit, on_delete=models.SET_NULL,
+                                null=True, blank=True,
+                                related_name="lignes_cartes")
+    nom_libre = models.CharField(
+        "Nom (ligne libre)", max_length=150, blank=True, default="",
+        help_text="Si la ligne ne reprend pas un produit du catalogue.")
+    section = models.CharField(
+        "Section", max_length=80, blank=True, default="",
+        help_text="Ex : « Entrées », « Plats », « Fromages au lait cru »…")
+    description = models.TextField("Description", blank=True)
+    unite_vente = models.CharField("Unité de vente", max_length=2,
+                                   choices=Produit.Unite.choices,
+                                   default=Produit.Unite.KG)
+    prix = models.DecimalField("Prix (€)", max_digits=6, decimal_places=2,
+                               null=True, blank=True,
+                               help_text="Vide : prix du produit lié.")
+    position = models.PositiveSmallIntegerField("Position", default=0)
+
+    class Meta:
+        verbose_name = "Ligne de carte"
+        verbose_name_plural = "Lignes de carte"
+        ordering = ["section", "position", "id"]
+
+    def __str__(self):
+        return f"{self.nom} ({self.carte.nom})"
+
+    @property
+    def nom(self):
+        return self.produit.nom if self.produit else (self.nom_libre or "—")
+
+    @property
+    def prix_affiche(self):
+        if self.prix is not None:
+            return self.prix
+        return self.produit.prix if self.produit else None
+
+    @property
+    def emoji(self):
+        if not self.produit:
+            return ""
+        if self.produit.emoji:
+            return self.produit.emoji
+        return (self.produit.origine_standard.emoji
+                if self.produit.origine_standard else "")
+
+    @property
+    def unite_courte(self):
+        return Produit.UNITES_COURTES.get(self.unite_vente,
+                                          self.unite_vente)
+
+
 class Commande(models.Model):
     """Commande client (portail ou saisie par l'exploitant), à valider.
 
@@ -975,6 +1150,19 @@ class ParametresVitrine(models.Model):
     afficher_creneaux = models.BooleanField("Afficher les créneaux", default=True)
     reseaux = models.JSONField("Réseaux sociaux", default=dict, blank=True,
                                help_text='Ex : {"facebook": "https://…"}')
+    # Rythme de publication de l'encart vitrine (« …de la semaine »,
+    # « …du mois »…) : LIBRE — plusieurs publications par période
+    # restent possibles, seul le libellé s'adapte. Vide = déduit de
+    # l'activité (maraîcher : semaine, arboriculteur : mois…).
+    class Rythme(models.TextChoices):
+        JOUR = "JOUR", "Quotidien — « …du jour »"
+        SEMAINE = "SEMAINE", "Hebdomadaire — « …de la semaine »"
+        MOIS = "MOIS", "Mensuel — « …du mois »"
+        SAISON = "SAISON", "Saisonnier — « …de la saison »"
+
+    rythme_publication = models.CharField(
+        "Rythme de publication", max_length=8,
+        choices=Rythme.choices, blank=True, default="")
     # Paramètres de messagerie du propriétaire (page Paramètres) :
     # serveur SMTP d'envoi des e-mails (newsletters, annonces,
     # confirmations) et passerelle SMS pour la disponibilité hebdo.

@@ -163,7 +163,7 @@
 
 {% if points_livraison %}
 <section>
-  <h2>📍 Boutiques, marchés &amp; {{ exploitant.vocab.points|lower }}</h2>
+  <h2>📍 {{ exploitant.titre_points_vitrine }}</h2>
   <ul>
     {% for point in points_livraison %}
       <li>{{ point.emoji_type }} <strong>{{ point.nom }}</strong> <span class="muted">({{ point.get_type_point_display }})</span> — {{ point.adresse }}, {{ point.code_postal }} {{ point.ville }}
@@ -175,7 +175,7 @@
 
 {% if creneaux %}
 <section>
-  <h2>🗓️ Créneaux</h2>
+  <h2>🗓️ {{ exploitant.vocab.creneaux|capfirst }}</h2>
   <ul>
     {% for creneau in creneaux %}
       <li>{{ creneau.get_jour_display }} {{ creneau.heure_debut|time:"H:i" }}–{{ creneau.heure_fin|time:"H:i" }}
