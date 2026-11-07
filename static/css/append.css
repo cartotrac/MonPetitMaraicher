@@ -1237,3 +1237,54 @@ html.dark .carte-section td { background: #31402a !important; }
   transition: background 0.2s ease; }
 .nav-chercher-flottant .nav-chercher-texte { display: none; }
 .nav-chercher-flottant .nav-chercher-icone { margin: 0; }
+
+/* ===== Brand : logo + badge DÉMO en diagonale (côté pro) ===== */
+.brand { display: inline-flex; align-items: center; gap: 0.45rem;
+  position: relative; }
+.brand-logo { width: 30px; height: 30px; border-radius: 50%; flex: none; }
+.brand-demo-badge { position: absolute; left: 20px; top: 13px;
+  transform: rotate(-18deg); background: #7b2ff7; color: #fff;
+  font-size: 0.55rem; font-weight: 700; letter-spacing: 0.08em;
+  padding: 0.05rem 0.3rem; border-radius: 4px; pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+
+/* ===== Dialog « portail en développement » (clic logo, côté pro) ===== */
+.dialog-demo { border: 2px solid #4e6b3a; border-radius: 14px;
+  padding: 1.4rem 1.6rem; max-width: 460px; }
+.dialog-demo::backdrop { background: rgba(0,0,0,.45); }
+.dialog-demo h2 { margin: 0 0 0.6rem; }
+.dialog-demo-actions { margin-top: 0.8rem; }
+html.dark .dialog-demo { background: #26301f; color: #e6e4da; }
+html.dark .dialog-demo h2 { color: #c5e1a5; }
+
+/* ===== Dark : lisibilité des boutons de filtres et listes
+       dépliables (« Mes commandes », Ventes, paniers) ===== */
+html.dark details.groupe-jour, html.dark .order-card,
+html.dark .panier-client { background: #26301f;
+  border-color: #3f4d34; }
+html.dark details.groupe-jour summary,
+html.dark .order-card summary,
+html.dark .panier-client summary { color: #e6e4da; }
+html.dark .btn-outline { background: #2c3625; color: #e6e4da;
+  border-color: #5a7246; }
+html.dark .btn-outline:hover { background: #3a4930; color: #fff; }
+html.dark .btn.btn-active { background: #4e6b3a; color: #fff; }
+html.dark .quick-actions .btn { background: #2c3625;
+  color: #e6e4da; border-color: #5a7246; }
+html.dark .quick-actions .btn:hover { background: #3a4930; }
+html.dark .quick-actions .btn-filtre-atrier { background: #4a3018;
+  color: #ffd9a8; border-color: #b07030; }
+html.dark .quick-actions .btn-filtre-prepa { background: #57430e;
+  color: #ffe082; border-color: #b08d1e; }
+html.dark .quick-actions .btn-filtre-pret,
+html.dark .quick-actions .btn-filtre-recu { background: #24421f;
+  color: #c5e1a5; border-color: #4e8a3d; }
+html.dark .quick-actions .btn-filtre-livre { background: #5a5410;
+  color: #fff59d; border-color: #b0a01e; }
+html.dark .quick-actions .btn-filtre-refus { background: #5a1f18;
+  color: #ffcdd2; border-color: #b0463d; }
+html.dark .quick-actions .btn-filtre-annule { background: #44484e;
+  color: #e6e4da; border-color: #777c85; }
+html.dark .my-orders-section { color: #c5e1a5; }
+html.dark .flash.ok { background: #24421f; color: #d7ecd0;
+  border-color: #4e8a3d; }

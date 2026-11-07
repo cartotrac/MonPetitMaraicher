@@ -41,7 +41,7 @@
            {% endif %}</p>
       {% endwith %}
       {% endif %}
-      {% if panier.statut == 'PRET' %}
+      {% if panier.statut == 'PRET' or panier.statut == 'LIVRE' %}
         <form method="post" action="{% url 'portal:panier_recu' panier.pk %}" class="inline">
           {% csrf_token %}<button class="btn" type="submit">✅ Valider la réception</button>
         </form>
@@ -174,8 +174,8 @@
               </ul>
             {% endfor %}
             {% if panier.note %}<p class="muted">💬 {{ panier.note }}</p>{% endif %}
-            {% if panier.statut == 'PRET' %}
-              <p class="flash ok">🧺 Votre panier est <strong>prêt</strong> ! Il vous attend au point de livraison ci-dessous.</p>
+            {% if panier.statut == 'PRET' or panier.statut == 'LIVRE' %}
+              <p class="flash ok">🧺 Votre panier est <strong>à retirer</strong> ! Il vous attend au point de livraison ci-dessous.</p>
               <form method="post" action="{% url 'portal:panier_recu' panier.pk %}" class="inline">
                 {% csrf_token %}<button class="btn" type="submit">✅ Valider la réception</button>
               </form>

@@ -22,6 +22,29 @@
   </p>
 </section>
 
+{# ---- Fonctionnalités ---- #}
+<section class="hero">
+  <div class="grid features">
+    <div class="feature"><h3>🧺 Récoltes de la semaine</h3>
+      <p>Chaque producteur publie ses disponibilités hebdomadaires : produits, quantités estimées, prix.</p></div>
+    <div class="feature"><h3>📍 Points de livraison &amp; marchés</h3>
+      <p>Marchés, AMAP, ferme : chaque producteur définit ses points de retrait et créneaux, jour par jour.</p></div>
+    <div class="feature"><h3>🎪 Marchés &amp; boutiques identifiés</h3>
+      <p>Les stands et points de vente déclarés par les producteurs sont agrégés : un marché, une fiche, des horaires déduits — même quand plusieurs y vendent.</p></div>
+    <div class="feature"><h3>🍽️ Traiteurs &amp; foodtrucks</h3>
+      <p>Pizzas, burgers, sandwichs, rôtisserie : les emplacements du soir des foodtrucks et les boutiques des traiteurs, sur la même carte.</p></div>
+    <div class="feature"><h3>🛒 Commande directe</h3>
+      <p>Le client commande auprès du producteur qui valide : paniers préparés pour chaque jour de livraison.</p></div>
+    <div class="feature"><h3>✉️ Communication directe</h3>
+      <p>Newsletters et annonces de mise à disposition, par la boîte mail du producteur.</p></div>
+  </div>
+  <p class="hero-lead muted">Trois modes de recherche sur la
+     <a href="{% url 'portal:producer_search' %}">page de recherche</a> :
+     🥬 producteurs, 🍽️ traiteurs &amp; foodtrucks, 🎪 marchés &amp; boutiques —
+     la carte, les filtres et les vignettes s'adaptent à chaque mode.</p>
+</section>
+
+
 {# ---- Chiffres clés : pros segmentés par métier + trafic ---- #}
 <section class="chiffres-cles">
   <h2>📈 Le portail en chiffres</h2>
@@ -62,28 +85,6 @@
       <p class="muted">Dernier jour : {{ graph_visiteurs.dernier }} visiteur{{ graph_visiteurs.dernier|pluralize }}</p>
     </div>
   </div>
-</section>
-
-{# ---- Fonctionnalités ---- #}
-<section class="hero">
-  <div class="grid features">
-    <div class="feature"><h3>🧺 Récoltes de la semaine</h3>
-      <p>Chaque producteur publie ses disponibilités hebdomadaires : produits, quantités estimées, prix.</p></div>
-    <div class="feature"><h3>📍 Points de livraison &amp; marchés</h3>
-      <p>Marchés, AMAP, ferme : chaque producteur définit ses points de retrait et créneaux, jour par jour.</p></div>
-    <div class="feature"><h3>🎪 Marchés &amp; boutiques identifiés</h3>
-      <p>Les stands et points de vente déclarés par les producteurs sont agrégés : un marché, une fiche, des horaires déduits — même quand plusieurs y vendent.</p></div>
-    <div class="feature"><h3>🍽️ Traiteurs &amp; foodtrucks</h3>
-      <p>Pizzas, burgers, sandwichs, rôtisserie : les emplacements du soir des foodtrucks et les boutiques des traiteurs, sur la même carte.</p></div>
-    <div class="feature"><h3>🛒 Commande directe</h3>
-      <p>Le client commande auprès du producteur qui valide : paniers préparés pour chaque jour de livraison.</p></div>
-    <div class="feature"><h3>✉️ Communication directe</h3>
-      <p>Newsletters et annonces de mise à disposition, par la boîte mail du producteur.</p></div>
-  </div>
-  <p class="hero-lead muted">Trois modes de recherche sur la
-     <a href="{% url 'portal:producer_search' %}">page de recherche</a> :
-     🥬 producteurs, 🍽️ traiteurs &amp; foodtrucks, 🎪 marchés &amp; boutiques —
-     la carte, les filtres et les vignettes s'adaptent à chaque mode.</p>
 </section>
 
 {% endblock %}

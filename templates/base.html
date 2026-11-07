@@ -25,7 +25,7 @@
 <header class="site-header">
   <nav class="nav container">
     <div class="nav-gauche">
-      <a class="brand" href="{% url 'portal:home' %}">🌱 MonPetitProducteurLocal</a>
+      <a class="brand" href="{% url 'portal:home' %}" id="brand-accueil"><img class="brand-logo" src="{% static 'img/logo.svg' %}" alt="Logo MonPetitProducteurLocal" width="30" height="30"> MonPetitProducteurLocal{% if exploitant_courant %}<span class="brand-demo-badge" title="Instance de démonstration">DÉMO</span>{% endif %}</a>
       <button class="btn-darkmode" type="button" id="btn-darkmode" title="Basculer en mode sombre" aria-label="Basculer en mode sombre">🌙</button>
     </div>
     <button class="nav-burger" type="button" id="nav-burger"
@@ -216,5 +216,43 @@
   });
 })();
 </script>
+{% if exploitant_courant %}
+<dialog id="dialog-demo-portail" class="dialog-demo">
+  <h2>🚧 Portail en cours de développement</h2>
+  <p><strong>Bienvenue sur l'instance de démonstration !</strong></p>
+  <p>Ce portail est un outil en cours de construction : cette instance
+     a vocation à constituer la communauté des producteurs locaux.</p>
+  <p>🎯 <strong>Vos retours sont précieux</strong> : chaque remarque d'usage —
+     ce qui manque, ce qui coince, ce qui vous ferait gagner du temps —
+     nous aide à construire un outil qui réponde au mieux aux besoins
+     de votre métier. Partagez-les via la page contact de votre ferme
+     ou directement à l'admin de l'instance.</p>
+  <form method="dialog" class="dialog-demo-actions">
+    <button class="btn" type="submit">C'est noté !</button>
+  </form>
+</dialog>
+<script>
+/* Logo cliquable côté pro : rappel du cadre de démonstration et appel
+   aux retours utilisateurs — affiché une fois par session, les clics
+   suivants naviguent normalement vers l'accueil. */
+(function () {
+  var brand = document.getElementById("brand-accueil");
+  var dlg = document.getElementById("dialog-demo-portail");
+  if (!brand || !dlg) { return; }
+  brand.addEventListener("click", function (evt) {
+    var vu = false;
+    try { vu = sessionStorage.getItem("mppl_dialog_demo") === "vu"; }
+    catch (e) { vu = true; }
+    if (vu) { return; }
+    evt.preventDefault();
+    try { sessionStorage.setItem("mppl_dialog_demo", "vu"); } catch (e) {}
+    dlg.showModal();
+  });
+  dlg.addEventListener("click", function (evt) {
+    if (evt.target === dlg) { dlg.close(); }
+  });
+})();
+</script>
+{% endif %}
 </body>
 </html>

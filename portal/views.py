@@ -3093,7 +3093,13 @@ def panier_recu(request, panier_id):
     statut du processus (Reçu / retiré), verrouillé en lecture seule
     côté producteur et compté dans l'export production."""
     panier = get_object_or_404(Panier, pk=panier_id, client=request.user)
-    if request.method == "POST" and panier.statut == Panier.Statut.PRET:
+    # Un panier « Prêt » OU « Livré » (marqué livré par le producteur)
+    # peut être confirmé reçu/retiré par le client : dernier statut du
+    # processus, il notifie le producteur et verrouille la fiche en
+    # lecture seule côté pro.
+    if (request.method == "POST"
+            and panier.statut in (Panier.Statut.PRET,
+                                  Panier.Statut.LIVRE)):
         panier.statut = Panier.Statut.RECU
         panier.save()
         messages.success(
