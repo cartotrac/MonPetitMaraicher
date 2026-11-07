@@ -71,9 +71,10 @@ from django.db import connection
 from django.utils.text import slugify
 from django.utils import timezone
 
-from portal.models import (Bulletin, Categorie, Commande, CreneauLivraison,
-                           Exploitant, LigneCommande, LignePanier,
-                           LigneRecolte, Panier, PointLivraison, Produit,
+from portal.models import (Bulletin, Carte, Categorie, Commande,
+                           CreneauLivraison, Exploitant, LigneCarte,
+                           LigneCommande, LignePanier, LigneRecolte,
+                           Panier, PointLivraison, Produit,
                            ProduitStandard, ProfilClient, SemaineRecolte)
 
 MOT_DE_PASSE_DEMO = "demo1234!"
@@ -1073,6 +1074,49 @@ class Command(BaseCommand):
             panier.save()
         return commande
 
+    def _cartes_demo(self):
+        """Cartes / boutiques de DÉMONSTRATION : une carte ACTIVE par
+        traiteur et foodtruck (« Carte du moment » — sections Entrées,
+        Plats, Desserts) et par producteur en mode boutique (fromager,
+        apiculteur, conserverie, micro-brasseur — « En boutique en ce
+        moment »). Les lignes reprennent les produits actifs de la
+        ferme ; une carte déjà active est conservée telle quelle."""
+        concernees = ("FOODTRUCK", "TRAITEUR", "FROMAGER", "APICULTEUR",
+                      "CONSERVERIE", "MICRO_BRASSEUR")
+        nb_cartes = 0
+        fermes = Exploitant.objects.filter(
+            est_demo=True, activite__in=concernees)
+        for ferme in fermes:
+            if ferme.cartes.filter(
+                    statut=Carte.Statut.ACTIVE).exists():
+                continue
+            restauration = ferme.activite in ("FOODTRUCK", "TRAITEUR")
+            carte = Carte.objects.create(
+                exploitant=ferme,
+                nom=("Carte du moment" if restauration
+                     else "En boutique en ce moment"),
+                statut=Carte.Statut.ACTIVE)
+            produits = list(ferme.produits.filter(actif=True)
+                            .select_related("categorie")
+                            .order_by("categorie__position", "nom")[:8])
+            for n, produit in enumerate(produits):
+                section = ""
+                if restauration:
+                    section = ("Entrées" if n < 2
+                               else "Plats" if n < 6 else "Desserts")
+                elif produit.categorie:
+                    section = produit.categorie.nom
+                LigneCarte.objects.create(
+                    carte=carte, produit=produit, section=section,
+                    unite_vente=produit.unite_vente, prix=None,
+                    position=n + 1)
+            nb_cartes += 1
+        if nb_cartes:
+            self.stdout.write(self.style.SUCCESS(
+                "Cartes de démo créées : " + str(nb_cartes)
+                + " carte(s) active(s) — traiteurs, foodtrucks et "
+                "boutiques de producteurs."))
+
     def handle(self, *args, **options):
         if options["purge"]:
             # Purge LARGE : tout compte « demo.* », toute exploitation
@@ -1192,6 +1236,8 @@ class Command(BaseCommand):
                 self._commande(exploitant, produits, points[0], clients[2],
                                deux, Commande.Statut.VALIDEE, jours=6,
                                panier_statut=Panier.Statut.PRET)
+        self._cartes_demo()
+
         self.stdout.write(self.style.SUCCESS(
             f"Démonstration prête : {len(FERMES)} fermes fictives "
             "(Tarn et départements limitrophes, Bretagne, Loire, Corse, "

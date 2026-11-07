@@ -1226,3 +1226,7 @@ html.dark .nav-chercher-flottant:hover { background: #33402a; }
 .btn-retirer-filtre:hover { background: #b71c1c; color: #fff; }
 html.dark .btn.btn-filtre-actif, html.dark .btn-retirer-filtre {
   background: #8f1d16; border-color: #b0463d; color: #ffd9d5; }
+
+/* ===== Vitrine : sections de la carte / boutique ===== */
+.carte-section td { background: #f0f4ec; font-size: 0.95rem; }
+html.dark .carte-section td { background: #31402a !important; }
