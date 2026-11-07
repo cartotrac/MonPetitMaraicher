@@ -1402,3 +1402,18 @@ html.dark .btn-session-dot-rouge { background: #3a1d1a;
   .nav-gestion-titre.nav-actif + .nav-gestion-menu {
     display: block !important; }
 }
+
+/* ===== Bandeau déconnecté : contraste du bouton « Créer mon espace
+       pro » — fond opaque clair + texte vert foncé (le fond
+       transparent laissait le texte vert sur le bandeau vert). ===== */
+.nav-links .btn-outline { background: #fdfcf7 !important;
+  color: #33502a !important; border-color: #4e6b3a !important;
+  font-weight: 600; }
+.nav-links .btn-outline:hover { background: #ffffff !important;
+  color: #245d18 !important; border-color: #2e5d1a !important; }
+html.dark .nav-links .btn-outline { background: #2c3625 !important;
+  color: #dbe8cd !important; border-color: #8fae76 !important; }
+html.dark .nav-links .btn-outline:hover { background: #3a4930 !important;
+  color: #fff !important; }
+/* « Devenir Localien » : assuré lisible sur le bandeau vert */
+.nav-links .nav-compte { color: #fff; }
