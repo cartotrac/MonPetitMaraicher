@@ -1087,8 +1087,18 @@ class Command(BaseCommand):
                          exploitant__nom_ferme__in=[
                              s["ferme"] for s in FERMES])
                      ).distinct()
+            # Les lignes de commandes et paniers de démo portent des
+            # clés étrangères PROTÉGÉES (produits, points) : sans cet
+            # effacement préalable, la suppression du compte échoue
+            # (ProtectedError) et les fermes sont conservées avec leurs
+            # anciens points — les nouveaux types MARCHE/BOUTIQUE ne
+            # sont alors jamais appliqués au jeu de démo.
+            cibles = list(users)
+            ids = [u.pk for u in cibles]
+            Panier.objects.filter(exploitant__user_id__in=ids).delete()
+            Commande.objects.filter(exploitant__user_id__in=ids).delete()
             n, purges = 0, []
-            for user in users:
+            for user in cibles:
                 try:
                     n += user.delete()[0]
                     purges.append(user.username)
