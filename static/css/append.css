@@ -1288,3 +1288,37 @@ html.dark .quick-actions .btn-filtre-annule { background: #44484e;
 html.dark .my-orders-section { color: #c5e1a5; }
 html.dark .flash.ok { background: #24421f; color: #d7ecd0;
   border-color: #4e8a3d; }
+
+/* ===== FIX : le bouton « Trouver » flottant ne se fixait pas en haut à
+       droite — une règle antérieure impose position: relative
+       !important sur .nav-chercher, qui écrasait le position: fixed
+       du mode flottant. L'override ci-dessous reprend la main avec
+       une spécificité supérieure + !important, et replace le bouton
+       sous les boutons de scroll et le toggle dark (colonne droite). ===== */
+.nav-links a.nav-chercher.nav-chercher-flottant {
+  position: fixed !important;
+  top: 196px !important; right: 9px !important; left: auto !important;
+  bottom: auto !important; margin: 0 !important;
+  z-index: 1160 !important;
+  display: inline-flex !important; justify-content: center !important;
+  background: rgba(62, 92, 44, 0.9) !important; color: #fff !important;
+  border-radius: 10px !important; padding: 0.35rem 0.5rem !important;
+  font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+  transition: background 0.2s ease;
+}
+.nav-links a.nav-chercher.nav-chercher-flottant:hover {
+  background: #3e5c2c !important;
+}
+html.dark .nav-links a.nav-chercher.nav-chercher-flottant {
+  background: rgba(38, 48, 31, 0.92) !important; color: #e6e4da !important;
+}
+html.dark .nav-links a.nav-chercher.nav-chercher-flottant:hover {
+  background: #33402a !important;
+}
+.nav-chercher-flottant .nav-chercher-texte { display: none; }
+.nav-chercher-flottant .nav-chercher-icone { margin: 0; }
+@media (max-width: 820px) {
+  .nav-links a.nav-chercher.nav-chercher-flottant {
+    top: 186px !important; right: 7px !important;
+  }
+}
