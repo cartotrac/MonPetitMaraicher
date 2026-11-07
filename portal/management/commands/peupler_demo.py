@@ -138,6 +138,18 @@ def _ferme_spec(utilisateur, ferme, activite, mode, cp, adresse, ville,
 A = Exploitant.Activite
 M = Exploitant.ModeProduction
 
+
+def _type_deduit(nom):
+    """Devine le type d'un point d'après son libellé (jeu de démo) :
+    « Marché … » / « Halle … » → Marché, « Boutique … » → Boutique ;
+    sinon le type par défaut (point de livraison)."""
+    bas = nom.lower()
+    if bas.startswith(("marché", "marche", "halle")):
+        return PointLivraison.Type.MARCHE
+    if bas.startswith("boutique"):
+        return PointLivraison.Type.BOUTIQUE
+    return PointLivraison.Type.LIVRAISON
+
 FERMES = [
     # ── Tarn ──────────────────────────────────────────────────────
     {
@@ -948,14 +960,16 @@ class Command(BaseCommand):
                     actif=True)
                 produits.append(produit)
 
-        # Points de livraison + créneaux
+        # Points de livraison + créneaux. Le type est déduit du libellé
+        # quand la saisie est explicite : les points « Marché … » et
+        # « Boutique … » alimentent le mode Marchés & Boutiques de la
+        # recherche (le type explicite de la spécification prime).
         points = []
         for nom, adresse, ville, cp, lat, lon in spec["points"]:
             points.append(PointLivraison.objects.create(
                 exploitant=exploitant, nom=nom, adresse=adresse,
                 ville=ville, code_postal=cp, latitude=lat, longitude=lon,
-                type_point=(spec.get("type_point")
-                            or PointLivraison.Type.LIVRAISON)))
+                type_point=(spec.get("type_point") or _type_deduit(nom))))
         for jour, debut, fin, idx_point in spec["creneaux"]:
             CreneauLivraison.objects.create(
                 exploitant=exploitant, point_livraison=points[idx_point],
