@@ -247,10 +247,10 @@ class Exploitant(models.Model):
 
     @property
     def titre_semaine(self):
-        ```Titre de l'encart vitrine, accordé à l'activité, à l'équipe
+        """Titre de l'encart vitrine, accordé à l'activité, à l'équipe
         (Mes/Notre) et au rythme choisi : « Récolte de la semaine »,
         « Ma carte de la semaine », « Nos plats du mois », « Mes
-        produits de la semaine », « Mes productions du mois »…```
+        produits de la semaine », « Mes productions du mois »…"""
         nous = self.membres.exists()
         rythme = self.libelle_rythme
         if self.activite in (self.Activite.MARAICHER,
@@ -273,8 +273,8 @@ class Exploitant(models.Model):
 
     @property
     def titres_avoir(self):
-        ```Titre de l'encart « à venir » de la vitrine publique,`
-        ` accordé à l'activité.```
+        """Titre de l'encart « à venir » de la vitrine publique,
+         accordé à l'activité."""
         if self.activite in (self.Activite.MARAICHER,
                              self.Activite.ARBORICULTEUR):
             return "Récoltes à venir"
@@ -303,9 +303,9 @@ class Exploitant(models.Model):
 
     @property
     def titre_carte_boutique(self):
-        ```« Ma carte » (foodtruck), « Mes menus » (traiteur), « Ma
+        """« Ma carte » (foodtruck), « Mes menus » (traiteur), « Ma
         boutique » (fromager, apiculteur, conserverie, brasseur) —
-        « Notre » dès que l'équipe s'étoffe.```
+        « Notre » dès que l'équipe s'étoffe."""
         nous = self.membres.exists()
         if self.activite == self.Activite.FOODTRUCK:
             return "Notre carte" if nous else "Ma carte"
@@ -315,9 +315,9 @@ class Exploitant(models.Model):
 
     @property
     def titre_points_vitrine(self):
-        ```Titre de la rubrique des points de la vitrine : les
+        """Titre de la rubrique des points de la vitrine : les
         foodtrucks exposent des EMPLACEMENTS (qui peuvent être sur des
-        marchés), les autres des points de retrait.```
+        marchés), les autres des points de retrait."""
         if self.activite == self.Activite.FOODTRUCK:
             return "Emplacements & marchés"
         if self.en_mode_boutique:
@@ -686,14 +686,14 @@ class CreneauLivraison(models.Model):
 
 
 class Carte(models.Model):
-    ```Carte / boutique stable d'un traiteur, foodtruck ou
+    """Carte / boutique stable d'un traiteur, foodtruck ou
     producteur en mode boutique (fromager, apiculteur, conserverie,
     micro-brasseur) : vitrine permanente EN PLUS de l'encart de la
     semaine — le côté « boutique stable » qui convient à la majorité,
     quand l'encart saisonnier reste dans l'esprit récoltes du site.
 
     Plusieurs cartes coexistent (brouillons, versions archivées et
-    republiables) mais UNE SEULE est active à la fois.```
+    republiables) mais UNE SEULE est active à la fois."""
 
     class Statut(models.TextChoices):
         BROUILLON = "BROUILLON", "Brouillon"
@@ -721,8 +721,8 @@ class Carte(models.Model):
         return f"{self.nom} — {self.exploitant.nom_ferme} ({self.statut})"
 
     def activer(self):
-        ```Publie cette carte : la carte active précédente passe en
-        archive (une seule active à la fois).```
+        """Publie cette carte : la carte active précédente passe en
+        archive (une seule active à la fois)."""
         with transaction.atomic():
             (Carte.objects.filter(exploitant=self.exploitant,
                                   statut=Carte.Statut.ACTIVE)
@@ -733,9 +733,9 @@ class Carte(models.Model):
 
 
 class LigneCarte(models.Model):
-    ```Ligne d'une carte/boutique : reprend un PRODUIT du catalogue
+    """Ligne d'une carte/boutique : reprend un PRODUIT du catalogue
     de l'exploitant (copié du catalogue de référence ou perso) ou une
-    ligne entièrement libre (plat du jour, menu…), avec son prix.```
+    ligne entièrement libre (plat du jour, menu…), avec son prix."""
 
     carte = models.ForeignKey(Carte, on_delete=models.CASCADE,
                               related_name="lignes")
