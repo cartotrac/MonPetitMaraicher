@@ -1355,3 +1355,9 @@ html.dark .table { background: #26301f; }
 html.dark .table thead { background: #31402a; }
 html.dark .table thead th { color: #c5e1a5; }
 html.dark .table tbody tr:hover { background: #31402a; }
+
+/* ===== Bouton actif (vue Liste/Calendrier, filtres) : le fond vert
+       foncé rendait le texte vert foncé illisible en mode clair ===== */
+.btn.btn-active { background: var(--accent-dark); color: #fff;
+  border-color: var(--accent-dark); }
+.btn.btn-active:hover { background: var(--accent-dark); color: #fff; }

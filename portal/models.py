@@ -987,6 +987,22 @@ class Panier(models.Model):
         unique_together = ("exploitant", "client", "date_livraison", "numero")
         ordering = ["date_livraison", "numero"]
 
+    @property
+    def destination_itineraire(self):
+        """(lat, lon) du point de retrait s'il est géolocalisé, sinon
+        de la ferme du producteur — base des liens de calcul
+        d'itinéraire côté client (OpenStreetMap, Google Maps) quand le
+        panier est marqué livré."""
+        pt = self.point_livraison
+        if (pt is not None and pt.latitude is not None
+                and pt.longitude is not None):
+            return (pt.latitude, pt.longitude)
+        ex = self.exploitant
+        if (ex is not None and ex.latitude is not None
+                and ex.longitude is not None):
+            return (ex.latitude, ex.longitude)
+        return None
+
     def __str__(self):
         return (f"Panier n°{self.numero} — {self.nom_client} "
                 f"le {self.date_livraison}")

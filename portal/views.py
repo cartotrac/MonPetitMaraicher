@@ -1435,8 +1435,41 @@ def _notifier_sans_echec(request, panier, type_msg):
 @exploitant_requis
 def order_list(request, statut=None):
     exploitant = exploitant_pour(request.user)
-    return render(request, "portal/pro/orders.html",
-                  _contexte_commandes(exploitant, statut))
+    contexte = _contexte_commandes(exploitant, statut)
+    # Vue alternative « calendrier » (?vue=calendrier)
+    contexte.update(_contexte_calendrier(request, contexte["commandes"]))
+    return render(request, "portal/pro/orders.html", contexte)
+
+
+def _contexte_calendrier(request, commandes):
+    """Vue alternative « calendrier » de la semaine (7 cases), côté
+    pro comme côté client : construite à partir des commandes triées
+    par date de livraison. Retourne {} si la vue demandée n'est pas
+    le calendrier — la page retombe alors sur la liste par jour."""
+    if request.GET.get("vue", "liste").strip() != "calendrier":
+        return {}
+    try:
+        ref = datetime.date.fromisoformat(
+            request.GET.get("sem", "").strip())
+    except ValueError:
+        ref = timezone.localdate()
+    lundi = ref - datetime.timedelta(days=ref.weekday())
+    jours_cal = []
+    for i in range(7):
+        jour = lundi + datetime.timedelta(days=i)
+        jours_cal.append({
+            "date": jour,
+            "commandes": [c for c in commandes
+                          if c.date_livraison == jour],
+        })
+    return {
+        "vue": "calendrier",
+        "jours_cal": jours_cal,
+        "semaine_debut": lundi,
+        "semaine_fin": lundi + datetime.timedelta(days=6),
+        "sem_prec": (lundi - datetime.timedelta(days=7)).isoformat(),
+        "sem_suiv": (lundi + datetime.timedelta(days=7)).isoformat(),
+    }
 
 
 def _contexte_commandes(exploitant, statut=None):
@@ -1810,7 +1843,7 @@ def ventes(request):
     exploitant = exploitant_pour(request.user)
     commandes = _contexte_commandes(exploitant)
     paniers = _contexte_paniers(exploitant)
-    return render(request, "portal/pro/ventes.html", {
+    contexte = {
         "commandes": commandes["commandes"],
         "jours_badges_commandes": commandes["jours_badges"],
         "filtre_statut_commandes": commandes["filtre_statut"],
@@ -1820,7 +1853,11 @@ def ventes(request):
         "filtre_point_paniers": paniers["filtre_point"],
         "points": paniers["points"],
         "today": commandes["today"],
-    })
+    }
+    # Vue alternative « calendrier » des commandes (?vue=calendrier) :
+    # les paniers restent en liste dessous.
+    contexte.update(_contexte_calendrier(request, commandes["commandes"]))
+    return render(request, "portal/pro/ventes.html", contexte)
 
 
 @login_required
