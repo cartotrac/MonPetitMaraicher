@@ -7,6 +7,17 @@
   <title>{% block title %}MonPetitProducteurLocal{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/append.css' %}">
+  <script>
+  /* Mode sombre appliqué AVANT le premier rendu (dans le <head>) :
+     sans cela, les boutons du bandeau s'affichent une fraction de
+     seconde en style clair puis basculent — flash lumineux visible
+     à chaque chargement (page recherche, changement de mode). */
+  try {
+    if (localStorage.getItem("mppl_dark") === "1") {
+      document.documentElement.classList.add("dark");
+    }
+  } catch (e) {}
+  </script>
   {% block extra_style %}{% endblock %}
   {% block extrahead %}{% endblock %}
 </head>
@@ -142,12 +153,23 @@
   /* Bouton mode sombre : le bandeau disparu, il se fixe sous les
      boutons de scroll pour rester toujours accessible. */
   var dark = document.getElementById("btn-darkmode");
+  var trouver = document.querySelector(".nav-chercher");
   var bandeau = document.querySelector(".site-header");
-  if (dark && bandeau) {
+  var bandeauDisparu = bandeau ? function () {
+    return bandeau.getBoundingClientRect().bottom < 0;
+  } : null;
+  if (bandeauDisparu) {
     window.addEventListener("scroll", function () {
-      dark.classList.toggle(
-        "btn-darkmode-flottant",
-        bandeau.getBoundingClientRect().bottom < 0);
+      var flottant = bandeauDisparu();
+      if (dark) {
+        dark.classList.toggle("btn-darkmode-flottant", flottant);
+      }
+      /* Le bouton « Trouver » suit le même comportement que le
+         bouton de mode sombre : le bandeau disparu, il reste
+         accessible, flottant en haut à droite. */
+      if (trouver) {
+        trouver.classList.toggle("nav-chercher-flottant", flottant);
+      }
     }, { passive: true });
   }
 })();

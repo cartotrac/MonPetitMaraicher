@@ -1168,3 +1168,51 @@ html.dark .marker-marche { background: #33281c; }
   z-index: 1; }
 .itineraire-btn { margin-top: 0.7rem; }
 .marche-categorie { margin: 1.5rem 0 0.6rem; }
+
+
+/* ===== Accueil : chiffres clés (pros segmentés + trafic) ===== */
+.chiffres-cles { background: var(--accent-light, #e8f5e9);
+  border: 1px solid #c5d3b4; border-radius: 14px;
+  padding: 1.2rem 1.4rem; margin: 1.4rem 0; }
+.chiffres-cles h2 { margin: 0 0 0.3rem; }
+.chiffres-accroche { font-size: 1.3rem; margin: 0.2rem 0 0.9rem; }
+.chiffres-grille { display: flex; flex-wrap: wrap; gap: 0.7rem;
+  margin-bottom: 1rem; }
+.chiffre-carte { display: flex; flex-direction: column; align-items: center;
+  gap: 0.1rem; background: #fff; border: 1px solid #c5d3b4;
+  border-radius: 12px; padding: 0.65rem 1.1rem; min-width: 9rem;
+  text-align: center; }
+.chiffre-emoji { font-size: 1.5rem; line-height: 1; }
+.chiffre-nb { font-size: 1.6rem; line-height: 1.1; color: var(--accent-dark); }
+.chiffres-graphes { display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem; }
+.chiffre-graphe { background: #fff; border: 1px solid #c5d3b4;
+  border-radius: 12px; padding: 0.7rem 0.9rem; }
+.chiffre-graphe .muted { margin: 0.3rem 0 0; font-size: 0.85rem; }
+html.dark .chiffres-cles { background: #20301c; border-color: #4e6b3a; }
+html.dark .chiffre-carte, html.dark .chiffre-graphe {
+  background: #26301f !important; color: #e6e4da !important;
+  border-color: #3f4d34 !important; }
+html.dark .chiffre-nb { color: #c5e1a5; }
+
+/* ===== Accueil : vignettes « features » lisibles en mode sombre
+       (le fond restait blanc, le texte clair devenait invisible). ===== */
+html.dark .feature { background: #26301f !important; color: #e6e4da !important;
+  border-color: #3f4d34 !important; }
+html.dark .feature h3 { color: #c5e1a5 !important; }
+html.dark .feature p { color: #e6e4da !important; }
+
+/* ===== Nav : bouton « Trouver » flottant quand le bandeau disparaît
+       (même comportement que le bouton de mode sombre) ===== */
+.nav-chercher-flottant { position: fixed; top: 196px; right: 9px;
+  z-index: 1160; background: rgba(62, 92, 44, 0.9); color: #fff;
+  border-radius: 8px; padding: 0.3rem 0.55rem; font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+.nav-chercher-flottant:hover { background: #3e5c2c; }
+html.dark .nav-chercher-flottant { background: rgba(38, 48, 31, 0.92);
+  color: #e6e4da; }
+html.dark .nav-chercher-flottant:hover { background: #33402a; }
+@media (max-width: 820px) {
+  .nav-chercher-flottant { top: 186px; right: 7px; }
+}

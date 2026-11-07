@@ -1,37 +1,89 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Producteurs locaux — MonPetitProducteurLocal{% endblock %}
+{% block title %}Producteurs locaux, traiteurs &amp; foodtrucks — MonPetitProducteurLocal{% endblock %}
 {% block content %}
 
 {# ---- Bandeau d'action ---- #}
 <section class="action-bar">
-  <a class="btn btn-lg" href="{% url 'portal:producer_search' %}">🔍 Chercher mon producteur ou un produit</a>
+  <a class="btn btn-lg" href="{% url 'portal:producer_search' %}">🔍 Trouver producteurs, marchés, traiteurs &amp; foodtrucks</a>
   <a class="btn btn-outline btn-lg" href="{% url 'portal:register_producer' %}">🧑‍🌾 Je suis producteur — rejoindre le réseau</a>
 </section>
 
-{# ---- Hero section : portail, philosophie, fonctionnalités ---- #}
+{# ---- Hero : portail, philosophie ---- #}
 <section class="hero">
   <h1>Du champ à votre table, en circuit court</h1>
   <p class="hero-lead">
     MonPetitProducteurLocal met en relation les producteurs locaux indépendants —
-    maraîchers, arboriculteurs, éleveurs, fromagers, apiculteurs… — avec les
-    clients de leur territoire. Chaque producteur reste maître de ses prix,
-    de ses produits et de ses clients : le portail est un outil au service des
-    circuits courts, pas un intermédiaire. Un bien commun, libre et réplicable.
+    maraîchers, arboriculteurs, éleveurs, fromagers, apiculteurs… — et désormais
+    aussi les traiteurs et foodtrucks de votre territoire, avec leurs emplacements
+    du soir. Chaque pro reste maître de ses prix, de ses produits et de ses
+    clients : le portail est un outil au service des circuits courts, pas un
+    intermédiaire. Un bien commun, libre et réplicable.
   </p>
+</section>
+
+{# ---- Chiffres clés : pros segmentés par métier + trafic ---- #}
+<section class="chiffres-cles">
+  <h2>📈 Le portail en chiffres</h2>
+  <p class="chiffres-accroche">🤝 <strong>{{ nb_pros }} professionnel{{ nb_pros|pluralize }}</strong> nous font confiance</p>
+  <div class="chiffres-grille">
+    <div class="chiffre-carte"><span class="chiffre-emoji">🥬</span>
+      <strong class="chiffre-nb">{{ nb_producteurs_locaux }}</strong>
+      <span>producteur{{ nb_producteurs_locaux|pluralize }} local{{ nb_producteurs_locaux|pluralize:",ux" }}</span></div>
+    <div class="chiffre-carte"><span class="chiffre-emoji">🥗</span>
+      <strong class="chiffre-nb">{{ nb_traiteurs }}</strong>
+      <span>traiteur{{ nb_traiteurs|pluralize }}</span></div>
+    <div class="chiffre-carte"><span class="chiffre-emoji">🚚</span>
+      <strong class="chiffre-nb">{{ nb_foodtrucks }}</strong>
+      <span>foodtruck{{ nb_foodtrucks|pluralize }}</span></div>
+    <div class="chiffre-carte"><span class="chiffre-emoji">🎪</span>
+      <strong class="chiffre-nb">{{ nb_marches }}</strong>
+      <span>marché{{ nb_marches|pluralize }} identifié{{ nb_marches|pluralize }}</span></div>
+    <div class="chiffre-carte"><span class="chiffre-emoji">🏪</span>
+      <strong class="chiffre-nb">{{ nb_boutiques }}</strong>
+      <span>boutique{{ nb_boutiques|pluralize }} de producteur{{ nb_boutiques|pluralize }}</span></div>
+  </div>
+  <div class="chiffres-graphes">
+    <div class="chiffre-graphe">
+      <strong>🧑‍🌾 Pros inscrits</strong>
+      <div class="stats-chart">{% for pt in graph_producteurs.points %}<span class="stats-bar" style="height:{{ pt.hauteur }}%" title="{{ pt.titre }}"></span>{% endfor %}</div>
+      {% if graph_producteurs.tendance > 0 %}<p class="muted">↗ +{{ graph_producteurs.tendance }} sur 7 jours</p>
+      {% elif graph_producteurs.tendance < 0 %}<p class="muted">↘ {{ graph_producteurs.tendance }} sur 7 jours</p>
+      {% else %}<p class="muted">→ stable sur 7 jours</p>{% endif %}
+    </div>
+    <div class="chiffre-graphe">
+      <strong>👥 Clients inscrits</strong>
+      <div class="stats-chart">{% for pt in graph_clients.points %}<span class="stats-bar" style="height:{{ pt.hauteur }}%" title="{{ pt.titre }}"></span>{% endfor %}</div>
+      <p class="muted">Dernier jour : {{ graph_clients.dernier }} inscrit{{ graph_clients.dernier|pluralize }}</p>
+    </div>
+    <div class="chiffre-graphe">
+      <strong>👀 Visiteurs</strong>
+      <div class="stats-chart">{% for pt in graph_visiteurs.points %}<span class="stats-bar" style="height:{{ pt.hauteur }}%" title="{{ pt.titre }}"></span>{% endfor %}</div>
+      <p class="muted">Dernier jour : {{ graph_visiteurs.dernier }} visiteur{{ graph_visiteurs.dernier|pluralize }}</p>
+    </div>
+  </div>
+</section>
+
+{# ---- Fonctionnalités ---- #}
+<section class="hero">
   <div class="grid features">
     <div class="feature"><h3>🧺 Récoltes de la semaine</h3>
       <p>Chaque producteur publie ses disponibilités hebdomadaires : produits, quantités estimées, prix.</p></div>
-    <div class="feature"><h3>📍 Points de livraison</h3>
-      <p>Marchés, AMAP, ferme : chaque producteur définit ses points de retrait et créneaux.</p></div>
+    <div class="feature"><h3>📍 Points de livraison &amp; marchés</h3>
+      <p>Marchés, AMAP, ferme : chaque producteur définit ses points de retrait et créneaux, jour par jour.</p></div>
+    <div class="feature"><h3>🎪 Marchés &amp; boutiques identifiés</h3>
+      <p>Les stands et points de vente déclarés par les producteurs sont agrégés : un marché, une fiche, des horaires déduits — même quand plusieurs y vendent.</p></div>
+    <div class="feature"><h3>🍽️ Traiteurs &amp; foodtrucks</h3>
+      <p>Pizzas, burgers, sandwichs, rôtisserie : les emplacements du soir des foodtrucks et les boutiques des traiteurs, sur la même carte.</p></div>
     <div class="feature"><h3>🛒 Commande directe</h3>
       <p>Le client commande auprès du producteur qui valide : paniers préparés pour chaque jour de livraison.</p></div>
     <div class="feature"><h3>✉️ Communication directe</h3>
       <p>Newsletters et annonces de mise à disposition, par la boîte mail du producteur.</p></div>
   </div>
-  <p class="hero-lead muted">La carte des producteurs se trouve désormais sur la
-     <a href="{% url 'portal:producer_search' %}">page de recherche</a>, avec les
-     résultats filtrés par activité, produit, localité et mode de production.</p>
+  <p class="hero-lead muted">Trois modes de recherche sur la
+     <a href="{% url 'portal:producer_search' %}">page de recherche</a> :
+     🥬 producteurs, 🍽️ traiteurs &amp; foodtrucks, 🎪 marchés &amp; boutiques —
+     la carte, les filtres et les vignettes s'adaptent à chaque mode.</p>
 </section>
 
 {% endblock %}

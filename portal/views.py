@@ -58,11 +58,55 @@ def mentions_legales(request):
 
 
 def home(request):
-    """Landing : bandeau, hero, présentation du portail."""
-    exploitants = (Exploitant.objects.filter(visible=True)
-                   .exclude(latitude=None, longitude=None)
-                   .order_by("nom_ferme"))
-    return render(request, "portal/home.html", {"exploitants": exploitants})
+    """Landing : bandeau, hero, présentation du portail — et les
+    chiffres clés segmentés (pros par métier, marchés et boutiques
+    identifiés, clients, visiteurs) avec historique 30 jours."""
+    activites_restauration = (Exploitant.Activite.FOODTRUCK,
+                              Exploitant.Activite.TRAITEUR)
+    nb_pros = Exploitant.objects.count()
+    nb_visibles = Exploitant.objects.filter(visible=True).count()
+    nb_producteurs_locaux = (Exploitant.objects
+                             .filter(visible=True)
+                             .exclude(activite__in=activites_restauration)
+                             .count())
+    nb_foodtrucks = (Exploitant.objects
+                     .filter(visible=True,
+                             activite=Exploitant.Activite.FOODTRUCK).count())
+    nb_traiteurs = (Exploitant.objects
+                    .filter(visible=True,
+                            activite=Exploitant.Activite.TRAITEUR).count())
+    marches_identifies = identifier_marches()
+    nb_marches = sum(1 for m in marches_identifies if m["est_marche"])
+    nb_boutiques = len(marches_identifies) - nb_marches
+    nb_clients = (User.objects
+                  .filter(exploitant__isnull=True,
+                          membre_exploitation__isnull=True).count())
+    nb_visiteurs = Visiteur.objects.count()
+    aujourdhui = timezone.localdate()
+    StatistiqueQuotidienne.objects.update_or_create(
+        date=aujourdhui,
+        defaults={"nb_producteurs": nb_visibles,
+                  "nb_clients": nb_clients,
+                  "nb_visiteurs": nb_visiteurs})
+    lignes_stats = list(StatistiqueQuotidienne.objects.filter(
+        date__gte=aujourdhui - datetime.timedelta(days=29))
+        .order_by("date"))
+    graphs = {"producteurs": _serie_stats("nb_producteurs", lignes_stats),
+              "clients": _serie_stats("nb_clients", lignes_stats),
+              "visiteurs": _serie_stats("nb_visiteurs", lignes_stats)}
+    return render(request, "portal/home.html", {
+        "nb_pros": nb_pros,
+        "nb_producteurs_locaux": nb_producteurs_locaux,
+        "nb_foodtrucks": nb_foodtrucks,
+        "nb_traiteurs": nb_traiteurs,
+        "nb_marches": nb_marches,
+        "nb_boutiques": nb_boutiques,
+        "nb_clients": nb_clients,
+        "nb_visiteurs": nb_visiteurs,
+        "graph_producteurs": graphs["producteurs"],
+        "graph_clients": graphs["clients"],
+        "graph_visiteurs": graphs["visiteurs"],
+    })
 
 
 def _recherche_producteurs(q, dept, modes, activites):
