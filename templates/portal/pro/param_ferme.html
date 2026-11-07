@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Ma ferme — MonPetitProducteurLocal{% endblock %}
+{% block title %}{{ exploitant.libelle_fiche }} — MonPetitProducteurLocal{% endblock %}
 {% block extra_style %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
 {% block content %}
-<h1>🚜 Ma ferme</h1>
+<h1>{{ exploitant.titre_fiche }}</h1>
 <p class="muted">Ces informations sont affichées sur votre vitrine
    publique : activité, SIRET, logo (fichier ou lien externe), réseaux
    sociaux, position. Le département est déduit du code postal si vous
@@ -16,7 +16,7 @@
     <input type="hidden" name="section" value="ferme">
     <div id="carte-ferme" data-pick-map data-lat-input="id_latitude"
          data-lon-input="id_longitude" style="height: 300px; border-radius: 8px; margin-bottom: 0.4rem;"></div>
-    <p class="muted">👆 Cliquez sur la carte pour positionner la ferme :
+    <p class="muted">👆 Cliquez sur la carte pour positionner {{ exploitant.libelle_fiche|lower }} :
        latitude/longitude sont renseignées automatiquement.</p>
     {{ form_ferme.as_p }}
     <div class="save-bar">
@@ -30,7 +30,7 @@
     </select>
     <p class="muted">Libellé affiché sur la vitrine (« …de la semaine », « …du mois ») — purement indicatif : publiez aussi souvent que nécessaire, plusieurs {{ exploitant.vocab.recoltes|lower }} par période ne posent aucun problème.</p>
   </div>
-      <button class="btn" type="submit">💾 Enregistrer ma fiche</button>
+      <button class="btn" type="submit">💾 Enregistrer {{ exploitant.libelle_fiche|lower }}</button>
     </div>
   </form>
   </div>
@@ -41,4 +41,23 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{% static 'js/pick-map.js' %}" defer></script>
 <script src="{% static 'js/image-picker.js' %}" defer></script>
+<script>
+/* Le champ « Spécialité » ne concerne que les foodtrucks : il n'est
+   visible que si l'activité sélectionnée vaut Foodtruck. Si l'on
+   quitte ce métier, la valeur est effacée pour éviter qu'une
+   spécialité foodtruck ne traîne sur un autre profil. */
+(function () {
+  var activite = document.getElementById("id_activite");
+  var spec = document.getElementById("id_specialite");
+  if (!activite || !spec) { return; }
+  var ligne = spec.closest("p") || spec.parentElement;
+  function maj() {
+    var foodtruck = activite.value === "FOODTRUCK";
+    ligne.style.display = foodtruck ? "" : "none";
+    if (!foodtruck) { spec.value = ""; }
+  }
+  activite.addEventListener("change", maj);
+  maj();
+})();
+</script>
 {% endblock %}

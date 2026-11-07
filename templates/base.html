@@ -61,7 +61,7 @@
             <a class="nav-gestion-titre{% if '/parametres/' in request.path or '/equipe/' in request.path %} nav-actif{% endif %}" href="{% url 'portal:param_rubrique' 'profil' %}">Paramètres ▾</a>
             <div class="nav-gestion-menu">
               <a href="{% url 'portal:param_rubrique' 'profil' %}">👤 Mon profil</a>
-              <a href="{% url 'portal:param_rubrique' 'ferme' %}">🚜 Ma ferme</a>
+              <a href="{% url 'portal:param_rubrique' 'ferme' %}">{{ exploitant_courant.titre_fiche }}</a>
               {% if user.exploitant %}<a href="{% url 'portal:equipe_manage' %}">👥 Mon équipe</a>{% endif %}
               {% if user.exploitant %}<a href="{% url 'portal:param_rubrique' 'messagerie' %}">✉️ Messagerie</a>{% endif %}
             </div>
@@ -121,7 +121,7 @@
           <a href="{% url 'portal:pub_rubrique' 'newsletter' %}">Newsletter</a>
           <a href="{% url 'portal:pub_rubrique' 'annonces' %}">Annonces</a>
           <a href="{% url 'portal:param_rubrique' 'profil' %}">Mon profil</a>
-          <a href="{% url 'portal:param_rubrique' 'ferme' %}">Ma ferme</a>
+          <a href="{% url 'portal:param_rubrique' 'ferme' %}">{{ exploitant_courant.titre_fiche }}</a>
           {% if user.exploitant %}<a href="{% url 'portal:equipe_manage' %}">Mon équipe</a>{% endif %}
         {% else %}
           <a href="{% url 'portal:my_orders' %}">Mes commandes</a>

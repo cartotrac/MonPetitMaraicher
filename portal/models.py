@@ -198,6 +198,28 @@ class Exploitant(models.Model):
             "creneaux": "créneaux de livraison",
         }
 
+    # Libellé de la fiche pro adapté au métier : un foodtruck ou un
+    # traiteur n'exploitent pas une « ferme » — la rubrique Paramètres,
+    # le menu et le bouton d'enregistrement utilisent ce libellé.
+    LIBELLES_FICHE = {
+        "FOODTRUCK": ("🚚", "Mon foodtruck"),
+        "TRAITEUR": ("🥗", "Ma boutique"),
+    }
+
+    @property
+    def libelle_fiche(self):
+        """« Ma ferme », « Mon foodtruck » ou « Ma boutique » selon
+        l'activité du pro."""
+        return self.LIBELLES_FICHE.get(self.activite, ("", "Ma ferme"))[1]
+
+    @property
+    def titre_fiche(self):
+        """Libellé précédé de son emoji, prêt pour un titre de page ou
+        une entrée de menu."""
+        emoji, libelle = self.LIBELLES_FICHE.get(
+            self.activite, ("🚜", "Ma ferme"))
+        return f"{emoji} {libelle}"
+
     # Libellé « équipe » selon l'activité, page publique producteur :
     # « L'équipe d'éleveurs », « L'équipe de brasseurs »…
     EQUIPE_LIBELLES = {

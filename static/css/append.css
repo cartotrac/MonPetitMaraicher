@@ -1322,3 +1322,36 @@ html.dark .nav-links a.nav-chercher.nav-chercher-flottant:hover {
     top: 186px !important; right: 7px !important;
   }
 }
+
+/* ===== Dark : derniers fonds clairs résiduels =====
+   - .save-bar (barre d'enregistrement en pied des pages Paramètres :
+     Mon profil, Ma ferme, Messagerie) gardait var(--bg) clair ;
+   - details.panier-bloc (historique client « Panier n°… ») gardait
+     #fafafa ;
+   - .cal-passe / .cal-courante / .cal-avenir portent un background
+     !important (code couleur clair) qui écrasait le fond sombre des
+     groupes de jours déroulés (commandes, paniers, Mes commandes) :
+     overrides avec la même force, teinte assombrie mais conservée. */
+html.dark .save-bar { background: #1e2617;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4); }
+html.dark details.panier-bloc { background: #26301f;
+  border-color: #3f4d34; color: #e6e4da; }
+html.dark details.panier-bloc > summary { color: #e6e4da; }
+html.dark details.groupe-jour.cal-passe {
+  background: #1c2a38 !important; border-color: #33506b !important; }
+html.dark details.groupe-jour.cal-courante {
+  background: #24421f !important; border-color: #4e8a3d !important; }
+html.dark details.groupe-jour.cal-avenir {
+  background: #3a2c14 !important; border-color: #8a6a2e !important; }
+html.dark details.groupe-jour.cal-passe > summary { color: #90caf9; }
+html.dark details.groupe-jour.cal-courante > summary { color: #a5d6a7; }
+html.dark details.groupe-jour.cal-avenir > summary { color: #ffcc80; }
+/* Vue calendrier client (Mes commandes) : cases de jours et événements */
+html.dark .cal-jour { background: #26301f; border-color: #3f4d34; }
+html.dark .cal-jour.cal-passe { background: #2c3238; }
+html.dark .cal-evt { background: #1e2617; }
+/* Tableaux de données (fiches, stocks) restés blancs */
+html.dark .table { background: #26301f; }
+html.dark .table thead { background: #31402a; }
+html.dark .table thead th { color: #c5e1a5; }
+html.dark .table tbody tr:hover { background: #31402a; }
