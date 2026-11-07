@@ -41,6 +41,7 @@
            {% if panier.statut == 'LIVRE' %}
              — 🧭 <a href="https://www.openstreetmap.org/directions?to={{ pt.latitude|unlocalize|floatformat:'6' }},{{ pt.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener">Calculer mon itinéraire (OSM)</a>
              / <a href="https://www.google.com/maps/dir/?api=1&amp;destination={{ pt.latitude|unlocalize|floatformat:'6' }},{{ pt.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener">Google Maps</a>
+           {% endif %}
            {% endif %}</p>
       {% endwith %}
       {% endif %}
@@ -201,6 +202,7 @@
              {% if panier.statut == 'LIVRE' %}
                — 🧭 <a href="https://www.openstreetmap.org/directions?to={{ pt.latitude|unlocalize|floatformat:'6' }},{{ pt.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener">Calculer mon itinéraire (OSM)</a>
                / <a href="https://www.google.com/maps/dir/?api=1&amp;destination={{ pt.latitude|unlocalize|floatformat:'6' }},{{ pt.longitude|unlocalize|floatformat:'6' }}" target="_blank" rel="noopener">Google Maps</a>
+             {% endif %}
              {% endif %}</p>
         {% endwith %}
         {% endif %}
