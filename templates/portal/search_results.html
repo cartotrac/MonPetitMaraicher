@@ -24,7 +24,7 @@
     <span class="stats-item">
       {% if visu == "marches" %}<span class="badge badge-marche">🎪 {{ nb_marches }} marché{{ nb_marches|pluralize }} &amp; 🏪 {{ nb_boutiques }} boutique{{ nb_boutiques|pluralize }} de producteur{{ nb_boutiques|pluralize }}</span>
       {% elif visu == "restauration" %}<span class="badge badge-activite">🥗 {{ nb_traiteurs }} traiteur{{ nb_traiteurs|pluralize }} &amp; 🚚 {{ nb_foodtrucks }} foodtruck{{ nb_foodtrucks|pluralize }}</span>
-      {% else %}<span class="badge badge-ab">🥬 {{ nb_producteurs_locaux }} producteur{{ nb_producteurs_locaux|pluralize }} local{{ nb_producteurs_locaux|pluralize }}</span>{% endif %}
+      {% else %}<span class="badge badge-ab">🥬 {{ nb_producteurs_locaux }} producteur{{ nb_producteurs_locaux|pluralize }} local{{ nb_producteurs_locaux|pluralize:",ux" }}</span>{% endif %}
     </span>
     <span class="stats-item">
       <button type="button" class="badge badge-ab" data-stats="clients">👥 {{ nb_clients }} client{{ nb_clients|pluralize }} inscrit{{ nb_clients|pluralize }}</button>
@@ -52,8 +52,18 @@
 </div>
 <form class="search-bar" method="get" action="{% url 'portal:producer_search' %}">
   <input type="hidden" name="visu" value="{{ visu }}">
-  <input type="text" name="q" placeholder="{% if visu == 'marches' %}Marché, boutique, ville…{% else %}Produit, ferme, ville ou code postal…{% endif %}" value="{{ q }}">
-  <input type="text" name="dept" placeholder="Dépt. ou code postal (ex : 81)" value="{{ dept }}" size="10">
+  <input type="text" name="q" placeholder="{% if visu == 'marches' %}Marché, boutique…{% elif visu == 'restauration' %}Plat, spécialité, nom…{% else %}Produit, ferme…{% endif %}" value="{{ q }}">
+  <input type="text" name="dept" placeholder="Département, région ou code postal…" title="Zoome la carte sur un département (nom ou numéro), une région ou un code postal — les vignettes suivent l'emprise" value="{{ dept }}" size="14">
+  {% if visu == "marches" %}
+  <details class="filtre-multi">
+    <summary>🎪 Marchés &amp; 🏪 Boutiques{% if type_marche_choisi %} ({{ type_marche_choisi|length }}){% endif %} ▾</summary>
+    <div class="filtre-multi-menu">
+      <label class="filtre-multi-choix"><input type="checkbox" name="type_marche" value="MARCHE"{% if 'MARCHE' in type_marche_choisi %} checked{% endif %}> 🎪 Marchés</label>
+      <label class="filtre-multi-choix"><input type="checkbox" name="type_marche" value="BOUTIQUE"{% if 'BOUTIQUE' in type_marche_choisi %} checked{% endif %}> 🏪 Boutiques de producteurs</label>
+      <p class="muted">Tout décocher = marchés et boutiques.</p>
+    </div>
+  </details>
+  {% endif %}
   {% if visu != "marches" %}
   <details class="filtre-multi">
     <summary>🥬 Activités{% if activite_choisie %} ({{ activite_choisie|length }}){% endif %} ▾</summary>
@@ -64,6 +74,8 @@
       <p class="muted">Plusieurs choix possibles — tout décocher = toutes les activités.</p>
     </div>
   </details>
+  {% endif %}
+  {% if not visu %}
   <details class="filtre-multi">
     <summary>🌱 Modes de production{% if mode_choisi %} ({{ mode_choisi|length }}){% endif %} ▾</summary>
     <div class="filtre-multi-menu">
@@ -76,9 +88,9 @@
     </div>
   </details>
   {% endif %}
-  <button class="btn" type="submit">Filtrer</button>
+  {% if filtre_actif %}<a class="btn btn-sm btn-retirer-filtre" href="{% url 'portal:producer_search' %}?visu={{ visu }}" title="Retirer tous les filtres actifs">✕ Retirer les filtres</a>{% endif %}
+  <button class="btn{% if filtre_actif %} btn-filtre-actif{% endif %}" type="submit">Filtrer</button>
 </form>
-<div id="filtres-sauvegardes" class="filtres-sauvegardes" data-url="{% url 'portal:producer_search' %}"></div>
 
 <section class="map-section">
   <div class="mode-choix mode-choix-entete" role="group" aria-label="Mode de visualisation">
@@ -89,7 +101,7 @@
   <div class="map-canvas-wrap{% if visu == "restauration" %} visu-restauration{% elif visu == "marches" %} visu-marches{% endif %}">
     <h2 class="map-titre">🗺️ {% if visu == "restauration" %}Traiteurs &amp; foodtrucks trouvés{% elif visu == "marches" %}Marchés &amp; boutiques identifiés{% else %}Producteurs trouvés{% endif %}{% if carte_data %} ({{ carte_data|length }}){% endif %}</h2>
     {% if carte_data %}
-      <div id="carte-recherche" class="map-canvas" data-mode="{% if visu == "restauration" %}restauration{% elif visu == "marches" %}marches{% else %}producteurs{% endif %}"></div>
+      <div id="carte-recherche" class="map-canvas" data-mode="{% if visu == "restauration" %}restauration{% elif visu == "marches" %}marches{% else %}producteurs{% endif %}" data-zone="{{ dept }}"></div>
       {{ carte_data|json_script:"donnees-carte" }}
       {{ home_carte|json_script:"home-carte" }}
     {% else %}
@@ -229,142 +241,7 @@
   });
 })();
 </script>
-<script>
-/* Filtres enregistrés : sauvegarde locale des combinaisons, ré-application
-   en un clic, suppression (✕) et CUMUL de plusieurs combinaisons
-   (union des résultats via ?comb=…&comb=…). */
-(function () {
-  var CLE = "mppl_filtres";
-  var conteneur = document.getElementById("filtres-sauvegardes");
-  var form = document.querySelector(".search-bar");
-  if (!conteneur || !form) return;
-  var base = conteneur.dataset.url || "";
 
-  function lire() {
-    try { return JSON.parse(localStorage.getItem(CLE)) || []; }
-    catch (e) { return []; }
-  }
-  function ecrire(liste) {
-    try { localStorage.setItem(CLE, JSON.stringify(liste)); } catch (e) {}
-  }
-  function libelle(valeurs) {
-    var morceaux = [];
-    if (valeurs.q) morceaux.push("« " + valeurs.q + " »");
-    if (valeurs.dept) morceaux.push("📍 " + valeurs.dept);
-    if (valeurs.mode) {
-      morceaux.push(Array.isArray(valeurs.mode)
-        ? valeurs.mode.join(" + ") : valeurs.mode);
-    }
-    if (valeurs.activite) {
-      morceaux.push(Array.isArray(valeurs.activite)
-        ? valeurs.activite.join(" + ") : valeurs.activite);
-    }
-    return morceaux.join(" · ") || "Tous les producteurs";
-  }
-  function courants() {
-    var vals = {};
-    ["q", "dept"].forEach(function (nom) {
-      var champ = form.elements[nom];
-      if (champ && champ.value.trim()) vals[nom] = champ.value.trim();
-    });
-    /* Listes à choix multiple (cases à cocher des filtres déroulants) :
-       on relève toutes les cases cochées. */
-    ["mode", "activite"].forEach(function (nom) {
-      var sel = Array.prototype.slice.call(
-        form.querySelectorAll('[name="' + nom + '"]:checked'))
-        .map(function (o) { return o.value.trim(); })
-        .filter(Boolean);
-      if (sel.length) vals[nom] = sel;
-    });
-    return vals;
-  }
-  function qs(vals) {
-    var morceaux = [];
-    Object.keys(vals).forEach(function (k) {
-      if (Array.isArray(vals[k])) {
-        vals[k].forEach(function (v) {
-          morceaux.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
-        });
-      } else {
-        morceaux.push(encodeURIComponent(k) + "=" + encodeURIComponent(vals[k]));
-      }
-    });
-    return morceaux.join("&");
-  }
-  function urlAppli(liste) {
-    return base + "?" + liste.map(function (f) {
-      return "comb=" + encodeURIComponent(f.qs);
-    }).join("&");
-  }
-  function dessine() {
-    var liste = lire();
-    conteneur.innerHTML = "";
-    if (!liste.length) return;
-    liste.forEach(function (filtre, i) {
-      var puce = document.createElement("span");
-      puce.className = "puce-filtre";
-      var appli = document.createElement("a");
-      appli.href = base + "?" + "comb=" + encodeURIComponent(filtre.qs);
-      appli.textContent = filtre.label;
-      appli.title = "Appliquer ce filtre";
-      var coche = document.createElement("input");
-      coche.type = "checkbox";
-      coche.title = "Sélectionner pour le cumul";
-      coche.addEventListener("change", majCumul);
-      var suppr = document.createElement("button");
-      suppr.type = "button";
-      suppr.className = "puce-filtre-suppr";
-      suppr.textContent = "✕";
-      suppr.title = "Supprimer ce filtre enregistré";
-      suppr.addEventListener("click", function () {
-        liste.splice(i, 1);
-        ecrire(liste);
-        dessine();
-      });
-      puce.appendChild(coche);
-      puce.appendChild(appli);
-      puce.appendChild(suppr);
-      conteneur.appendChild(puce);
-    });
-    var cumul = document.createElement("a");
-    cumul.id = "btn-cumul-filtres";
-    cumul.className = "btn btn-sm btn-outline";
-    cumul.style.display = "none";
-    cumul.textContent = "🔗 Cumuler la sélection";
-    conteneur.appendChild(cumul);
-    cumul.addEventListener("click", function (evt) {
-      evt.preventDefault();
-      var selection = lire().filter(function (_, j) {
-        var c = conteneur.querySelectorAll(".puce-filtre input")[j];
-        return c && c.checked;
-      });
-      if (selection.length) window.location = urlAppli(selection);
-    });
-  }
-  function majCumul() {
-    var coches = conteneur.querySelectorAll(".puce-filtre input:checked").length;
-    var btn = document.getElementById("btn-cumul-filtres");
-    if (btn) {
-      btn.style.display = coches ? "inline-block" : "none";
-      btn.textContent = "🔗 Cumuler la sélection (" + coches + ")";
-    }
-  }
-  // C'est le bouton « Filtrer » qui enregistre : chaque filtrage
-  // ajoute (si inédit) une puce à la liste des combinaisons.
-  form.addEventListener("submit", function () {
-    var vals = courants();
-    var liste = lire();
-    var dejaLa = liste.some(function (f) { return f.qs === qs(vals); });
-    if (!dejaLa) {
-      liste.push({ label: libelle(vals), qs: qs(vals) });
-      if (liste.length > 12) liste.shift();
-      ecrire(liste);
-    }
-  });
-  conteneur.dataset.url = conteneur.dataset.url || base;
-  dessine();
-})();
-</script>
 {% if carte_data %}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="{% static 'js/search-map.js' %}"></script>

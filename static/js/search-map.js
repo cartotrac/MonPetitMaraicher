@@ -460,3 +460,50 @@ geolocCtrl.onAdd = function () {
   return div;
 };
 geolocCtrl.addTo(carte);
+
+/* ------------------------------------------- zone spatiale (dept/région/CP) */
+/* Saisie intelligente : nom ou numéro de département, nom de région
+   ou code postal (les 2 premiers chiffres suffisent) — la carte
+   zoome directement dessus au chargement. Le champ ne filtre PAS
+   le jeu de résultats côté serveur : ce sont l'emprise de la carte
+   et majEmprise() qui masquent les vignettes hors zone. */
+(function () {
+  var zone = ((blocCarte.getAttribute("data-zone") || "")).trim();
+  if (!zone) { return; }
+  function normalise(t) {
+    return (t || "").toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+  }
+  var chiffres = (zone.match(/\d/g) || []).join("");
+  var code = chiffres.length >= 2 ? chiffres.slice(0, 2) : "";
+  var nom = normalise(zone.replace(/\d+/g, ""));
+  function cherche(features) {
+    return features.filter(function (f) {
+      var p = f.properties || {};
+      if (code && String(p.code).replace(/^0+/, "") ===
+          code.replace(/^0+/, "")) { return true; }
+      return !!(nom && normalise(p.nom) === nom);
+    });
+  }
+  function cadreSiTrouve(features) {
+    var trouves = cherche(features);
+    if (!trouves.length) { return false; }
+    var bornes = L.latLngBounds();
+    trouves.forEach(function (f) {
+      bornes.extend(L.geoJSON(f).getBounds());
+    });
+    carte.fitBounds(bornes, { padding: [30, 30] });
+    return true;
+  }
+  function essai(url, ensuite) {
+    fetch(url).then(function (r) { return r.json(); })
+      .then(function (gj) { ensuite(gj.features || []); })
+      .catch(function () { /* réseau indisponible : cadrage par défaut */ });
+  }
+  essai(FOND_ADMIN + "departements.geojson", function (feats) {
+    if (!cadreSiTrouve(feats)) {
+      essai(FOND_ADMIN + "regions.geojson", cadreSiTrouve);
+    }
+  });
+})();

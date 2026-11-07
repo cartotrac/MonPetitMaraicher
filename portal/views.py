@@ -164,37 +164,22 @@ def _serie_stats(champ, lignes):
 
 
 def producer_search(request):
-    """Recherche multi-critères : exploitant, produit, ville, département
-    (ou code postal), mode de production — plus la CARTE des résultats.
-    Plusieurs combinaisons enregistrées (?comb=qs&comb=qs…) sont
-    cumulées (union des résultats)."""
-    combinaisons = request.GET.getlist("comb")
-    if combinaisons:
-        # Cumul / agrégat de plusieurs filtres enregistrés
-        cumul = None
-        for qs_comb in combinaisons[:10]:
-            brut = parse_qsl(qs_comb, keep_blank_values=True)
-            params = {}
-            for cle, valeur in brut:
-                params.setdefault(cle, []).append(valeur)
-            jeu = _recherche_producteurs(
-                (params.get("q") or [""])[0].strip(),
-                (params.get("dept") or [""])[0].strip(),
-                params.get("mode", []), params.get("activite", []))
-            cumul = jeu if cumul is None else (cumul | jeu)
-        exploitants = (cumul or Exploitant.objects.none()).distinct()
-        q = dept = ""
-        mode_choisi = activite_choisie = []
-    else:
-        q = request.GET.get("q", "").strip()
-        dept = request.GET.get("dept", "").strip()
-        # Listes à choix multiple : Ctrl/clic pour combiner plusieurs
-        # modes de production ou activités dans une même recherche.
-        mode_choisi = [m for m in request.GET.getlist("mode") if m.strip()]
-        activite_choisie = [a for a in request.GET.getlist("activite")
-                            if a.strip()]
-        exploitants = _recherche_producteurs(
-            q, dept, mode_choisi, activite_choisie)
+    """Recherche multi-critères : texte (exploitant, produit, ville),
+    activités, modes de production — plus la CARTE des résultats.
+    Le champ « Département, région ou code postal » est purement
+    SPATIAL : il ne filtre pas le jeu de résultats, la carte zoome
+    dessus au chargement et filtre les vignettes par emprise."""
+    q = request.GET.get("q", "").strip()
+    dept = request.GET.get("dept", "").strip()
+    # Listes à choix multiple : Ctrl/clic pour combiner plusieurs
+    # modes de production ou activités dans une même recherche.
+    mode_choisi = [m for m in request.GET.getlist("mode") if m.strip()]
+    activite_choisie = [a for a in request.GET.getlist("activite")
+                        if a.strip()]
+    # « dept » n'entre PAS dans le queryset : il pilote uniquement
+    # le zoom cartographique (data-zone), la carte filtre ensuite
+    # les vignettes par emprise.
+    exploitants = _recherche_producteurs(q, "", mode_choisi, activite_choisie)
     # Mode de visualisation : « producteurs » (toutes les activités
     # sauf foodtrucks et traiteurs — ils n'ont PLUS rien à faire sur
     # cette carte), « restauration » (uniquement ces deux-là) ou
@@ -216,15 +201,19 @@ def producer_search(request):
     # virtuelles recalculées à la demande ; les filtres texte et
     # département s'y appliquent aussi (nom, ville, adresse, CP).
     marches = []
+    type_marche_choisi = []
     if visu_marches:
         marches = identifier_marches()
         if q:
             marches = [m for m in marches if q.lower() in (
                 f"{m['nom']} {m['ville']} {m['adresse']}".lower())]
-        if dept:
+        # Filtre « Marchés / Boutiques » propre au mode marches ;
+        # tout décocher = marchés et boutiques.
+        type_marche_choisi = [t for t in request.GET.getlist("type_marche")
+                              if t in ("MARCHE", "BOUTIQUE")]
+        if type_marche_choisi:
             marches = [m for m in marches
-                       if m["code_postal"].startswith(dept)
-                       or dept.lower() in m["ville"].lower()]
+                       if m["type"] in type_marche_choisi]
     # Dénombrements affichés à côté du titre : producteurs visibles,
     # clients inscrits (comptes non pro), visiteurs (sessions anonymes),
     # + photo quotidienne pour l'historique / tendance des badges.
@@ -337,6 +326,11 @@ def producer_search(request):
         c for c in Exploitant.Activite.choices
         if (c[0] in activites_restauration)
         == (visu == "restauration")]
+    # Le bouton « Filtrer » passe en rouge (et un « ✕ Retirer »
+    # apparaît) dès qu'un filtre — texte, zone spatiale ou cases
+    # cochées — est actif.
+    filtre_actif = bool(q or dept or mode_choisi
+                        or activite_choisie or type_marche_choisi)
     return render(request, "portal/search_results.html", {
         "exploitants": exploitants,
         "carte_data": carte_data,
@@ -358,6 +352,8 @@ def producer_search(request):
         "graph_visiteurs": graphs["visiteurs"],
         "q": q, "dept": dept,
         "mode_choisi": mode_choisi, "activite_choisie": activite_choisie,
+        "type_marche_choisi": type_marche_choisi,
+        "filtre_actif": filtre_actif,
         "favoris_slugs": favoris_slugs,
     })
 

@@ -1216,3 +1216,13 @@ html.dark .nav-chercher-flottant:hover { background: #33402a; }
 @media (max-width: 820px) {
   .nav-chercher-flottant { top: 186px; right: 7px; }
 }
+
+/* ===== Recherche : filtre actif — bouton rouge + « Retirer » ===== */
+.btn.btn-filtre-actif { background: #c62828; border-color: #b71c1c;
+  color: #fff; }
+.btn.btn-filtre-actif:hover { background: #b71c1c; }
+.btn-retirer-filtre { background: #c62828; border-color: #b71c1c;
+  color: #fff; }
+.btn-retirer-filtre:hover { background: #b71c1c; color: #fff; }
+html.dark .btn.btn-filtre-actif, html.dark .btn-retirer-filtre {
+  background: #8f1d16; border-color: #b0463d; color: #ffd9d5; }
